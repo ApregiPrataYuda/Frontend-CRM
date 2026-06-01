@@ -34,7 +34,7 @@ const routes = [
     path: '/home',
     name: 'Home',
     component: () =>
-      import('@/views/template/home/HomeView.vue'),
+      import('@/views/home/HomeView.vue'),
   },
 
   /* ========================================
@@ -187,6 +187,20 @@ const routes = [
         }
       },
 
+
+      {
+        path: 'data-master-employee',
+
+        name: 'MasterEmploye',
+
+        component: () =>
+          import('@/views/administrator/employe/EmployeManagementView.vue'),
+
+        meta: {
+          role: [1],  title: 'Employe Management' 
+        }
+      },
+
       /* ========================================
          SALES
       ========================================= */
@@ -203,6 +217,49 @@ const routes = [
           role: [2], title: 'Sales Home'
         }
       },
+
+
+      {
+        path: 'sales-timesheets-leave-attendance',
+
+        name: 'SalesTimesheetsLeaveAttendance',
+
+        component: () =>
+          import('@/views/sales/attendance/AttendanceView.vue'),
+
+        meta: {
+          role: [2], title: 'Sales Attendance'
+        }
+      },
+
+
+       {
+        path: 'sales-timesheets-leave-reports',
+
+        name: 'SalesTimesheetsLeaveReports',
+
+        component: () =>
+          import('@/views/sales/attendance/ReportAttendanceView.vue'),
+
+        meta: {
+          role: [2], title: 'Attendance Reports'
+        }
+      },
+
+      {
+        path: 'sales-timesheets-leave-reports-history',
+
+        name: 'SalesTimesheetsLeaveReportsHistory',
+
+        component: () =>
+          import('@/views/sales/attendance/AttendanceHistoryView.vue'),
+
+        meta: {
+          role: [2], title: 'Reports History'
+        }
+      },
+
+
 
       {
         path: 'reports-sales',

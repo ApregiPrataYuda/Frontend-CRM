@@ -132,6 +132,13 @@ import {
   faUserCheck,
   faUserXmark,
   faIdCard,
+  faCalendarDays,
+  faVideo,
+  faImage,
+  faSignal,
+  faMap,
+  faMapLocationDot,
+  faCircleExclamation,
 } from '@fortawesome/free-solid-svg-icons'
 
 library.add(
@@ -251,6 +258,13 @@ library.add(
   faUserCheck,
   faUserXmark,
   faIdCard,
+  faCalendarDays,
+  faVideo,
+  faImage,
+  faSignal,
+  faMap,
+  faMapLocationDot,
+  faCircleExclamation
 )
 
 const app = createApp(App)

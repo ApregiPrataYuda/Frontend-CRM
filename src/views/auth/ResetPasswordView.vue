@@ -152,7 +152,7 @@ async function handleResetPassword() {
           </div>
 
           <div>
-            <h1>Karya Suite App</h1>
+            <h1>PT. Duta Indomandiri.</h1>
             <p>
               CRM & Sales Management Platform
             </p>
@@ -417,7 +417,7 @@ async function handleResetPassword() {
         <div
           class="login-footer copyright"
         >
-          © 2026 Karya Suite App
+          © 2026 PT. Duta Indomandiri.
         </div>
 
       </div>

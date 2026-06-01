@@ -136,7 +136,7 @@ function resendEmail() {
             <font-awesome-icon :icon="['fas', 'chart-line']" class="fallback-icon" />
           </div>
           <div>
-            <h1>Karya Suite App</h1>
+            <h1>PT. Duta Indomandiri.</h1>
             <p>CRM & Sales Management Platform</p>
           </div>
         </div>
@@ -230,7 +230,7 @@ function resendEmail() {
         </div>
 
         <div class="login-footer copyright">
-          © 2026 Karya Suite App
+          © 2026 PT. Duta Indomandiri.
         </div>
 
       </div>
