@@ -176,7 +176,6 @@ const routes = [
 
       {
         path: 'setting-app-global',
-
         name: 'SettingAppGlobal',
 
         component: () =>
@@ -190,7 +189,6 @@ const routes = [
 
       {
         path: 'data-master-employee',
-
         name: 'MasterEmploye',
 
         component: () =>
@@ -256,6 +254,21 @@ const routes = [
 
         meta: {
           role: [2], title: 'Reports History'
+        }
+      },
+
+
+
+      {
+        path: 'sales-leads',
+
+        name: 'SalesLeads',
+
+        component: () =>
+          import('@/views/sales/leads/LeadsManagementView.vue'),
+
+        meta: {
+          role: [2], title: 'Leads Management'
         }
       },
 

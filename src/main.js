@@ -139,6 +139,9 @@ import {
   faMap,
   faMapLocationDot,
   faCircleExclamation,
+  faListUl,
+  faLayerGroup,
+  faFileCircleExclamation,
 } from '@fortawesome/free-solid-svg-icons'
 
 library.add(
@@ -264,7 +267,10 @@ library.add(
   faSignal,
   faMap,
   faMapLocationDot,
-  faCircleExclamation
+  faCircleExclamation,
+  faListUl,
+  faLayerGroup,
+  faFileCircleExclamation
 )
 
 const app = createApp(App)

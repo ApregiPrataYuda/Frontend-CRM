@@ -9,7 +9,7 @@ export const menuServices = {
 
   async show(id) {
     const response = await api.get(`/menu-management-show/${id}`)
-    return response        // ← sama
+    return response        
   },
 
   async create(payload) {

@@ -44,13 +44,6 @@ const sortByLabel = () =>
 
 
 
-
-
-
-
-
-
-
 // Add / Edit Modal States
 // ── Add / Edit Modal States ──
 const isAddModalVisible  = ref(false)
@@ -389,7 +382,7 @@ async function openDeleteModal(item) {
             </div>
           </div>
 
-          <button class="btn-toolbar btn-purple" @click="openAddModal">
+          <button  v-if="canCreate" class="btn-toolbar btn-purple" @click="openAddModal">
             <font-awesome-icon icon="plus" /> Add Data
           </button>
         </div>
@@ -510,6 +503,7 @@ async function openDeleteModal(item) {
 
                    <td class="td-actions">
                      <button
+                       v-if="canUpdate"
                       class="act-btn act-edit"
                       title="Edit"
                       @click="openEditModal(item)"
@@ -518,6 +512,7 @@ async function openDeleteModal(item) {
                     </button>
 
                       <button
+                        v-if="canDelete"
                         class="act-btn act-delete"
                         title="Hapus"
                         @click="openDeleteModal(item)"
@@ -526,6 +521,7 @@ async function openDeleteModal(item) {
                       </button>
 
                       <button
+                        v-if="canView"
                         class="act-btn act-info"
                         @click="openDetailModal(item)"
                         title="Detail"
