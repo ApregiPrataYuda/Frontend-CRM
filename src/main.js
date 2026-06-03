@@ -166,7 +166,8 @@ import {
   faPersonChalkboard,
   faCalendarPlus,
   faBox,
-  faClipboardCheck
+  faClipboardCheck,
+
 
 
 
@@ -324,7 +325,7 @@ library.add(
   faPersonChalkboard,
   faCalendarPlus,
   faBox,
-  faClipboardCheck
+  faClipboardCheck,
 
 
 )

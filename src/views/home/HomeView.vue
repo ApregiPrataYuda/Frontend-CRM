@@ -130,14 +130,21 @@ const features = [
           </a>
 
           <a href="#features" class="lp-link">
-            <font-awesome-icon icon="star" />
-            Features
+            <font-awesome-icon icon="map-location-dot" />
+            Realtime Maps Activity 
           </a>
 
           <a href="#" class="lp-link">
             <font-awesome-icon icon="chart-bar" />
+             Visit & Monitoring
+          </a>
+
+
+           <a href="#" class="lp-link">
+            <font-awesome-icon icon="chart-bar" />
             Dashboard
           </a>
+
 
           <a href="#" class="lp-link">
             <font-awesome-icon icon="bell" />

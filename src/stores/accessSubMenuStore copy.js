@@ -9,6 +9,7 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
   const loadingAccessSubMenu = ref(false)
   const searchAccessSubMenu  = ref('')
 
+  // FIX (memory leak) — pakai ref agar bisa di-clear
   const searchTimeout   = ref(null)
   const autoSaveTimeout = ref(null)
 
@@ -23,8 +24,8 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
     total:         0,
   })
 
-  // sort state dipertahankan untuk UI, tapi tidak dikirim ke backend
-  // sampai nama kolom yang valid dikonfirmasi dari controller Laravel
+  // FIX #1 — gunakan nama kolom sederhana yang diterima backend
+  // 'submenu.title' (dot notation) menyebabkan Laravel validation 422
   const sort = reactive({
     column:    'title',
     direction: 'asc',
@@ -33,19 +34,15 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
   const allowedSortColumns = ['title', 'created_at']
 
   // ── BUILD URL ──
-  // CATATAN: sort_by & sort_dir sengaja tidak dikirim karena backend menolak 422.
-  // Cek controller Laravel — ada Rule::in([...]) pada validasi sort_by.
-  // Setelah tahu nama kolom yang diizinkan, uncomment blok sort di bawah.
   const buildUrl = () => {
     const params = new URLSearchParams()
     if (searchAccessSubMenu.value) params.append('search',   searchAccessSubMenu.value)
     if (pagination.current_page)   params.append('page',     pagination.current_page)
     if (pagination.per_page)       params.append('per_page', pagination.per_page)
-    // Aktifkan setelah konfirmasi nama kolom dari backend:
-    // if (sort.column) {
-    //   params.append('sort_by',  sort.column)
-    //   params.append('sort_dir', sort.direction)
-    // }
+    if (sort.column) {
+      params.append('sort_by',  sort.column)
+      params.append('sort_dir', sort.direction)
+    }
     return `/users/${userId.value}/submenu-access?${params.toString()}`
   }
 
@@ -58,6 +55,7 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
       const response = await accessSubMenuService.getByUrl(finalUrl)
       const result   = response.data
 
+      // FIX — assignment langsung lebih idiomatis
       const dataArray = Array.isArray(result.data)
         ? result.data
         : result.data?.data ?? []
@@ -82,12 +80,13 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
 
   // ── SET USER & FETCH ──
   const setUserId = async (id) => {
-    userId.value              = id
-    searchAccessSubMenu.value = ''
-    pagination.current_page   = 1
-    pagination.per_page       = 10
-    sort.column               = 'title'
-    sort.direction            = 'asc'
+    userId.value                  = id
+    searchAccessSubMenu.value     = ''
+    pagination.current_page       = 1
+    pagination.per_page           = 10
+    // FIX — reset sort ke default yang valid
+    sort.column                   = 'title'
+    sort.direction                = 'asc'
     await fetchAccessSubMenu()
   }
 
@@ -125,6 +124,7 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
   }
 
   // ── RESET FILTERS ──
+  // FIX #2 — sort.column dikembalikan ke 'title' (konsisten dengan allowedSortColumns)
   const resetFilters = () => {
     searchAccessSubMenu.value = ''
     pagination.per_page       = 10

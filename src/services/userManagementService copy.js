@@ -2,10 +2,8 @@ import api from './api'
 
 export const usersManagementServices = {
 
-  // FIX #4 — terima signal AbortController dari store untuk cancel stale request
-  async getByUrl(url, signal = null) {
-    const config = signal ? { signal } : {}
-    const response = await api.get(url, config)
+  async getByUrl(url) {
+    const response = await api.get(url)
     return response
   },
 
@@ -19,7 +17,7 @@ export const usersManagementServices = {
     return response
   },
 
-  // create — multipart/form-data
+  // create multipart/form-data
   async create(payload) {
     const response = await api.post(
       '/store-users-management',
@@ -30,11 +28,11 @@ export const usersManagementServices = {
         },
       }
     )
+
     return response
   },
 
-  // update — multipart/form-data + method spoofing _method: PUT
-  // (Laravel mendukung ini secara default via MethodSpoofing middleware)
+  // update multipart/form-data
   async update(id, payload) {
     const response = await api.post(
       `/update-users-management/${id}`,
@@ -45,6 +43,7 @@ export const usersManagementServices = {
         },
       }
     )
+
     return response
   },
 

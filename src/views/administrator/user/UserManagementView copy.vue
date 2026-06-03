@@ -1,6 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-// FIX #7 — nextTick dihapus karena tidak diperlukan setelah fetchFormOptions
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 
@@ -36,8 +35,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('click', closeAllMenus)
-  // FIX #1 — bersihkan timeout & abort request yang masih pending saat komponen di-unmount
-  store.clearSearchTimeout()
 })
 
 /* ─────────────────────────────────────────
@@ -157,19 +154,12 @@ function onChangeImage(e) {
     toast.error('Ukuran file maksimal 2MB')
     return
   }
-  // Revoke blob URL lama sebelum buat yang baru
-  if (imageFile.value && imagePreview.value?.startsWith('blob:')) {
-    URL.revokeObjectURL(imagePreview.value)
-  }
   imageFile.value    = file
   imagePreview.value = URL.createObjectURL(file)
 }
 
 function resetImage() {
-  // Hanya revoke jika itu blob URL (hasil createObjectURL), bukan URL dari server
-  if (imagePreview.value?.startsWith('blob:')) {
-    URL.revokeObjectURL(imagePreview.value)
-  }
+  if (imagePreview.value) URL.revokeObjectURL(imagePreview.value)
   imageFile.value    = null
   imagePreview.value = null
 }
@@ -208,25 +198,26 @@ async function openEditModal(user) {
   isEdit.value       = true
   selectedUser.value = user
   store.errorUser    = null
-  form.value         = emptyForm()
+  form.value         = emptyForm()   // reset dulu sebelum fetch options
   resetImage()
   isUserModalVisible.value = true
 
-  // FIX #7 — nextTick dihapus, tidak diperlukan di sini
+  // Fetch options dulu agar select sudah terisi saat form dipopulate
   await store.fetchFormOptions()
+  await nextTick()
 
   form.value = {
     fullname:  user.fullname  ?? '',
     username:  user.username  ?? '',
     email:     user.email     ?? '',
     password:  '',
-    role_id:   user.role_id         ? Number(user.role_id)           : null,
-    divisi_id: user.division?.id    ? Number(user.division.id)       : null,
+    role_id:   user.role_id   ? Number(user.role_id)                 : null,
+    divisi_id: user.division?.id ? Number(user.division.id)          : null,
     group_id:  user.groups?.id_group ? Number(user.groups.id_group)  : null,
     is_active: user.is_active ? 1 : 0,
   }
 
-  // Tampilkan preview foto existing (ini URL dari server, bukan blob — tidak perlu revoke)
+  // Tampilkan preview foto existing
   if (user.image && user.image !== 'default.png') {
     imagePreview.value = store.getImageUrl(user.image, user.fullname)
   }
@@ -238,31 +229,16 @@ function closeUserModal() {
   resetImage()
 }
 
-// FIX #8 — client-side validation yang lebih lengkap
 async function submitUserForm() {
   if (!form.value.fullname.trim()) {
-    toast.error('Full name harus diisi!')
-    return
-  }
-  if (!form.value.username.trim()) {
-    toast.error('Username harus diisi!')
-    return
-  }
-  if (!form.value.email.trim()) {
-    toast.error('Email harus diisi!')
-    return
-  }
-  if (!isEdit.value && !form.value.password) {
-    toast.error('Password harus diisi untuk user baru!')
-    return
-  }
-  if (!form.value.role_id) {
-    toast.error('Role harus dipilih!')
+    toast.error('Full name must be filled in!')
     return
   }
 
   const payload = { ...form.value }
+  // Hapus password kosong (jangan kirim ke backend)
   if (!payload.password) delete payload.password
+  // Sertakan file image jika dipilih
   if (imageFile.value) payload.image = imageFile.value
 
   if (isEdit.value && selectedUser.value) {
@@ -292,9 +268,8 @@ function closeDetailModal() {
 
 /* ─────────────────────────────────────────
  * DELETE
- * FIX #5 — rename handleDeleteUser agar tidak shadow store.deleteUser
  * ───────────────────────────────────────── */
-async function handleDeleteUser(user) {
+async function deleteUser(user) {
   const isConfirmed = await confirm({
     type:        'danger',
     title:       'Delete User',
@@ -316,7 +291,7 @@ const isAccessModalVisible = ref(false)
 const accessTargetUser     = ref(null)
 
 async function openAccessModal(user) {
-  accessTargetUser.value     = user
+  accessTargetUser.value   = user
   isAccessModalVisible.value = true
   await accessSubMenu.setUserId(user.id_user)
 }
@@ -552,8 +527,7 @@ async function handlePermissionChange(row) {
               <button v-if="canUpdate" class="act-btn act-edit"    title="Edit"   @click="openEditModal(item)">
                 <font-awesome-icon icon="pen-to-square" />
               </button>
-              <!-- FIX #5 — pakai handleDeleteUser, bukan deleteUser -->
-              <button v-if="canDelete" class="act-btn act-delete"  title="Hapus"  :disabled="store.deletingUser" @click="handleDeleteUser(item)">
+              <button v-if="canDelete" class="act-btn act-delete"  title="Hapus"  :disabled="store.deletingUser" @click="deleteUser(item)">
                 <font-awesome-icon icon="trash-can" />
               </button>
               <button v-if="canView"   class="act-btn act-info"    title="Detail" @click="openDetailModal(item)">
@@ -622,9 +596,8 @@ async function handlePermissionChange(row) {
               class="form-input"
               :class="{ 'input-error': store.errorUser?.fullname }"
               placeholder="e.g. Budi Santoso"
-              @input="store.clearFieldError('fullname')"
+              @input="store.errorUser = null"
             />
-            <!-- FIX #2 — clearFieldError hanya clear error field ini -->
             <span v-if="store.errorUser?.fullname" class="field-error">{{ store.errorUser.fullname[0] }}</span>
           </div>
 
@@ -635,7 +608,7 @@ async function handlePermissionChange(row) {
               class="form-input"
               :class="{ 'input-error': store.errorUser?.username }"
               placeholder="e.g. budi_s"
-              @input="store.clearFieldError('username')"
+              @input="store.errorUser = null"
             />
             <span v-if="store.errorUser?.username" class="field-error">{{ store.errorUser.username[0] }}</span>
           </div>
@@ -651,7 +624,7 @@ async function handlePermissionChange(row) {
               class="form-input"
               :class="{ 'input-error': store.errorUser?.email }"
               placeholder="e.g. budi@email.com"
-              @input="store.clearFieldError('email')"
+              @input="store.errorUser = null"
             />
             <span v-if="store.errorUser?.email" class="field-error">{{ store.errorUser.email[0] }}</span>
           </div>
@@ -667,7 +640,7 @@ async function handlePermissionChange(row) {
               class="form-input"
               :class="{ 'input-error': store.errorUser?.password }"
               placeholder="••••••••"
-              @input="store.clearFieldError('password')"
+              @input="store.errorUser = null"
             />
             <span v-if="store.errorUser?.password" class="field-error">{{ store.errorUser.password[0] }}</span>
           </div>
@@ -681,7 +654,7 @@ async function handlePermissionChange(row) {
               v-model="form.role_id"
               class="form-input form-select"
               :class="{ 'input-error': store.errorUser?.role_id }"
-              @change="store.clearFieldError('role_id')"
+              @change="store.errorUser = null"
             >
               <option :value="null" disabled>-- Pilih Role --</option>
               <option
@@ -699,7 +672,7 @@ async function handlePermissionChange(row) {
               v-model="form.divisi_id"
               class="form-input form-select"
               :class="{ 'input-error': store.errorUser?.divisi_id }"
-              @change="store.clearFieldError('divisi_id')"
+              @change="store.errorUser = null"
             >
               <option :value="null" disabled>-- Pilih Division --</option>
               <option
@@ -720,7 +693,7 @@ async function handlePermissionChange(row) {
               v-model="form.group_id"
               class="form-input form-select"
               :class="{ 'input-error': store.errorUser?.group_id }"
-              @change="store.clearFieldError('group_id')"
+              @change="store.errorUser = null"
             >
               <option :value="null" disabled>-- Pilih Group --</option>
               <option

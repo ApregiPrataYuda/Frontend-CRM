@@ -13,12 +13,7 @@ export const useUserStore = defineStore('userStore', () => {
   const usersData    = ref([])
   const loadingUsers = ref(false)
   const searchUsers  = ref('')
-
-  // FIX #1 — searchTimeout pakai ref agar bisa di-clear dari luar (cegah memory leak)
-  const searchTimeout = ref(null)
-
-  // FIX #4 — AbortController untuk cancel stale request (cegah race condition)
-  let abortController = null
+  let   searchTimeout = null
 
   // ─────────────────────────────────────────────
   // STATE — CRUD Loading
@@ -84,27 +79,19 @@ export const useUserStore = defineStore('userStore', () => {
 
   // ─────────────────────────────────────────────
   // FETCH USERS
-  // FIX #4 — AbortController: cancel request lama sebelum kirim yang baru
   // ─────────────────────────────────────────────
   const fetchUsers = async (url = null) => {
-    // Batalkan request sebelumnya jika masih pending
-    if (abortController) {
-      abortController.abort()
-    }
-    abortController = new AbortController()
-
     loadingUsers.value = true
     try {
       const finalUrl = url || buildUrl()
-      const response = await usersManagementServices.getByUrl(finalUrl, abortController.signal)
+      const response = await usersManagementServices.getByUrl(finalUrl)
       const result   = response.data
 
-      // FIX #3 — assignment langsung, lebih idiomatis daripada splice
       const dataArray = Array.isArray(result.data)
         ? result.data
         : result.data?.data ?? []
 
-      usersData.value = dataArray
+      usersData.value.splice(0, usersData.value.length, ...dataArray)
 
       const pag = result.pagination ?? result.data?.pagination
       if (pag) {
@@ -116,8 +103,6 @@ export const useUserStore = defineStore('userStore', () => {
         pagination.total         = pag.total
       }
     } catch (error) {
-      // FIX #4 — abaikan error dari request yang sengaja dibatalkan
-      if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') return
       console.error('Gagal fetch users:', error)
       toast.error('Gagal memuat data user')
     } finally {
@@ -127,28 +112,15 @@ export const useUserStore = defineStore('userStore', () => {
 
   // ─────────────────────────────────────────────
   // SEARCH WITH DELAY
-  // FIX #1 — gunakan searchTimeout.value agar bisa di-clear dari onUnmounted
+  // Menerima val opsional; jika tidak ada, baca searchUsers langsung
   // ─────────────────────────────────────────────
   const searchWithDelay = (val) => {
-    if (searchTimeout.value) clearTimeout(searchTimeout.value)
+    clearTimeout(searchTimeout)
     if (val !== undefined) searchUsers.value = val
     pagination.current_page = 1
-    searchTimeout.value = setTimeout(() => {
+    searchTimeout = setTimeout(() => {
       fetchUsers(buildUrl())
     }, 500)
-  }
-
-  // FIX #1 — fungsi cleanup, dipanggil dari onUnmounted di view
-  const clearSearchTimeout = () => {
-    if (searchTimeout.value) {
-      clearTimeout(searchTimeout.value)
-      searchTimeout.value = null
-    }
-    // Juga batalkan request yang masih pending
-    if (abortController) {
-      abortController.abort()
-      abortController = null
-    }
   }
 
   // ─────────────────────────────────────────────
@@ -192,6 +164,7 @@ export const useUserStore = defineStore('userStore', () => {
 
   // ─────────────────────────────────────────────
   // FETCH OPTIONS FORM (role, division, group)
+  // Dipanggil sekali saat modal Add/Edit dibuka
   // ─────────────────────────────────────────────
   const fetchFormOptions = async () => {
     loadingOptions.value = true
@@ -252,16 +225,6 @@ export const useUserStore = defineStore('userStore', () => {
   }
 
   // ─────────────────────────────────────────────
-  // FIX #2 — clearFieldError: clear error hanya untuk field tertentu
-  // ─────────────────────────────────────────────
-  const clearFieldError = (field) => {
-    if (!errorUser.value) return
-    const updated = { ...errorUser.value }
-    delete updated[field]
-    errorUser.value = Object.keys(updated).length ? updated : null
-  }
-
-  // ─────────────────────────────────────────────
   // CREATE USER
   // ─────────────────────────────────────────────
   const saveUser = async (payload) => {
@@ -291,7 +254,7 @@ export const useUserStore = defineStore('userStore', () => {
     updatingUser.value = true
     errorUser.value    = null
     try {
-      const fd = buildFormData(payload, true)
+      const fd = buildFormData(payload, true)     // append _method: PUT
       await usersManagementServices.update(id, fd)
       await fetchUsers(buildUrl())
       return true
@@ -340,7 +303,7 @@ export const useUserStore = defineStore('userStore', () => {
   }
 
   // ─────────────────────────────────────────────
-  // FORMAT IMAGE URL
+  // FORMAT IMAGE URL — hanya path ke URL lengkap
   // ─────────────────────────────────────────────
   const formatImageUrl = (path) => {
     if (!path) return null
@@ -352,6 +315,7 @@ export const useUserStore = defineStore('userStore', () => {
 
   // ─────────────────────────────────────────────
   // GET IMAGE URL — dengan fallback avatar ui-avatars
+  // Dipakai di tabel dan form (mendukung null image)
   // ─────────────────────────────────────────────
   const getImageUrl = (image, fullname = 'User') => {
     if (!image || image === 'default.png') {
@@ -386,14 +350,12 @@ export const useUserStore = defineStore('userStore', () => {
     fetchUsers,
     buildUrl,
     searchWithDelay,
-    clearSearchTimeout,   // FIX #1 — expose untuk onUnmounted
     changePageSize,
     changeSorting,
     toggleSort,
     resetFilters,
     fetchFormOptions,
     fetchUserDetail,
-    clearFieldError,      // FIX #2 — expose per-field error clear
     saveUser,
     updateUser,
     deleteUser,
