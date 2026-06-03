@@ -1,4 +1,33 @@
 <script setup>
+import { ref, onMounted, onUnmounted, computed  } from 'vue'
+import AppModal from '@/components/AppModal.vue'
+import { useConfirm } from '@/composables/useConfirm'
+import { usePermissionStore } from '@/stores/permissionStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useRoute } from 'vue-router'
+import { useToast } from 'vue-toastification'
+
+const { confirm } = useConfirm()
+const permission = usePermissionStore()
+const route      = useRoute()
+const toast = useToast()
+const authStore = useAuthStore()
+
+
+// ── PERMISSIONS ────────────────────────────
+const currentUrl = computed(() => route.path.replace('/app', ''))
+const canCreate  = computed(() => permission.canCreate(currentUrl.value))
+const canUpdate  = computed(() => permission.canUpdate(currentUrl.value))
+const canDelete  = computed(() => permission.canDelete(currentUrl.value))
+const canView    = computed(() => permission.canView(currentUrl.value))
+
+
+const fullNameUser = computed(() =>
+  authStore.user?.fullname || 'User'
+)
+
+
+
 const stats = [
   {
     title: 'Target Bulanan',
@@ -71,7 +100,7 @@ const customers = [
 
       <div>
         <h1 class="page-title">
-          Welcome Back, Sales Joko 👋
+          Welcome Back, {{ fullNameUser }} 👋
         </h1>
 
         <p class="page-subtitle">

@@ -585,13 +585,13 @@ async function handleDelete(lead) {
             <td class="td-actions">
               <!-- Assign / Re-assign -->
              <button
-  v-if="canUpdate"
-  class="act-btn act-assign"
-  :title="lead.assigned_name ? 'Re-assign' : 'Assign'"
-  @click="openAssignModal(lead)"
->
-  <font-awesome-icon :icon="lead.assigned_name ? 'user-gear' : 'user-plus'" />
-</button>
+                v-if="canUpdate"
+                class="act-btn act-assign"
+                :title="lead.assigned_name ? 'Re-assign' : 'Assign'"
+                @click="openAssignModal(lead)"
+              >
+                <font-awesome-icon :icon="lead.assigned_name ? 'user-gear' : 'user-plus'" />
+              </button>
               
 
               <!-- Unassign -->

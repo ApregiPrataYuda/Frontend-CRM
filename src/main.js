@@ -146,7 +146,19 @@ import {
   faTag,
   faCheckDouble,
   faCirclePlus,
-  faUserMinus
+  faUserMinus,
+  faPeopleArrows,
+  faLocationArrow,
+  faPhoneVolume,
+  faRocket,
+  faBuildingUser,
+  faSackDollar,
+  faCloudArrowUp,
+  faSeedling,
+  faComments,
+  faCircleXmark,
+  faFileSignature,
+  faMinus
 } from '@fortawesome/free-solid-svg-icons'
 
 library.add(
@@ -280,7 +292,20 @@ library.add(
   faTag,
   faCheckDouble,
   faCirclePlus,
-  faUserMinus
+  faUserMinus,
+  faPeopleArrows,
+  faLocationArrow,
+  faPhoneVolume,
+  faRocket,
+  faBuildingUser,
+  faSackDollar,
+  faCloudArrowUp,
+  faSeedling,
+  faComments,
+  faCircleXmark,
+  faFileSignature,
+  faMinus
+
 )
 
 const app = createApp(App)

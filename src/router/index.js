@@ -295,6 +295,18 @@ const routes = [
         }
       },
 
+      {
+        path: 'sales-visit',
+        name: 'SalesVisit',
+
+        component: () =>
+          import('@/views/sales/visit/SalesVisitView.vue'),
+
+        meta: {
+          role: [2], title: 'Sales Visit Data'
+        }
+      },
+
 
 
       {
