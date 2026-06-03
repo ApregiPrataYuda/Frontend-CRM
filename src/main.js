@@ -158,7 +158,19 @@ import {
   faComments,
   faCircleXmark,
   faFileSignature,
-  faMinus
+  faMinus,
+  faTrophy,
+  faFilter,
+  faPenToSquare,
+  faTimeline,
+  faPersonChalkboard,
+  faCalendarPlus,
+  faBox,
+  faClipboardCheck
+
+
+
+
 } from '@fortawesome/free-solid-svg-icons'
 
 library.add(
@@ -304,7 +316,16 @@ library.add(
   faComments,
   faCircleXmark,
   faFileSignature,
-  faMinus
+  faMinus,
+  faTrophy,
+  faFilter,
+  faPenToSquare,
+  faTimeline,
+  faPersonChalkboard,
+  faCalendarPlus,
+  faBox,
+  faClipboardCheck
+
 
 )
 

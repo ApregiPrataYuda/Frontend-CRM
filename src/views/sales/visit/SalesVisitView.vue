@@ -588,7 +588,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           <span class="btn-label">Visit Customers</span>
           <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
         </button>
-        <button class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'sales-follow-up' })">
+        <button class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'SalesFollowUp' })">
           <font-awesome-icon icon="phone-volume" />
           <span class="btn-label">Follow Up</span>
           <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />

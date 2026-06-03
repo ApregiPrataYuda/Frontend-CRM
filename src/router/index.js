@@ -308,6 +308,19 @@ const routes = [
       },
 
 
+      {
+        path: 'sales-follow-up',
+        name: 'SalesFollowUp',
+
+        component: () =>
+          import('@/views/sales/followup/FollowUpManagementView.vue'),
+
+        meta: {
+          role: [2], title: 'Sales Follow Up'
+        }
+      },
+
+
 
       {
         path: 'reports-sales',
