@@ -261,7 +261,6 @@ const routes = [
 
       {
         path: 'sales-leads',
-
         name: 'SalesLeads',
 
         component: () =>
@@ -269,6 +268,30 @@ const routes = [
 
         meta: {
           role: [2], title: 'Leads Management'
+        }
+      },
+
+      {
+        path: 'data-master-leads-assign',
+        name: 'SalesLeadsAssign',
+
+        component: () =>
+          import('@/views/sales/leads/LeadsAssigntToSalesView.vue'),
+
+        meta: {
+          role: [2], title: 'Leads Assignment'
+        }
+      },
+
+      {
+        path: 'sales-customers',
+        name: 'SalesCustomers',
+
+        component: () =>
+          import('@/views/sales/customers/CustomersManagementView.vue'),
+
+        meta: {
+          role: [2], title: 'Customers Management'
         }
       },
 

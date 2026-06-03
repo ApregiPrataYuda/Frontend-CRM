@@ -301,7 +301,7 @@ const handleStoreBulk = async () => {
         </h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item">
-            <font-awesome-icon icon="house" /> Dashboard
+            <font-awesome-icon icon="house" /> Home
           </span>
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
           <span class="breadcrumb-item active">Leads Table</span>
@@ -559,7 +559,7 @@ const handleStoreBulk = async () => {
                 </button>
               </template>
               <button v-if="canView" class="act-btn act-info" title="Detail" @click="openDetailModal(lead.id)">
-                <font-awesome-icon icon="eye" />
+               <font-awesome-icon icon="circle-info" />
               </button>
             </td>
           </tr>
