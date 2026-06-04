@@ -686,9 +686,8 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           <!-- LOADING -->
           <tr v-if="loadingVisits">
             <td colspan="12" class="td-center">
-              <div class="spinner-wrap">
-                <div class="spinner"></div>
-                <span>Loading data...</span>
+              <div style="display:flex;justify-content:center;">
+                <div class="spinner-custom"></div>
               </div>
             </td>
           </tr>
@@ -696,8 +695,11 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           <!-- EMPTY -->
           <tr v-else-if="visitsData.length === 0">
             <td colspan="12" class="td-center">
-              <div style="font-size:2rem; margin-bottom:8px">📭</div>
-              <p>There is no visit data yet</p>
+             <div class="empty-state">
+                <img src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
+                  alt="No data" class="empty-img" />
+                <div class="empty-text">No data found</div>
+              </div>
             </td>
           </tr>
 
@@ -1879,6 +1881,13 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   .page-badges { width: 100%; justify-content: center; flex-wrap: wrap; }
   .page-badge { flex: 1; text-align: center; font-size: 0.7rem; }
 }
+
+/* ── SPINNER & EMPTY ── */
+.spinner-custom { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state { display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 8px; }
+.empty-img { max-width: 200px; height: auto; opacity: 0.85; }
+.empty-text { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); }
 
 /* ===== FORM STANDARD COMPONENTS ===== */
 .form-group { display: flex; flex-direction: column; gap: 6px; }

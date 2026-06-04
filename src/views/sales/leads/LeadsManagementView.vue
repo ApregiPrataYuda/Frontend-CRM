@@ -478,9 +478,8 @@ const handleStoreBulk = async () => {
           <!-- LOADING -->
           <tr v-if="loadingLeads">
             <td :colspan="mode === 'assigned' ? 9 : 8" class="td-center">
-              <div class="d-flex flex-column align-items-center gap-2">
-                <div class="spinner-border text-primary" role="status" style="width:1.5rem;height:1.5rem"></div>
-                <span class="text-muted" style="font-size:0.85rem">Loading data...</span>
+               <div style="display:flex;justify-content:center;">
+                <div class="spinner-custom"></div>
               </div>
             </td>
           </tr>
@@ -1153,6 +1152,13 @@ const handleStoreBulk = async () => {
 .perpage-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 .perpage-opt { padding: 5px 10px; border: 1px solid var(--border-main); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font-size: 0.82rem; cursor: pointer; }
 .perpage-opt.active { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 700; }
+
+
+.spinner-custom { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state { display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 8px; }
+.empty-img { max-width: 200px; height: auto; opacity: 0.85; }
+.empty-text { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); }
 
 /* ===== DATA TABLE ===== */
 .table-card { background: var(--bg-card); border-radius: 10px; box-shadow: 0 1px 3px var(--shadow-color); }

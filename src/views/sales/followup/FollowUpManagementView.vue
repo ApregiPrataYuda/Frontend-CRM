@@ -488,18 +488,24 @@ const handleDelete = async (item) => {
 // ══════════════════════════════════════════════
 //  VISIT FROM FOLLOW UP
 // ══════════════════════════════════════════════
+// const createVisitFromFollowUp = (item) => {
+//   if (!item.customer_id) {
+//     return toast.warning('Customer tidak ditemukan untuk follow up ini')
+//   }
+//   router.push({
+//     path : '/sales-visit-customers',
+//     query: {
+//       customer_id  : item.customer_id,
+//       company_name : item.target_name,
+//       from_followup: item.follow_up_code,
+//     },
+//   })
+// }
 const createVisitFromFollowUp = (item) => {
   if (!item.customer_id) {
     return toast.warning('Customer tidak ditemukan untuk follow up ini')
   }
-  router.push({
-    path : '/sales-visit-customers',
-    query: {
-      customer_id  : item.customer_id,
-      company_name : item.target_name,
-      from_followup: item.follow_up_code,
-    },
-  })
+  router.push('/app/sales-visit')
 }
 
 // ── RESET ──
@@ -683,7 +689,9 @@ const fuTypeIcon = (type) => {
         <tbody v-if="followUpStore.loadingFollowUp">
           <tr>
             <td colspan="10" class="td-center">
-              <font-awesome-icon icon="fa-solid fa-spinner" spin style="font-size:1.4rem; color:#6366f1" />
+              <div style="display:flex;justify-content:center;">
+                <div class="spinner-custom"></div>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -692,8 +700,11 @@ const fuTypeIcon = (type) => {
         <tbody v-else-if="!followUpStore.followUpData.length">
           <tr>
             <td colspan="10" class="td-center">
-              <font-awesome-icon icon="fa-solid fa-inbox" style="font-size:2rem; color:#cbd5e1; display:block; margin:0 auto 8px" />
-              <span style="color:var(--text-muted); font-size:0.85rem">Follow Up data tidak ditemukan</span>
+             <div class="empty-state">
+                <img src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
+                  alt="No data" class="empty-img" />
+                <div class="empty-text">No data found</div>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -895,7 +906,7 @@ const fuTypeIcon = (type) => {
           />
         </div>
         <div class="form-group">
-          <label>Subject <span class="req-label">*</span></label>
+          <label>Subject <span class="req-label"></span></label>
           <input v-model="formEdit.subject" class="form-input" placeholder="Tulis subject..." />
         </div>
         <div class="form-group">
@@ -1794,6 +1805,13 @@ const fuTypeIcon = (type) => {
 .mt-4 { margin-top: 20px; }
 .mb-2 { margin-bottom: 8px; }
 .me-1 { margin-right: 4px; }
+
+/* ── SPINNER & EMPTY ── */
+.spinner-custom { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state { display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 8px; }
+.empty-img { max-width: 200px; height: auto; opacity: 0.85; }
+.empty-text { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); }
 
 /* FADE TRANSITION */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }

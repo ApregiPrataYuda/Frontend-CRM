@@ -37,6 +37,13 @@ const routes = [
       import('@/views/home/HomeView.vue'),
   },
 
+   {
+    path: '/maps-tracking',
+    name: 'MapsTracking',
+    component: () =>
+      import('@/views/home/MapsTrackingView.vue'),
+  },
+
   /* ========================================
      GUEST ONLY
   ========================================= */
@@ -453,7 +460,7 @@ router.beforeEach((to, from) => {
   const sidebarStore = useSidebarStore()
   const permissionStore = usePermissionStore()
 
-  const publicPages = ['/login', '/register', '/forgot-password', '/home','/user-reset-password']
+  const publicPages = ['/login', '/register', '/forgot-password', '/home','/user-reset-password/', '/maps-tracking']
   const authRequired = !publicPages.includes(to.path)
 
   //  Belum login → /login

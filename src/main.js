@@ -167,6 +167,7 @@ import {
   faCalendarPlus,
   faBox,
   faClipboardCheck,
+  faUserTie
 
 
 
@@ -326,6 +327,7 @@ library.add(
   faCalendarPlus,
   faBox,
   faClipboardCheck,
+  faUserTie
 
 
 )
