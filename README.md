@@ -185,22 +185,55 @@ src/
 Create `.env` file:
 
 ```env
-VITE_API_URL=http://localhost:8000/api
+VITE_API_URL=http://localhost:8000/api/
 ```
 
 ---
 
 # 📸 Screenshots
 
+## Home Page
+![Login](./public/screenshot/home.png)
+
+## Maps tracking Page
+![Maps tracking Page](./public/screenshot/realtimetracking.png)
+
+## Dashboard For Company Public  Page
+![Dashboard Public](./public/screenshot/dashboardpublic.png)
+
+
+## Monitoring Page
+![Monitoring](./public/screenshot/monitoring.png)
+
+
+## Monitoring Page
+![activity feed](./public/screenshot/activityfeed.png)
+
 ## Login Page
+![Login](./public/screenshot/login.png)
 
 
-## CRM Dashboard
+## Register Page
+![Register](./public/screenshot/register.png)
+
+
+## Forgot PW Page
+![Forgot PW Page](./public/screenshot/forgotpw.png)
+
+
+## IT Page Account
+![IT Page Account](./public/screenshot/dashboardIT.png)
+
+## Sales Page Account
+![Sales Page Account](./public/screenshot/salespage.png)
+
+## manager Page Account
+![manager Page Account](./public/screenshot/managerpage.png)
 
 ## User Profile
+![Profile](./public/screenshot/profile.png)
 
-## Data Table
-
+## and many other features
 ---
 
 # 📌 Roadmap
