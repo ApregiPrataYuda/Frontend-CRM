@@ -421,7 +421,7 @@ async function handleSave() {
               </div>
             </div>
           </div>
-          <button class="btn-toolbar btn-purple" @click="openAddModal">
+          <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openAddModal">
             <font-awesome-icon icon="plus" /> Add Data
           </button>
         </div>
@@ -536,13 +536,13 @@ async function handleSave() {
             <td class="td-muted">{{ store.formatDate(item.created_at) }}</td>
             <td class="td-muted">{{ store.formatDate(item.updated_at) }}</td>
             <td class="td-actions">
-              <button class="act-btn act-edit"   title="Edit"   @click="openEditModal(item)">
+              <button v-if="canUpdate" class="act-btn act-edit"   title="Edit"   @click="openEditModal(item)">
                 <font-awesome-icon icon="pen-to-square" />
               </button>
-              <button class="act-btn act-delete" title="Hapus"  @click="openDeleteModal(item)">
+              <button v-if="canDelete" class="act-btn act-delete" title="Hapus"  @click="openDeleteModal(item)">
                 <font-awesome-icon icon="trash-can" />
               </button>
-              <button class="act-btn act-info"   title="Detail" @click="openDetailModal(item.id)">
+              <button v-if="canView" class="act-btn act-info"   title="Detail" @click="openDetailModal(item.id)">
                 <font-awesome-icon icon="circle-info" />
               </button>
             </td>

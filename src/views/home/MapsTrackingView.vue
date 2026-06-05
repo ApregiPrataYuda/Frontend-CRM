@@ -389,7 +389,7 @@ const legends = [
             <font-awesome-icon icon="chevron-down" class="btn-arrow" />
           </button>
           <div class="drop-menu drop-wide" :class="{ show: showDateFilter }">
-            <div class="drop-label">Filter Tanggal</div>
+            <div class="drop-label">Date Filter</div>
             <div class="date-range-row">
               <div class="form-group">
                 <label>From</label>
@@ -402,7 +402,7 @@ const legends = [
               </div>
             </div>
             <button class="btn-toolbar btn-purple w-100 mt-2" @click="fetchWithDate">
-              <font-awesome-icon icon="magnifying-glass" /> Terapkan
+              <font-awesome-icon icon="magnifying-glass" /> Apply
             </button>
           </div>
         </div>
@@ -485,7 +485,7 @@ const legends = [
         <div class="sidebar-header">
           <span v-if="!sidebarCollapsed" class="sidebar-title">
             <font-awesome-icon icon="list" />
-            Semua Kunjungan
+            All Visits
             <em class="sidebar-count">{{ filteredVisits.length }}</em>
           </span>
           <button class="collapse-btn" @click="sidebarCollapsed = !sidebarCollapsed">
@@ -495,7 +495,7 @@ const legends = [
 
         <template v-if="!sidebarCollapsed">
           <div class="sidebar-search">
-            <input v-model="search" type="text" placeholder="Cari sales / perusahaan..." class="search-input-map" />
+            <input v-model="search" type="text" placeholder="Search for sales / companies..." class="search-input-map" />
             <button class="search-btn-map"><font-awesome-icon icon="magnifying-glass" /></button>
           </div>
 
@@ -533,7 +533,7 @@ const legends = [
 
             <div class="empty-state" v-if="filteredVisits.length === 0">
               <font-awesome-icon icon="map-pin" class="empty-icon" />
-              <div>Tidak ada kunjungan</div>
+              <div>No visits found</div>
             </div>
           </div>
         </template>
@@ -551,9 +551,9 @@ const legends = [
 
         <div class="map-loading-overlay" v-else-if="store.errorMap">
           <font-awesome-icon icon="circle-exclamation" class="error-icon" />
-          <span>Gagal memuat data kunjungan</span>
+          <span>Failed to load visit data</span>
           <button class="btn-toolbar btn-purple" @click="store.fetchMapData()">
-            <font-awesome-icon icon="rotate-right" /> Coba Lagi
+            <font-awesome-icon icon="rotate-right" /> Try Again
           </button>
         </div>
 

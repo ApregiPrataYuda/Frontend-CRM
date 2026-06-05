@@ -1,19 +1,31 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter }   from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useToast }    from 'vue-toastification'
 import AppModal        from '@/components/AppModal.vue'
+
 
 import { useVisitDataStore }      from '@/stores/VisitSalesStore'
 import { useLeadsVisitStore }     from '@/stores/leadsVisitStore'
 import { useCustomersVisitStore } from '@/stores/customersVisitStore'
+import { usePermissionStore } from '@/stores/permissionStore'
 
-const router              = useRouter()
+const router = useRouter()
+const route  = useRoute()
 const toast               = useToast()
 const visitDataStore      = useVisitDataStore()
 const leadsVisitStore     = useLeadsVisitStore()
 const customersVisitStore = useCustomersVisitStore()
+const permission  = usePermissionStore()
+
+
+// ── PERMISSIONS ───────────────────────────────────────
+const currentUrl = computed(() => route.path.replace('/app', ''))
+const canCreate  = computed(() => permission.canCreate(currentUrl.value))
+const canUpdate  = computed(() => permission.canUpdate(currentUrl.value))
+const canDelete  = computed(() => permission.canDelete(currentUrl.value))
+const canView    = computed(() => permission.canView(currentUrl.value))
 
 // ── Store refs ──
 const {
@@ -577,23 +589,60 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 
     <!-- TOOLBAR — 3 Action Buttons -->
     <div class="toolbar-top">
-      <div class="toolbar-center">
-        <button class="btn-toolbar btn-purple" @click="openLeadForm">
+      <!-- <div class="toolbar-center">
+
+        <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openLeadForm">
           <font-awesome-icon icon="people-arrows" />
           <span class="btn-label">Visit Leads</span>
           <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
         </button>
-        <button class="btn-toolbar btn-purple" @click="openCustomerForm">
+
+        <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openCustomerForm">
           <font-awesome-icon icon="handshake" />
           <span class="btn-label">Visit Customers</span>
           <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
         </button>
-        <button class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'SalesFollowUp' })">
+
+        <button v-if="canCreate" class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'SalesFollowUp' })">
           <font-awesome-icon icon="phone-volume" />
           <span class="btn-label">Follow Up</span>
           <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
         </button>
-      </div>
+
+      </div> -->
+      <div class="toolbar-center">
+
+  <template v-if="canCreate">
+    <button class="btn-toolbar btn-purple" @click="openLeadForm">
+      <font-awesome-icon icon="people-arrows" />
+      <span class="btn-label">Visit Leads</span>
+      <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+    </button>
+
+    <button class="btn-toolbar btn-purple" @click="openCustomerForm">
+      <font-awesome-icon icon="handshake" />
+      <span class="btn-label">Visit Customers</span>
+      <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+    </button>
+
+    <button class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'SalesFollowUp' })">
+      <font-awesome-icon icon="phone-volume" />
+      <span class="btn-label">Follow Up</span>
+      <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+    </button>
+  </template>
+
+  <div v-else class="no-access-info">
+  
+    <div class="alert alert-danger" role="alert">
+        <font-awesome-icon icon="circle-info" />
+      Anda tidak memiliki akses untuk membuat data visit!
+    </div>
+  </div>
+
+  
+
+</div>
     </div>
 
     <!-- CONTROLS -->

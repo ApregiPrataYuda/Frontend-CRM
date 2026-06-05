@@ -553,16 +553,18 @@ const fuTypeIcon = (type) => {
 
         <!-- ADD BUTTONS sesuai mode -->
         <template v-if="followUpStore.mode === 'leads'">
-          <button class="btn-toolbar btn-purple" @click="openSubmitLeadModal({ id: null, follow_up_type: '', subject: '' })">
+
+          <!-- <button class="btn-toolbar btn-purple" @click="openSubmitLeadModal({ id: null, follow_up_type: '', subject: '' })">
             <font-awesome-icon icon="plus" /> Add Follow Up Lead
-          </button>
-          <button class="btn-toolbar btn-purple" @click="openDirectLeadModal">
-            <font-awesome-icon icon="plus" /> Direct Lead
+          </button> -->
+
+          <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openDirectLeadModal">
+            <font-awesome-icon icon="plus" /> Direct Lead Data
           </button>
         </template>
 
         <template v-if="followUpStore.mode === 'customers'">
-          <button class="btn-toolbar btn-purple" @click="openDirectCustomerModal">
+          <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openDirectCustomerModal">
             <font-awesome-icon icon="plus" /> Direct Customer
           </button>
         </template>
@@ -780,7 +782,7 @@ const fuTypeIcon = (type) => {
             <td class="td-actions">
               <!-- Edit (hanya PENDING) -->
               <button
-                v-if="item.status === 'PENDING'"
+                 v-if="canUpdate && item.status === 'PENDING'"
                 class="act-btn act-edit"
                 title="Reschedule"
                 @click="openEditModal(item)"
@@ -790,7 +792,7 @@ const fuTypeIcon = (type) => {
 
               <!-- Delete (hanya PENDING) -->
               <button
-                v-if="item.status === 'PENDING'"
+                 v-if="canDelete && item.status === 'PENDING'"
                 class="act-btn act-delete"
                 title="Hapus"
                 @click="handleDelete(item)"
@@ -804,7 +806,7 @@ const fuTypeIcon = (type) => {
               </span>
 
               <!-- Detail -->
-              <button class="act-btn act-info" title="Detail" @click="openDetailModal(item)">
+              <button v-if="canView" class="act-btn act-info" title="Detail" @click="openDetailModal(item)">
                 <font-awesome-icon icon="fa-eye" />
               </button>
 
