@@ -167,7 +167,20 @@ import {
   faCalendarPlus,
   faBox,
   faClipboardCheck,
-  faUserTie
+  faUserTie,
+  faAnglesRight,
+  faStopwatch,
+  faAnglesLeft,
+  faAngleRight,
+  faAngleLeft,
+  faCalendarDay,
+  faBriefcase,
+  faGaugeHigh,
+  faCloudArrowDown,
+  faCalendarCheck,
+  faRotateRight,
+
+
 
 
 
@@ -327,8 +340,18 @@ library.add(
   faCalendarPlus,
   faBox,
   faClipboardCheck,
-  faUserTie
-
+  faUserTie,
+  faAnglesRight,
+  faStopwatch,
+  faAnglesLeft,
+  faAngleRight,
+  faAngleLeft,
+  faCalendarDay,
+  faBriefcase,
+  faGaugeHigh,
+  faCloudArrowDown,
+  faCalendarCheck,
+    faRotateRight
 
 )
 

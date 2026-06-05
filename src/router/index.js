@@ -37,11 +37,32 @@ const routes = [
       import('@/views/home/HomeView.vue'),
   },
 
-   {
+  {
     path: '/maps-tracking',
     name: 'MapsTracking',
     component: () =>
       import('@/views/home/MapsTrackingView.vue'),
+  },
+
+  {
+    path: '/history/monitoring/sales/data',
+    name: 'DataVisitsAllData',
+    component: () =>
+      import('@/views/home/DataVisitsAllDataView.vue'),
+  },
+
+  {
+    path: '/dashboard/all-data',
+    name: 'DashboardHome',
+    component: () =>
+      import('@/views/home/DashboardHomeView.vue'),
+  },
+
+  {
+    path: '/activity/feed',
+    name: 'ActivityFeed',
+    component: () =>
+      import('@/views/home/ActivityFeedView.vue'),
   },
 
   /* ========================================
@@ -460,7 +481,7 @@ router.beforeEach((to, from) => {
   const sidebarStore = useSidebarStore()
   const permissionStore = usePermissionStore()
 
-  const publicPages = ['/login', '/register', '/forgot-password', '/home','/user-reset-password/', '/maps-tracking']
+  const publicPages = ['/login', '/register', '/forgot-password', '/home','/user-reset-password/', '/maps-tracking', '/history/monitoring/sales/data','/dashboard/all-data','/activity/feed']
   const authRequired = !publicPages.includes(to.path)
 
   //  Belum login → /login

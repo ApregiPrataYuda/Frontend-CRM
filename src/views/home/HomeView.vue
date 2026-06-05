@@ -97,7 +97,7 @@ onMounted(async () => {
     <nav class="lp-nav">
       <div class="lp-nav-inner">
         <div class="lp-brand">
-          <img src="/logo.png" alt="Logo" class="logo-img" />
+          <!-- <img src="/logo.png" alt="Logo" class="logo-img" /> -->
           <span class="lp-brand-name">PT. Duta Indomandiri</span>
         </div>
 
@@ -113,16 +113,20 @@ onMounted(async () => {
           <RouterLink to="/maps-tracking" class="lp-link">
             <font-awesome-icon icon="map-location-dot" /> Realtime Maps Activity
           </RouterLink>
-          
-          <a href="#" class="lp-link">
+
+           <RouterLink to="/history/monitoring/sales/data" class="lp-link">
             <font-awesome-icon icon="chart-bar" /> Visit & Monitoring
-          </a>
-          <a href="#" class="lp-link">
-            <font-awesome-icon icon="chart-bar" /> Dashboard
-          </a>
-          <a href="#" class="lp-link">
-            <font-awesome-icon icon="bell" /> Activity Feed
-          </a>
+          </RouterLink>
+          
+          <RouterLink to="/dashboard/all-data" class="lp-link">
+             <font-awesome-icon icon="chart-bar" /> Dashboard
+          </RouterLink>
+         
+          <RouterLink to="/activity/feed" class="lp-link">
+             <font-awesome-icon icon="bell" /> Activity Feed
+          </RouterLink>
+
+          
 
           <div class="lp-nav-right">
             <div class="lp-search">
