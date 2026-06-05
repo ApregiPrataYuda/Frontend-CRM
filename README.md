@@ -206,7 +206,7 @@ VITE_API_URL=http://localhost:8000/api/
 ![Monitoring](./public/screenshot/monitoring.png)
 
 
-## Monitoring Page
+## Activity Feed Page
 ![activity feed](./public/screenshot/activityfeed.png)
 
 ## Login Page
