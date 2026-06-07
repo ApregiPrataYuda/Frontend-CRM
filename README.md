@@ -117,7 +117,7 @@ git clone https://github.com/ApregiPrataYuda/Frontend-CRM
 Enter project folder:
 
 ```bash
-cd Template-siap-pakai-vue3-coreUI
+cd Frontend-CRM
 ```
 
 Install dependencies:
