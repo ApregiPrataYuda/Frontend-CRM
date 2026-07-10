@@ -393,6 +393,153 @@ const routes = [
         }
       },
 
+      {
+        path: 'manager-executive-summary-report',
+
+        name: 'managerExecutiveSummaryReport',
+
+        component: () =>
+          import('@/views/manager/executiveSummary/executiveSummaryView.vue'),
+
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
+        path: 'manager-sales-performance-report',
+
+        name: 'managerSalesPerformanceReport',
+
+        component: () =>
+          import('@/views/manager/salesPerformance/SalesPerformanceView.vue'),
+
+        meta: {
+          role: [3]
+        }
+      },
+
+
+      {
+        path: 'manager-follow-up-report',
+
+        name: 'managerFollowUpReport',
+
+        component: () =>
+          import('@/views/manager/followUp/FollowUpReportView.vue'),
+
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
+        path: 'manager-visit-report',
+
+        name: 'managerVisitReport',
+
+        component: () =>
+          import('@/views/manager/visits/VisitsView.vue'),
+
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
+        path: 'manager-sales-pipeline-report',
+
+        name: 'managerSalesPipelineReport',
+
+        component: () =>
+          import('@/views/manager/salesPipeline/SalesPipelineView.vue'),
+
+        meta: {
+          role: [3]
+        }
+      },
+      
+
+      {
+        path: 'manager-activity-report',
+
+        name: 'managerActivityReport',
+
+        component: () =>
+          import('@/views/manager/activity/activityView.vue'),
+
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
+        path: 'manager-customer-report',
+
+        name: 'Customer Analytics',
+
+        component: () =>
+          import('@/views/manager/customers/customersView.vue'),
+
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
+        path: 'manager-conversion-report',
+
+        name: 'Conversion Analytics',
+
+        component: () =>
+          import('@/views/manager/conversion/conversionView.vue'),
+
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
+        path: 'manager-lead-report',
+        name: 'Lead Analytics',
+        component: () =>
+          import('@/views/manager/lead/leadView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
+
+      {
+        path: 'manager-complaint-report',
+        name: 'Complaint Analytics',
+        component: () =>
+          import('@/views/manager/complaint/complaintView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
+        path: 'manager-potential-order-report',
+        name: 'Potential Order Analytics',
+        component: () =>
+          import('@/views/manager/potensialOrder/potensialOrderView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
+        path: 'manager-kpi-report',
+        name: 'KPI Analytics',
+        component: () =>
+          import('@/views/manager/kpi/kpiView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
       /* ========================================
          SHARED
       ========================================= */
