@@ -179,6 +179,8 @@ import {
   faCloudArrowDown,
   faCalendarCheck,
   faRotateRight,
+  faTableCells,
+  faIndustry
 
 
 
@@ -351,7 +353,9 @@ library.add(
   faGaugeHigh,
   faCloudArrowDown,
   faCalendarCheck,
-    faRotateRight
+  faRotateRight,
+  faTableCells,
+  faIndustry
 
 )
 

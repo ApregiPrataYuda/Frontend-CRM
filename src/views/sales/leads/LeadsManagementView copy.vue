@@ -46,77 +46,6 @@ const sortByLabel = computed(() =>
   sortByOptions.find(o => o.value === sort.value?.column)?.label ?? 'Created Date'
 )
 
-// ── VIEW MODE (CARD / TABLE) ──────────────────────────
-// Default: card. Preference disimpan di localStorage supaya tetap
-// diingat ketika user reload halaman.
-const VIEW_MODE_KEY = 'leads_view_mode'
-const viewMode = ref(localStorage.getItem(VIEW_MODE_KEY) || 'card')
-
-function setViewMode(m) {
-  viewMode.value = m
-  localStorage.setItem(VIEW_MODE_KEY, m)
-}
-
-// Palet warna avatar + helper inisial nama, dipakai di card view
-const avatarPalette = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6', '#8b5cf6']
-function getInitials(name) {
-  if (!name) return '?'
-  const parts = name.trim().split(/\s+/)
-  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase()
-}
-function getAvatarColor(name) {
-  if (!name) return avatarPalette[0]
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return avatarPalette[Math.abs(hash) % avatarPalette.length]
-}
-
-// ── VALIDASI NOMOR TELEPON (DINAMIS) ───────────────────
-// Mendukung berbagai format:
-//   - HP            : 08123456789, +6281234567890
-//   - Telepon kantor: 021-5551234, (021) 555-1234
-//   - Dengan ext.   : 021-5551234 ext 123, 0215551234 x45
-// Fungsi-fungsi ini dipakai bareng di form Add, Edit, dan Bulk Add.
-function sanitizePhoneValue(raw) {
-  return (raw ?? '').replace(/[^0-9+\-.\s()extEXTkKsS]/g, '')
-}
-function parsePhoneParts(raw) {
-  if (!raw) return { main: '', ext: null }
-  const extMatch = raw.match(/(?:ext\.?|ekst\.?|x)\s*([0-9]{1,6})\s*$/i)
-  if (extMatch) return { main: raw.slice(0, extMatch.index), ext: extMatch[1] }
-  return { main: raw, ext: null }
-}
-function getPhoneError(raw) {
-  if (!raw) return null
-  const { main, ext } = parsePhoneParts(raw)
-  const digitsOnly = main.replace(/[^0-9]/g, '')
-  if (digitsOnly.length < 7 || digitsOnly.length > 15) {
-    return 'Nomor telepon harus 7–15 digit angka (boleh pakai -, spasi, kurung, +).'
-  }
-  if (ext !== null && (ext.length < 1 || ext.length > 6)) {
-    return 'Nomor extension tidak valid, maksimal 6 digit.'
-  }
-  return null
-}
-function isPhoneValid(raw) {
-  return !!raw && !getPhoneError(raw)
-}
-
-const addPhoneTouched  = ref(false)
-const editPhoneTouched = ref(false)
-
-function onAddPhoneInput(e) {
-  formData.value.phone = sanitizePhoneValue(e.target.value)
-  addPhoneTouched.value = true
-}
-function onEditPhoneInput(e) {
-  editData.value.phone = sanitizePhoneValue(e.target.value)
-  editPhoneTouched.value = true
-}
-function onBulkPhoneInput(row, e) {
-  row.phone = sanitizePhoneValue(e.target.value)
-}
-
 // ── LIFECYCLE ──
 onMounted(async () => {
   leadsStore.fetchleads(leadsStore.buildUrl())
@@ -181,21 +110,14 @@ const defaultForm = {
 const formData = ref({ ...defaultForm })
 
 const resetForm = () => {
-  formData.value       = { ...defaultForm }
-  errorLeads.value     = null
-  addPhoneTouched.value = false
+  formData.value   = { ...defaultForm }
+  errorLeads.value = null
 }
 
 const openAddModal  = () => { resetForm(); isAddModalVisible.value = true }
 const closeAddModal = () => { isAddModalVisible.value = false; resetForm() }
 
 const handleStore = async () => {
-  addPhoneTouched.value = true
-  if (!isPhoneValid(formData.value.phone)) {
-    showToast('error', 'Nomor telepon tidak valid.')
-    return
-  }
-
   formLoading.value = true
   try {
     await leadsStore.storeLeads(formData.value)
@@ -221,9 +143,8 @@ const editLoading        = ref(false)
 const editData           = ref({ ...defaultForm })
 
 const openEditModal = (lead) => {
-  editId.value            = lead.id
-  errorLeads.value        = null
-  editPhoneTouched.value  = false
+  editId.value     = lead.id
+  errorLeads.value = null
   editData.value   = {
     company_name     : lead.company_name,
     contact_name     : lead.contact_name,
@@ -242,16 +163,9 @@ const closeEditModal = () => {
   isEditModalVisible.value = false
   editId.value             = null
   errorLeads.value         = null
-  editPhoneTouched.value   = false
 }
 
 const handleUpdate = async () => {
-  editPhoneTouched.value = true
-  if (!isPhoneValid(editData.value.phone)) {
-    showToast('error', 'Nomor telepon tidak valid.')
-    return
-  }
-
   editLoading.value = true
   try {
     await leadsStore.updateLeads(editId.value, editData.value)
@@ -483,26 +397,6 @@ const handleStoreBulk = async () => {
             </div>
           </div>
 
-          <!-- ═══ VIEW MODE TOGGLE (CARD / TABLE) ═══ -->
-          <div class="view-toggle">
-            <button
-              class="view-toggle-btn"
-              :class="{ active: viewMode === 'card' }"
-              title="Tampilan Card"
-              @click="setViewMode('card')"
-            >
-              <font-awesome-icon icon="table-cells" /> Card
-            </button>
-            <button
-              class="view-toggle-btn"
-              :class="{ active: viewMode === 'table' }"
-              title="Tampilan Tabel"
-              @click="setViewMode('table')"
-            >
-              <font-awesome-icon icon="list" /> Table
-            </button>
-          </div>
-
           <!-- ADD — hanya tampil di mode master -->
           <template v-if="mode === 'master'">
             <button  v-if="canCreate" class="btn-toolbar btn-purple" @click="openAddModal">
@@ -562,93 +456,9 @@ const handleStoreBulk = async () => {
       </div>
     </div>
 
-    <!-- ═══ CONTENT: CARD VIEW / TABLE VIEW ═══ -->
-    <div class="content-card flex-grow-1 overflow-auto mb-3">
-
-      <!-- LOADING (shared) -->
-      <div v-if="loadingLeads" class="state-wrap">
-        <div class="spinner-custom"></div>
-      </div>
-
-      <!-- EMPTY (shared) -->
-      <div v-else-if="leadsData.length === 0" class="state-wrap">
-        <div class="empty-state">
-          <img
-            src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
-            alt="No data found"
-            class="empty-img"
-          />
-          <div class="empty-text">No data found</div>
-        </div>
-      </div>
-
-      <!-- ═══ CARD VIEW (DEFAULT) ═══ -->
-      <div v-else-if="viewMode === 'card'" class="customer-grid">
-        <div v-for="lead in leadsData" :key="lead.id" class="customer-card">
-          <div class="cc-top">
-            <div class="cc-avatar" :style="{ background: getAvatarColor(lead.company_name) }">
-              {{ getInitials(lead.company_name) }}
-            </div>
-            <div class="cc-headinfo">
-              <div class="cc-name" :title="lead.company_name">{{ lead.company_name }}</div>
-              <div class="cc-code">{{ lead.industry_name ?? '-' }} · {{ lead.category_name ?? '-' }}</div>
-            </div>
-            <div class="cc-break"></div>
-            <span
-              class="badge text-white d-inline-flex align-items-center gap-1 cc-status"
-              :class="leadsStore.getStatusConfig(lead.lead_status).label"
-            >
-              <i :class="leadsStore.getStatusConfig(lead.lead_status).icon"></i>
-              {{ lead.lead_status }}
-            </span>
-          </div>
-
-          <div class="cc-body">
-            <div class="cc-row">
-              <font-awesome-icon icon="user" class="cc-icon" />
-              <span>{{ lead.contact_name ?? '-' }}</span>
-            </div>
-            <div class="cc-row">
-              <font-awesome-icon icon="envelope" class="cc-icon" />
-              <span>{{ lead.email ?? '-' }}</span>
-            </div>
-            <div class="cc-row">
-              <font-awesome-icon icon="phone" class="cc-icon" />
-              <span>{{ lead.phone ?? '-' }}</span>
-            </div>
-            <div v-if="mode === 'assigned'" class="cc-row">
-              <font-awesome-icon icon="user-check" class="cc-icon" />
-              <span>{{ lead.owner_name ?? '-' }} → {{ lead.assigned_name ?? '-' }}</span>
-            </div>
-          </div>
-
-          <div class="cc-tags">
-            <span class="badge bg-secondary text-white">{{ lead.lead_source }}</span>
-          </div>
-
-          <div class="cc-footer">
-            <span class="cc-date">
-              <font-awesome-icon icon="calendar" /> {{ leadsStore.formatDate(lead.created_at) }}
-            </span>
-            <div class="cc-actions">
-              <template v-if="mode === 'master'">
-                <button v-if="canUpdate" class="act-btn act-edit" title="Edit" @click="openEditModal(lead)">
-                  <font-awesome-icon icon="pen" />
-                </button>
-                <button v-if="canDelete" class="act-btn act-delete" title="Hapus" @click="handleDelete(lead)">
-                  <font-awesome-icon icon="trash-can" />
-                </button>
-              </template>
-              <button v-if="canView" class="act-btn act-info" title="Detail" @click="openDetailModal(lead.id)">
-                <font-awesome-icon icon="circle-info" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ TABLE VIEW ═══ -->
-      <table v-else class="data-table">
+    <!-- TABLE -->
+    <div class="table-card flex-grow-1 overflow-auto mb-3">
+      <table class="data-table">
         <thead>
           <tr>
             <th style="width:60px">No.</th>
@@ -659,11 +469,37 @@ const handleStoreBulk = async () => {
             <th>Lead Source</th>
             <th>Status Lead</th>
             <th v-if="mode === 'assigned'">Assigned By</th>
+            <th>Created</th>
             <th style="width:160px; text-align:center">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr
+
+          <!-- LOADING -->
+          <tr v-if="loadingLeads">
+            <td :colspan="mode === 'assigned' ? 9 : 8" class="td-center">
+               <div style="display:flex;justify-content:center;">
+                <div class="spinner-custom"></div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- EMPTY -->
+          <tr v-else-if="leadsData.length === 0">
+            <td :colspan="mode === 'assigned' ? 9 : 8" class="td-center">
+            <div class="empty-state">
+                <img
+                  src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
+                  alt="No data found"
+                  class="empty-img"
+                />
+                <div class="empty-text">No data found</div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- DATA ROWS -->
+          <tr v-else
             v-for="(lead, index) in leadsData"
             :key="lead.id"
             class="data-row"
@@ -708,7 +544,8 @@ const handleStoreBulk = async () => {
               <small class="td-muted">{{ lead.assigned_name ?? '-' }}</small>
             </td>
 
-            
+            <!-- Created -->
+            <td class="td-muted">{{ leadsStore.formatDate(lead.created_at) }}</td>
 
             <!-- Actions -->
             <td class="td-actions">
@@ -725,6 +562,7 @@ const handleStoreBulk = async () => {
               </button>
             </td>
           </tr>
+
         </tbody>
       </table>
     </div>
@@ -782,17 +620,9 @@ const handleStoreBulk = async () => {
           </div>
           <div class="col-6 form-group">
             <label>Phone <span style="color:#ef4444">*</span></label>
-            <input
-              :value="formData.phone"
-              type="tel"
-              class="form-input"
-              placeholder="08xxx / 021-xxx ext 123"
-              :class="{ 'is-invalid': getError('phone') || (addPhoneTouched && getPhoneError(formData.phone)) }"
-              @input="onAddPhoneInput"
-              @blur="addPhoneTouched = true"
-            />
+            <input v-model="formData.phone" class="form-input" placeholder="08xxxxxxxxxx"
+              :class="{ 'is-invalid': getError('phone') }" />
             <small v-if="getError('phone')" class="text-danger">{{ getError('phone') }}</small>
-            <small v-else-if="addPhoneTouched && getPhoneError(formData.phone)" class="text-danger">{{ getPhoneError(formData.phone) }}</small>
           </div>
         </div>
 
@@ -852,7 +682,7 @@ const handleStoreBulk = async () => {
 
       <template #footer>
         <button class="btn-cancel" @click="closeAddModal">Cancel</button>
-        <button class="btn-save" :disabled="formLoading || !isPhoneValid(formData.phone)" @click="handleStore">
+        <button class="btn-save" :disabled="formLoading" @click="handleStore">
           <span v-if="formLoading" class="spinner-border spinner-border-sm me-1"></span>
           <font-awesome-icon v-else icon="check" />
           {{ formLoading ? 'Saving...' : 'Save Data' }}
@@ -887,17 +717,9 @@ const handleStoreBulk = async () => {
           </div>
           <div class="col-6 form-group">
             <label>Phone <span style="color:#ef4444">*</span></label>
-            <input
-              :value="editData.phone"
-              type="tel"
-              class="form-input"
-              placeholder="08xxx / 021-xxx ext 123"
-              :class="{ 'is-invalid': getError('phone') || (editPhoneTouched && getPhoneError(editData.phone)) }"
-              @input="onEditPhoneInput"
-              @blur="editPhoneTouched = true"
-            />
+            <input v-model="editData.phone" class="form-input" placeholder="08xxxxxxxxxx"
+              :class="{ 'is-invalid': getError('phone') }" />
             <small v-if="getError('phone')" class="text-danger">{{ getError('phone') }}</small>
-            <small v-else-if="editPhoneTouched && getPhoneError(editData.phone)" class="text-danger">{{ getPhoneError(editData.phone) }}</small>
           </div>
         </div>
 
@@ -957,7 +779,7 @@ const handleStoreBulk = async () => {
 
       <template #footer>
         <button class="btn-cancel" @click="closeEditModal">Cancel</button>
-        <button class="btn-save" style="background:#f59e0b" :disabled="editLoading || !isPhoneValid(editData.phone)" @click="handleUpdate">
+        <button class="btn-save" style="background:#f59e0b" :disabled="editLoading" @click="handleUpdate">
           <span v-if="editLoading" class="spinner-border spinner-border-sm me-1"></span>
           <font-awesome-icon v-else icon="floppy-disk" />
           {{ editLoading ? 'Saving...' : 'Update' }}
@@ -1093,14 +915,7 @@ const handleStoreBulk = async () => {
 
               <div class="col-6 form-group">
                 <label>Phone</label>
-                <input
-                  :value="row.phone"
-                  type="tel"
-                  class="form-input"
-                  placeholder="08xxx / 021-xxx ext 123"
-                  @input="onBulkPhoneInput(row, $event)"
-                />
-                <small v-if="row.phone && getPhoneError(row.phone)" class="text-danger">{{ getPhoneError(row.phone) }}</small>
+                <input v-model="row.phone" class="form-input" placeholder="08xxxxxxxxxx" />
               </div>
 
               <div class="col-12 form-group">
@@ -1291,13 +1106,6 @@ const handleStoreBulk = async () => {
 .search-btn { padding: 7px 12px; background: #6366f1; color: #fff; border: none; cursor: pointer; }
 .sort-wrap { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
-/* ===== VIEW TOGGLE (CARD / TABLE) ===== */
-.view-toggle { display: flex; border: 1px solid var(--border-main); border-radius: 8px; overflow: hidden; background: var(--bg-input); }
-.view-toggle-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; background: transparent; border: none; color: var(--text-muted); font-size: 0.83rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; }
-.view-toggle-btn + .view-toggle-btn { border-left: 1px solid var(--border-main); }
-.view-toggle-btn:hover:not(.active) { color: #6366f1; }
-.view-toggle-btn.active { background: #6366f1; color: #fff; }
-
 .empty-state { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .empty-img   { width: 160px; opacity: 0.85; border-radius: 8px; }
 .empty-text  { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
@@ -1346,33 +1154,14 @@ const handleStoreBulk = async () => {
 .perpage-opt.active { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 700; }
 
 
-.state-wrap { display: flex; justify-content: center; padding: 40px 0; }
 .spinner-custom { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-/* ===== CONTENT WRAPPER (CARD / TABLE) ===== */
-.content-card { background: var(--bg-card); border-radius: 10px; box-shadow: 0 1px 3px var(--shadow-color); overflow: auto; }
-
-/* ===== CARD VIEW ===== */
-.customer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; padding: 16px; }
-.customer-card { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border-main); border-radius: 12px; background: var(--bg-card); padding: 14px; transition: all 0.18s ease; }
-.customer-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.08); border-color: #6366f1; transform: translateY(-2px); }
-.cc-top { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
-.cc-avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
-.cc-headinfo { flex: 1; min-width: 0; }
-.cc-name { font-weight: 700; font-size: 0.92rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cc-code { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
-.cc-status { flex-shrink: 0; }
-.cc-break { display: none; }
-.cc-body { display: flex; flex-direction: column; gap: 6px; }
-.cc-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cc-icon { color: var(--text-muted); width: 14px; flex-shrink: 0; }
-.cc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.cc-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px dashed var(--border-main); }
-.cc-date { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
-.cc-actions { display: flex; gap: 4px; }
+.empty-state { display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 8px; }
+.empty-img { max-width: 200px; height: auto; opacity: 0.85; }
+.empty-text { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); }
 
 /* ===== DATA TABLE ===== */
+.table-card { background: var(--bg-card); border-radius: 10px; box-shadow: 0 1px 3px var(--shadow-color); }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .data-table thead tr { background: var(--bg-input); border-bottom: 2px solid var(--border-main); position: sticky; top: 0; z-index: 2; }
 .data-table th { padding: 12px 18px; text-align: left; font-size: 0.75rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.07em; text-transform: uppercase; white-space: nowrap; }
@@ -1480,50 +1269,10 @@ const handleStoreBulk = async () => {
 .toast-leave-active { transition: all 0.2s ease-in; }
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-12px) scale(0.96); }
 
-/* ═══════════ RESPONSIVE / MOBILE ═══════════ */
-@media (max-width: 768px) {
-  .breadcrumb-card { padding: 12px 14px; }
-  .breadcrumb-title { font-size: 1rem; }
-
-  .toolbar-top { flex-direction: column; align-items: stretch; padding: 10px 12px; }
-  .toolbar-left { width: 100%; flex-direction: column; align-items: stretch; }
-  .mode-toggle { width: 100%; }
-  .mode-btn { flex: 1; justify-content: center; }
-  .toolbar-left .drop-wrap { width: 100%; }
-  .toolbar-left .btn-toolbar { width: 100%; justify-content: center; }
-  .toolbar-top > .btn-orange { width: 100%; justify-content: center; }
-  .drop-menu { left: 0; right: 0; min-width: 0; }
-
-  .controls-card { padding: 12px; }
-  .controls-row { flex-direction: column; align-items: stretch; gap: 10px; }
-  .controls-left, .controls-right { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
-  .showing-wrap { flex: 1 1 auto; }
-  .view-toggle { flex: 1 1 auto; }
-  .view-toggle-btn { flex: 1; justify-content: center; }
-  .controls-left > .btn-toolbar { flex: 1 1 100%; justify-content: center; }
-  .search-wrap { width: 100%; }
-  .search-input { width: 100%; }
-  .sort-wrap { width: 100%; }
-  .sort-wrap .drop-wrap { flex: 1; }
-  .sort-wrap .btn-select { width: 100%; justify-content: space-between; }
-}
-
 @media (max-width: 576px) {
-  .customer-grid { grid-template-columns: 1fr; padding: 10px; gap: 10px; }
-
-  /* Cegah nama company & status badge bertabrakan di kartu */
-  .customer-card { padding: 12px; gap: 8px; }
-  .cc-avatar { width: 38px; height: 38px; font-size: 0.78rem; }
-  .cc-name { white-space: normal; overflow: visible; text-overflow: unset; line-height: 1.3; font-size: 0.88rem; }
-  .cc-break { display: block; flex-basis: 100%; width: 0; height: 0; }
-  .cc-status { margin-left: 48px; }
-  .act-btn { width: 34px; height: 34px; }
-
-  .pagination-card { flex-direction: column; padding: 12px; gap: 12px; }
+  .pagination-card { flex-direction: column; padding: 12px; }
   .pagination-nav { width: 100%; justify-content: space-between; }
   .btn-prev-next { flex: 1; max-width: 48%; }
   .page-badges { width: 100%; justify-content: center; flex-wrap: wrap; }
-
-  .btn-cancel, .btn-save { width: 100%; justify-content: center; }
 }
 </style>

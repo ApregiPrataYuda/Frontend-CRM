@@ -27,72 +27,6 @@ const canUpdate  = computed(() => permission.canUpdate(currentUrl.value))
 const canDelete  = computed(() => permission.canDelete(currentUrl.value))
 const canView    = computed(() => permission.canView(currentUrl.value))
 
-// ── VIEW MODE (CARD / TABLE) ──────────────────────────
-// Default: card. Preference disimpan di localStorage supaya tetap
-// diingat ketika user reload halaman.
-const VIEW_MODE_KEY = 'customers_view_mode'
-const viewMode = ref(localStorage.getItem(VIEW_MODE_KEY) || 'card')
-
-function setViewMode(mode) {
-  viewMode.value = mode
-  localStorage.setItem(VIEW_MODE_KEY, mode)
-}
-
-// ── VALIDASI NOMOR TELEPON (DINAMIS) ───────────────────
-// Mendukung berbagai format:
-//   - HP            : 08123456789, +6281234567890
-//   - Telepon kantor: 021-5551234, (021) 555-1234
-//   - Dengan ext.   : 021-5551234 ext 123, 0215551234 x45
-// Karakter yang diizinkan saat mengetik: angka, +, -, ., spasi,
-// kurung, dan huruf e/x/t/k/s (untuk kata "ext"/"ekst"/"x").
-const phoneTouched = ref(false)
-
-function sanitizePhoneInput(e) {
-  const value = e.target.value.replace(/[^0-9+\-.\s()extEXTkKsS]/g, '')
-  formData.value.phone = value
-  phoneTouched.value = true
-}
-
-// Pisahkan bagian nomor utama dari extension (jika ada)
-function parsePhoneParts(raw) {
-  if (!raw) return { main: '', ext: null }
-  const extMatch = raw.match(/(?:ext\.?|ekst\.?|x)\s*([0-9]{1,6})\s*$/i)
-  if (extMatch) {
-    return { main: raw.slice(0, extMatch.index), ext: extMatch[1] }
-  }
-  return { main: raw, ext: null }
-}
-
-const phoneFormatError = computed(() => {
-  const phone = formData.value.phone
-  if (!phone) return null
-  const { main, ext } = parsePhoneParts(phone)
-  const digitsOnly = main.replace(/[^0-9]/g, '')
-  if (digitsOnly.length < 7 || digitsOnly.length > 15) {
-    return 'Nomor telepon harus 7–15 digit angka (boleh pakai -, spasi, kurung, +).'
-  }
-  if (ext !== null && (ext.length < 1 || ext.length > 6)) {
-    return 'Nomor extension tidak valid, maksimal 6 digit.'
-  }
-  return null
-})
-
-const isPhoneValid = computed(() => !!formData.value.phone && !phoneFormatError.value)
-
-// Palet warna avatar + helper inisial nama, dipakai di card view
-const avatarPalette = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6', '#8b5cf6']
-function getInitials(name) {
-  if (!name) return '?'
-  const parts = name.trim().split(/\s+/)
-  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase()
-}
-function getAvatarColor(name) {
-  if (!name) return avatarPalette[0]
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return avatarPalette[Math.abs(hash) % avatarPalette.length]
-}
-
 // ── LIFECYCLE ─────────────────────────────────────────
 onMounted(async () => {
   await store.fetchCustomers()
@@ -342,7 +276,6 @@ function resetSelectState() {
 function resetForm() {
   formData.value       = { ...defaultForm }
   errorCustomers.value = null
-  phoneTouched.value   = false
   resetSelectState()
 }
 
@@ -385,12 +318,6 @@ function closeAddModal() {
 }
 
 async function handleSave() {
-  phoneTouched.value = true
-  if (!isPhoneValid.value) {
-    showToast('error', 'Nomor telepon tidak valid.')
-    return
-  }
-
   formLoading.value         = true
   errorCustomers.value      = null
   formData.value.visibility = assignVisibility.value
@@ -494,27 +421,6 @@ async function handleSave() {
               </div>
             </div>
           </div>
-
-          <!-- ═══ VIEW MODE TOGGLE (CARD / TABLE) ═══ -->
-          <div class="view-toggle">
-            <button
-              class="view-toggle-btn"
-              :class="{ active: viewMode === 'card' }"
-              title="Tampilan Card"
-              @click="setViewMode('card')"
-            >
-              <font-awesome-icon icon="table-cells" /> Card
-            </button>
-            <button
-              class="view-toggle-btn"
-              :class="{ active: viewMode === 'table' }"
-              title="Tampilan Tabel"
-              @click="setViewMode('table')"
-            >
-              <font-awesome-icon icon="list" /> Table
-            </button>
-          </div>
-
           <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openAddModal">
             <font-awesome-icon icon="plus" /> Add Data
           </button>
@@ -567,85 +473,9 @@ async function handleSave() {
       </div>
     </div>
 
-    <!-- ═══ CONTENT: CARD VIEW / TABLE VIEW ═══ -->
-    <div class="content-card flex-grow-1 overflow-auto mb-3">
-
-      <!-- LOADING (shared) -->
-      <div v-if="store.loadingCustomers" class="state-wrap">
-        <div class="spinner-custom"></div>
-      </div>
-
-      <!-- EMPTY (shared) -->
-      <div v-else-if="!store.customersData.length" class="state-wrap">
-        <div class="empty-state">
-          <img src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
-            alt="No data" class="empty-img" />
-          <div class="empty-text">No data found</div>
-        </div>
-      </div>
-
-      <!-- ═══ CARD VIEW (DEFAULT) ═══ -->
-      <div v-else-if="viewMode === 'card'" class="customer-grid">
-        <div v-for="item in store.customersData" :key="item.id" class="customer-card">
-          <div class="cc-top">
-            <div class="cc-avatar" :style="{ background: getAvatarColor(item.company_name) }">
-              {{ getInitials(item.company_name) }}
-            </div>
-            <div class="cc-headinfo">
-              <div class="cc-name" :title="item.company_name">{{ item.company_name }}</div>
-              <div class="cc-code">{{ item.customer_code }}</div>
-            </div>
-            <div class="cc-break"></div>
-            <span class="status-badge cc-status" :class="store.getStatusConfig(item.customer_status).label">
-              {{ item.customer_status ?? '-' }}
-            </span>
-          </div>
-
-          <div class="cc-body">
-            <div class="cc-row">
-              <font-awesome-icon icon="user" class="cc-icon" />
-              <span>{{ item.contact_name ?? '-' }}</span>
-            </div>
-            <div class="cc-row">
-              <font-awesome-icon icon="envelope" class="cc-icon" />
-              <span>{{ item.email ?? '-' }}</span>
-            </div>
-            <div class="cc-row">
-              <font-awesome-icon icon="phone" class="cc-icon" />
-              <span>{{ item.phone ?? '-' }}</span>
-            </div>
-            <div class="cc-row">
-              <font-awesome-icon icon="industry" class="cc-icon" />
-              <span>{{ item.industry_name ?? '-' }}</span>
-            </div>
-          </div>
-
-          <div class="cc-tags">
-            <span class="badge-lead-source">{{ item.lead_source ?? '-' }}</span>
-            <span v-if="item.lead_category_name" class="detail-badge">{{ item.lead_category_name }}</span>
-          </div>
-
-          <div class="cc-footer">
-            <span class="cc-date">
-              <font-awesome-icon icon="calendar" /> {{ store.formatDate(item.created_at) }}
-            </span>
-            <div class="cc-actions">
-              <button v-if="canUpdate" class="act-btn act-edit"   title="Edit"   @click="openEditModal(item)">
-                <font-awesome-icon icon="pen-to-square" />
-              </button>
-              <button v-if="canDelete" class="act-btn act-delete" title="Hapus"  @click="openDeleteModal(item)">
-                <font-awesome-icon icon="trash-can" />
-              </button>
-              <button v-if="canView" class="act-btn act-info"   title="Detail" @click="openDetailModal(item.id)">
-                <font-awesome-icon icon="circle-info" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ TABLE VIEW ═══ -->
-      <table v-else class="data-table">
+    <!-- ═══ TABLE ═══ -->
+    <div class="table-card flex-grow-1 overflow-auto mb-3">
+      <table class="data-table">
         <thead>
           <tr>
             <th style="width:60px">NO.</th>
@@ -655,11 +485,30 @@ async function handleSave() {
             <th>Email / Phone</th>
             <th>Lead Info</th>
             <th>Status</th>
+            <th>Converted</th>
+            <th style="width:160px">CREATED</th>
+            <th style="width:160px">UPDATED</th>
             <th style="width:130px; text-align:center">ACTIONS</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(item, index) in store.customersData" :key="item.id" class="data-row">
+          <tr v-if="store.loadingCustomers">
+            <td colspan="11" class="td-center">
+              <div style="display:flex;justify-content:center;">
+                <div class="spinner-custom"></div>
+              </div>
+            </td>
+          </tr>
+          <tr v-else-if="!store.customersData.length">
+            <td colspan="11" class="td-center">
+              <div class="empty-state">
+                <img src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
+                  alt="No data" class="empty-img" />
+                <div class="empty-text">No data found</div>
+              </div>
+            </td>
+          </tr>
+          <tr v-else v-for="(item, index) in store.customersData" :key="item.id" class="data-row">
             <td class="td-no">
               {{ (store.pagination.current_page - 1) * store.pagination.per_page + index + 1 }}.
             </td>
@@ -683,7 +532,9 @@ async function handleSave() {
                 {{ item.customer_status ?? '-' }}
               </span>
             </td>
-           
+            <td class="td-muted">{{ store.formatDate(item.converted_at) }}</td>
+            <td class="td-muted">{{ store.formatDate(item.created_at) }}</td>
+            <td class="td-muted">{{ store.formatDate(item.updated_at) }}</td>
             <td class="td-actions">
               <button v-if="canUpdate" class="act-btn act-edit"   title="Edit"   @click="openEditModal(item)">
                 <font-awesome-icon icon="pen-to-square" />
@@ -747,17 +598,10 @@ async function handleSave() {
           </div>
           <div class="form-group">
             <label>Phone <span class="required">*</span></label>
-            <input
-              :value="formData.phone"
-              type="tel"
-              class="form-input"
-              :class="{ 'input-error': getError('phone') || (phoneTouched && phoneFormatError) }"
-              placeholder="08xxxxxxxxxx / 021-xxxxxxx ext 123"
-              @input="sanitizePhoneInput"
-              @blur="phoneTouched = true"
-            />
+            <input v-model="formData.phone" class="form-input"
+              :class="{ 'input-error': getError('phone') }"
+              placeholder="08xxxxxxxxxx" />
             <span v-if="getError('phone')" class="form-error">{{ getError('phone') }}</span>
-            <span v-else-if="phoneTouched && phoneFormatError" class="form-error">{{ phoneFormatError }}</span>
           </div>
         </div>
 
@@ -924,7 +768,7 @@ async function handleSave() {
         <button
           class="btn-save"
           :class="{ 'btn-save-edit': isEdit }"
-          :disabled="formLoading || savingCustomers || updatingCustomers || !isPhoneValid"
+          :disabled="formLoading || savingCustomers || updatingCustomers"
           @click="handleSave"
         >
           <font-awesome-icon v-if="formLoading || savingCustomers || updatingCustomers" icon="spinner" spin />
@@ -1065,7 +909,6 @@ async function handleSave() {
 .btn-arrow { font-size: 0.6rem; opacity: 0.7; }
 
 /* ── SPINNER & EMPTY ── */
-.state-wrap { display: flex; justify-content: center; padding: 40px 0; }
 .spinner-custom { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 8px; }
@@ -1086,13 +929,6 @@ async function handleSave() {
 .search-btn:hover { background: #4f46e5; }
 .sort-wrap { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
-/* ── VIEW TOGGLE (CARD / TABLE) ── */
-.view-toggle { display: flex; border: 1px solid var(--border-main); border-radius: 8px; overflow: hidden; background: var(--bg-input); }
-.view-toggle-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; background: transparent; border: none; color: var(--text-muted); font-size: 0.83rem; font-weight: 600; cursor: pointer; transition: all 0.15s ease; white-space: nowrap; }
-.view-toggle-btn + .view-toggle-btn { border-left: 1px solid var(--border-main); }
-.view-toggle-btn:hover:not(.active) { color: #6366f1; }
-.view-toggle-btn.active { background: #6366f1; color: #fff; }
-
 /* ── DROPDOWN TOOLBAR ── */
 .drop-wrap { position: relative; }
 .btn-select { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border-main); border-radius: 7px; font-size: 0.83rem; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
@@ -1109,29 +945,8 @@ async function handleSave() {
 .perpage-opt:hover { border-color: #6366f1; color: #6366f1; }
 .perpage-opt.active { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 700; }
 
-/* ── CONTENT WRAPPER (CARD / TABLE) ── */
-.content-card { background: var(--bg-card); border-radius: 10px; box-shadow: 0 1px 3px var(--shadow-color); overflow: auto; }
-
-/* ── CARD VIEW ── */
-.customer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; padding: 16px; }
-.customer-card { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border-main); border-radius: 12px; background: var(--bg-card); padding: 14px; transition: all 0.18s ease; }
-.customer-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.08); border-color: #6366f1; transform: translateY(-2px); }
-.cc-top { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
-.cc-avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
-.cc-headinfo { flex: 1; min-width: 0; }
-.cc-name { font-weight: 700; font-size: 0.92rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cc-code { font-family: monospace; font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
-.cc-status { flex-shrink: 0; }
-.cc-break { display: none; }
-.cc-body { display: flex; flex-direction: column; gap: 6px; }
-.cc-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cc-icon { color: var(--text-muted); width: 14px; flex-shrink: 0; }
-.cc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.cc-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px dashed var(--border-main); }
-.cc-date { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
-.cc-actions { display: flex; gap: 4px; }
-
-/* ── TABLE VIEW ── */
+/* ── TABLE ── */
+.table-card { background: var(--bg-card); border-radius: 10px; box-shadow: 0 1px 3px var(--shadow-color); overflow: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .data-table thead tr { background: var(--bg-input); border-bottom: 2px solid var(--border-main); position: sticky; top: 0; z-index: 2; }
 .data-table th { padding: 12px 18px; text-align: left; font-size: 0.75rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.07em; text-transform: uppercase; white-space: nowrap; }
@@ -1143,6 +958,7 @@ async function handleSave() {
 .td-name { font-weight: 500; }
 .td-muted { color: var(--text-muted); font-size: 0.84rem; }
 .td-sub { color: var(--text-muted); font-size: 0.78rem; margin-top: 2px; }
+.td-center { text-align: center; padding: 40px; color: var(--text-muted); }
 .td-actions { text-align: center; white-space: nowrap; }
 .mono-text { font-family: monospace; font-size: 0.82rem; }
 .fw-bold { font-weight: 700; }
@@ -1286,55 +1102,12 @@ async function handleSave() {
 .toast-enter-from { opacity: 0; transform: translateY(-16px) scale(0.95); }
 .toast-leave-to { opacity: 0; transform: translateY(-8px) scale(0.97); }
 
-@media (max-width: 768px) {
-  /* ── BREADCRUMB ── */
-  .breadcrumb-card { padding: 12px 14px; }
-  .breadcrumb-title { font-size: 1rem; }
-
-  /* ── TOOLBAR TOP ── */
-  .toolbar-top { flex-direction: column; align-items: stretch; padding: 10px 12px; }
-  .toolbar-left { width: 100%; }
-  .toolbar-left .drop-wrap { flex: 1; }
-  .toolbar-left .btn-toolbar { width: 100%; justify-content: center; }
-  .toolbar-top > .btn-orange { width: 100%; justify-content: center; }
-  .drop-menu { left: 0; right: 0; min-width: 0; }
-
-  /* ── CONTROLS ROW ── */
-  .controls-card { padding: 12px; }
-  .controls-row { flex-direction: column; align-items: stretch; gap: 10px; }
-  .controls-left, .controls-right { width: 100%; justify-content: flex-start; }
-  .controls-left { flex-wrap: wrap; }
-  .showing-wrap { flex: 1 1 auto; }
-  .view-toggle { flex: 1 1 auto; }
-  .view-toggle-btn { flex: 1; justify-content: center; }
-  .controls-left > .btn-toolbar { width: 100%; justify-content: center; order: 3; }
-  .search-wrap { width: 100%; }
-  .search-input { width: 100%; }
-  .sort-wrap { width: 100%; }
-  .sort-wrap .drop-wrap { flex: 1; }
-  .sort-wrap .btn-select { width: 100%; justify-content: space-between; }
-}
-
 @media (max-width: 576px) {
-  .customer-grid { grid-template-columns: 1fr; padding: 10px; gap: 10px; }
-
-  /* ── CARD: cegah nama & status badge bertabrakan ── */
-  .customer-card { padding: 12px; gap: 8px; }
-  .cc-avatar { width: 38px; height: 38px; font-size: 0.78rem; }
-  .cc-name { white-space: normal; overflow: visible; text-overflow: unset; line-height: 1.3; font-size: 0.88rem; }
-  .cc-status { flex-basis: auto; margin-left: 48px; }
-  .cc-break { display: block; flex-basis: 100%; width: 0; height: 0; }
-  .cc-row { white-space: normal; }
-  .act-btn { width: 34px; height: 34px; }
-
   .pagination-card { flex-direction: column; padding: 12px; gap: 12px; }
   .pagination-nav { width: 100%; justify-content: space-between; }
   .btn-prev-next { flex: 1; max-width: 48%; padding: 10px 14px; }
   .page-badges { width: 100%; justify-content: center; flex-wrap: wrap; }
   .page-badge { flex: 1; text-align: center; font-size: 0.7rem; }
   .form-row-2 { grid-template-columns: 1fr; }
-
-  /* ── MODAL FOOTER: tombol full width bertumpuk ── */
-  .btn-cancel, .btn-save { width: 100%; justify-content: center; }
 }
 </style>
