@@ -35,9 +35,6 @@ const showSortByMenu  = ref(false)
 const showSortDirMenu = ref(false)
 const showModeMenu    = ref(false)
 
-// ── VIEW MODE (Card / Table) ──
-const viewMode = ref('card') // default: card
-
 // ── DATETIME HELPERS ──
 // native input pakai format "YYYY-MM-DDTHH:mm", backend expect "YYYY-MM-DD HH:mm"
 const toNative = (val) => {
@@ -624,24 +621,6 @@ const fuTypeIcon = (type) => {
               </div>
             </div>
           </div>
-
-          <!-- TOGGLE CARD / TABLE -->
-          <div class="view-toggle-wrap">
-            <button
-              class="view-toggle-btn"
-              :class="{ active: viewMode === 'card' }"
-              @click="viewMode = 'card'"
-            >
-              <font-awesome-icon icon="fa-solid fa-table-cells" /> Card
-            </button>
-            <button
-              class="view-toggle-btn"
-              :class="{ active: viewMode === 'table' }"
-              @click="viewMode = 'table'"
-            >
-              <font-awesome-icon icon="fa-solid fa-list" /> Table
-            </button>
-          </div>
         </div>
 
         <div class="controls-right">
@@ -690,10 +669,8 @@ const fuTypeIcon = (type) => {
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════
-         TABLE VIEW (kode existing, tidak diubah, hanya dibungkus v-if)
-    ══════════════════════════════════════════ -->
-    <div v-if="viewMode === 'table'" class="table-card flex-grow-1 overflow-auto mb-3">
+    <!-- TABLE -->
+    <div class="table-card flex-grow-1 overflow-auto mb-3">
       <table class="data-table">
         <thead>
           <tr>
@@ -881,165 +858,6 @@ const fuTypeIcon = (type) => {
           </tr>
         </tbody>
       </table>
-    </div>
-
-    <!-- ══════════════════════════════════════════
-         CARD VIEW (baru) — default tampilan
-    ══════════════════════════════════════════ -->
-    <div v-else class="card-view flex-grow-1 overflow-auto mb-3">
-
-      <!-- LOADING -->
-      <div v-if="followUpStore.loadingFollowUp" class="td-center">
-        <div class="spinner-custom" style="margin:40px auto"></div>
-      </div>
-
-      <!-- EMPTY -->
-      <div v-else-if="!followUpStore.followUpData.length" class="empty-state">
-        <img src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
-          alt="No data" class="empty-img" />
-        <div class="empty-text">No data found</div>
-      </div>
-
-      <!-- CARDS -->
-      <div v-else class="card-grid">
-        <div
-          v-for="item in followUpStore.followUpData"
-          :key="item.id"
-          class="fu-card"
-          :class="{ 'card-overdue': item.is_overdue }"
-        >
-          <!-- HEADER -->
-          <div class="fu-card-header">
-            <span class="code-badge">{{ item.follow_up_code }}</span>
-            <span class="status-badge"
-              :class="item.computed_status === 'OVERDUE' ? 'status-danger'
-                : item.status === 'PENDING' ? 'status-warning' : 'status-success'">
-              {{ item.computed_status }}
-            </span>
-          </div>
-
-          <!-- BODY -->
-          <div class="fu-card-body">
-            <div class="fu-card-row">
-              <span class="type-pill">
-                <font-awesome-icon :icon="fuTypeIcon(item.follow_up_type)" />
-                {{ item.follow_up_type }}
-              </span>
-              <span v-if="showVisitColumn" class="status-badge"
-                :class="StatusConfigFromLeads[normalizeStatus(item.lead_status)]?.class || 'status-secondary'">
-                <font-awesome-icon
-                  :icon="StatusConfigFromLeads[normalizeStatus(item.lead_status)]?.icon || 'fa-solid fa-circle-info'"
-                />
-                {{ item.lead_status }}
-              </span>
-            </div>
-
-            <div class="fu-card-subject">{{ item.subject }}</div>
-
-            <div class="fu-card-target">
-              <font-awesome-icon icon="fa-solid fa-building" />
-              <div>
-                <div class="fw-600">{{ item.target_name }}</div>
-                <div class="td-muted">{{ item.target_source }}</div>
-              </div>
-            </div>
-
-            <div class="fu-card-dates">
-              <div>
-                <span class="detail-label">Dibuat</span>
-                <div class="td-muted">{{ followUpStore.formatDate(item.created_at) }}</div>
-              </div>
-              <div>
-                <span class="detail-label">Est. Follow Up</span>
-                <div :class="item.is_overdue ? 'text-danger fw-600' : ''">
-                  {{ followUpStore.formatDate(item.follow_up_at) }}
-                </div>
-                <div v-if="item.is_overdue" class="overdue-hint">
-                  <font-awesome-icon icon="fa-bell" /> Overdue
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- FOOTER / ACTIONS -->
-          <div class="fu-card-footer">
-            <!-- Edit (hanya PENDING) -->
-            <button
-              v-if="canUpdate && item.status === 'PENDING'"
-              class="act-btn act-edit"
-              title="Reschedule"
-              @click="openEditModal(item)"
-            >
-              <font-awesome-icon icon="fa-pen-to-square" />
-            </button>
-
-            <!-- Delete (hanya PENDING) -->
-            <button
-              v-if="canDelete && item.status === 'PENDING'"
-              class="act-btn act-delete"
-              title="Hapus"
-              @click="handleDelete(item)"
-            >
-              <font-awesome-icon icon="fa-trash-can" />
-            </button>
-
-            <!-- Done badge -->
-            <span v-if="!['PENDING'].includes(item.status)" class="status-badge status-success me-1">
-              {{ item.status }}
-            </span>
-
-            <!-- Detail -->
-            <button v-if="canView" class="act-btn act-info" title="Detail" @click="openDetailModal(item)">
-              <font-awesome-icon icon="fa-eye" />
-            </button>
-
-            <!-- Timeline Lead -->
-            <button
-              v-if="showVisitColumn"
-              class="act-btn act-timeline"
-              title="Timeline Lead"
-              @click="openTimelineLeadModal(item)"
-            >
-              <font-awesome-icon icon="fa-timeline" />
-            </button>
-
-            <!-- Timeline Customer -->
-            <button
-              v-if="!showVisitColumn"
-              class="act-btn act-timeline"
-              title="Timeline Customer"
-              @click="openTimelineCustomerModal(item)"
-            >
-              <font-awesome-icon icon="fa-timeline" />
-            </button>
-
-            <!-- Action dropdown (customer mode) -->
-            <div class="act-dropdown" v-if="showActionColumn && isActionable(item)">
-              <button class="act-btn act-more" title="Action">
-                <font-awesome-icon icon="fa-solid fa-person-chalkboard" />
-              </button>
-              <div class="act-dropdown-menu">
-                <button class="act-dropdown-item" @click="createVisitFromFollowUp(item)">
-                  <font-awesome-icon icon="fa-solid fa-location-dot" /> Visit Customer
-                </button>
-                <button class="act-dropdown-item" @click="openSubmitCustomerModal(item)">
-                  <font-awesome-icon icon="fa-solid fa-check" /> Submit Result
-                </button>
-              </div>
-            </div>
-
-            <!-- Submit result lead -->
-            <button
-              v-if="showVisitColumn && item.status === 'PENDING'"
-              class="act-btn act-submit"
-              title="Submit Result"
-              @click="openSubmitLeadModal(item)"
-            >
-              <font-awesome-icon icon="fa-solid fa-paper-plane" />
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- PAGINATION -->
@@ -1839,12 +1657,6 @@ const fuTypeIcon = (type) => {
 .perpage-opt { padding: 5px 10px; border: 1px solid var(--border-main); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font-size: 0.82rem; cursor: pointer; }
 .perpage-opt.active { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 700; }
 
-/* VIEW TOGGLE (Card / Table) */
-.view-toggle-wrap { display: flex; gap: 4px; padding: 3px; background: var(--bg-input); border: 1px solid var(--border-main); border-radius: 8px; }
-.view-toggle-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: none; border-radius: 6px; background: transparent; color: var(--text-muted); font-size: 0.83rem; font-weight: 600; cursor: pointer; transition: all 0.18s; white-space: nowrap; }
-.view-toggle-btn.active { background: #6366f1; color: #fff; }
-.view-toggle-btn:hover:not(.active) { color: #6366f1; }
-
 /* TABLE */
 .table-card { background: var(--bg-card); border-radius: 10px; box-shadow: 0 1px 3px var(--shadow-color); overflow: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
@@ -2007,41 +1819,11 @@ const fuTypeIcon = (type) => {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-/* ══════════════════════════════════════════
-   CARD VIEW (baru)
-══════════════════════════════════════════ */
-.card-view { background: transparent; }
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 14px;
-}
-.fu-card {
-  background: var(--bg-card);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px var(--shadow-color);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  transition: box-shadow 0.18s;
-}
-.fu-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
-.card-overdue { border-left: 3px solid #ef4444; background: rgba(239,68,68,0.03); }
-.fu-card-header { display: flex; justify-content: space-between; align-items: center; }
-.fu-card-body { display: flex; flex-direction: column; gap: 8px; }
-.fu-card-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
-.fu-card-subject { font-weight: 600; font-size: 0.92rem; color: var(--text-primary); line-height: 1.4; }
-.fu-card-target { display: flex; align-items: flex-start; gap: 8px; color: var(--text-muted); font-size: 0.85rem; }
-.fu-card-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 8px; border-top: 1px dashed var(--border-main); font-size: 0.8rem; }
-.fu-card-footer { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--border-main); }
-
 /* RESPONSIVE */
 @media (max-width: 768px) {
   .form-row-2 { grid-template-columns: 1fr; }
   .detail-grid { grid-template-columns: 1fr; }
   .pagination-card { flex-direction: column; }
-  .card-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 576px) {
   .pagination-nav { width: 100%; justify-content: space-between; }
