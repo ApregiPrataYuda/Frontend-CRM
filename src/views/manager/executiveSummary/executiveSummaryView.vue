@@ -6,289 +6,246 @@
       <div>
         <h2 class="fw-bold mb-1">Dashboard Manager Sales</h2>
         <p class="text-secondary mb-0">
-          {{ dashboard.period.start_date }}
-          -
-          {{ dashboard.period.end_date }}
+          {{ periodText }}
         </p>
       </div>
 
-      <button class="btn btn-primary">
-        <i class="ti ti-refresh me-2"></i>
-        Refresh
+      <button class="btn btn-primary" :disabled="loading" @click="refresh">
+        <i class="ti ti-refresh me-2" :class="{ 'spin-icon': loading }"></i>
+        {{ loading ? 'Memuat...' : 'Refresh' }}
       </button>
     </div>
 
-    <!-- ================= SUMMARY ================= -->
-
-    <div class="row g-4">
-
-      <!-- Lead -->
-      <div class="col-xl-3 col-lg-6">
-        <div class="summary-card card-lead">
-
-          <div class="summary-icon">
-            <i class="ti ti-target-arrow"></i>
-          </div>
-
-          <div class="summary-content">
-            <small>Total Lead</small>
-            <h2>{{ dashboard.lead.total }}</h2>
-            <span>Bulan ini</span>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Customer -->
-      <div class="col-xl-3 col-lg-6">
-        <div class="summary-card card-customer">
-
-          <div class="summary-icon">
-            <i class="ti ti-building-store"></i>
-          </div>
-
-          <div class="summary-content">
-            <small>Total Customer</small>
-            <h2>{{ dashboard.customer.total }}</h2>
-            <span>Customer Aktif</span>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Sales -->
-      <div class="col-xl-3 col-lg-6">
-        <div class="summary-card card-sales">
-
-          <div class="summary-icon">
-            <i class="ti ti-users"></i>
-          </div>
-
-          <div class="summary-content">
-            <small>Sales Active</small>
-            <h2>{{ dashboard.sales.active }}</h2>
-            <span>Sales Aktif</span>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Visit Today -->
-      <div class="col-xl-3 col-lg-6">
-        <div class="summary-card card-visit">
-
-          <div class="summary-icon">
-            <i class="ti ti-map-pin"></i>
-          </div>
-
-          <div class="summary-content">
-            <small>Visit Hari Ini</small>
-            <h2>{{ dashboard.visit.today }}</h2>
-            <span>Kunjungan</span>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Visit Month -->
-      <div class="col-xl-3 col-lg-6">
-        <div class="summary-card card-month">
-
-          <div class="summary-icon">
-            <i class="ti ti-calendar-event"></i>
-          </div>
-
-          <div class="summary-content">
-            <small>Visit Bulan Ini</small>
-            <h2>{{ dashboard.visit.this_month }}</h2>
-            <span>Total Visit</span>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Growth -->
-      <div class="col-xl-3 col-lg-6">
-        <div class="summary-card card-growth">
-
-          <div class="summary-icon">
-            <i class="ti ti-chart-line"></i>
-          </div>
-
-          <div class="summary-content">
-            <small>Growth</small>
-            <h2>{{ dashboard.visit.growth }}%</h2>
-            <span>vs Bulan Lalu</span>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Follow Up -->
-      <div class="col-xl-3 col-lg-6">
-        <div class="summary-card card-follow">
-
-          <div class="summary-icon">
-            <i class="ti ti-bell-ringing"></i>
-          </div>
-
-          <div class="summary-content">
-            <small>Follow Up</small>
-            <h2>{{ dashboard.follow_up.today }}</h2>
-            <span>Hari Ini</span>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Overdue -->
-      <div class="col-xl-3 col-lg-6">
-        <div class="summary-card card-overdue">
-
-          <div class="summary-icon">
-            <i class="ti ti-clock-exclamation"></i>
-          </div>
-
-          <div class="summary-content">
-            <small>Overdue</small>
-            <h2>{{ dashboard.follow_up.overdue }}</h2>
-            <span>Belum Follow Up</span>
-          </div>
-
-        </div>
-      </div>
-
+    <!-- ================= LOADING (first load) ================= -->
+    <div v-if="loading && !hasData" class="dm-loading-wrap">
+      <div class="spinner"></div>
+      <span>Memuat dashboard...</span>
     </div>
 
-    <!-- ================= SECOND ROW ================= -->
+    <template v-else>
 
-    <div class="row mt-2">
+      <!-- ================= SUMMARY ================= -->
 
-      <!-- Activity -->
-      <div class="col-lg-8">
+      <div class="row g-4">
 
-        <div class="card shadow-sm border-0">
+        <!-- Lead -->
+        <div class="col-xl-3 col-lg-6">
+          <div class="summary-card card-lead">
 
-          <div class="card-header bg-white">
-            <h4 class="mb-0">
-              Ringkasan Aktivitas Bulan Ini
-            </h4>
-          </div>
-
-          <div class="card-body">
-
-            <div class="activity-item">
-
-              <div class="d-flex justify-content-between">
-                <span>Total Lead</span>
-                <strong>{{ dashboard.lead.total }}</strong>
-              </div>
-
-              <div class="progress mt-2">
-                <div
-                  class="progress-bar bg-primary"
-                  style="width:30%">
-                </div>
-              </div>
-
+            <div class="summary-icon">
+              <i class="ti ti-target-arrow"></i>
             </div>
 
-            <div class="activity-item mt-4">
-
-              <div class="d-flex justify-content-between">
-                <span>Total Customer</span>
-                <strong>{{ dashboard.customer.total }}</strong>
-              </div>
-
-              <div class="progress mt-2">
-                <div
-                  class="progress-bar bg-success"
-                  style="width:70%">
-                </div>
-              </div>
-
-            </div>
-
-            <div class="activity-item mt-4">
-
-              <div class="d-flex justify-content-between">
-                <span>Total Visit</span>
-                <strong>{{ dashboard.visit.this_month }}</strong>
-              </div>
-
-              <div class="progress mt-2">
-                <div
-                  class="progress-bar bg-info"
-                  style="width:55%">
-                </div>
-              </div>
-
-            </div>
-
-            <div class="activity-item mt-4">
-
-              <div class="d-flex justify-content-between">
-                <span>Sales Active</span>
-                <strong>{{ dashboard.sales.active }}</strong>
-              </div>
-
-              <div class="progress mt-2">
-                <div
-                  class="progress-bar bg-warning"
-                  style="width:25%">
-                </div>
-              </div>
-
+            <div class="summary-content">
+              <small>Total Lead</small>
+              <h2>{{ dashboard.lead?.total ?? 0 }}</h2>
+              <span>Bulan ini</span>
             </div>
 
           </div>
-
         </div>
 
-      </div>
+        <!-- Customer -->
+        <div class="col-xl-3 col-lg-6">
+          <div class="summary-card card-customer">
 
-      <!-- Right Widget -->
-      <div class="col-lg-4">
+            <div class="summary-icon">
+              <i class="ti ti-building-store"></i>
+            </div>
+
+            <div class="summary-content">
+              <small>Total Customer</small>
+              <h2>{{ dashboard.customer?.total ?? 0 }}</h2>
+              <span>Customer Aktif</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Sales -->
+        <div class="col-xl-3 col-lg-6">
+          <div class="summary-card card-sales">
+
+            <div class="summary-icon">
+              <i class="ti ti-users"></i>
+            </div>
+
+            <div class="summary-content">
+              <small>Sales Active</small>
+              <h2>{{ dashboard.sales?.active ?? 0 }}</h2>
+              <span>Sales Aktif</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Visit Today -->
+        <div class="col-xl-3 col-lg-6">
+          <div class="summary-card card-visit">
+
+            <div class="summary-icon">
+              <i class="ti ti-map-pin"></i>
+            </div>
+
+            <div class="summary-content">
+              <small>Visit Hari Ini</small>
+              <h2>{{ dashboard.visit?.today ?? 0 }}</h2>
+              <span>Kunjungan</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Visit Month -->
+        <div class="col-xl-3 col-lg-6">
+          <div class="summary-card card-month">
+
+            <div class="summary-icon">
+              <i class="ti ti-calendar-event"></i>
+            </div>
+
+            <div class="summary-content">
+              <small>Visit Bulan Ini</small>
+              <h2>{{ dashboard.visit?.this_month ?? 0 }}</h2>
+              <span>Total Visit</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Growth -->
+        <div class="col-xl-3 col-lg-6">
+          <div class="summary-card card-growth">
+
+            <div class="summary-icon">
+              <i class="ti ti-chart-line"></i>
+            </div>
+
+            <div class="summary-content">
+              <small>Growth</small>
+              <h2>{{ dashboard.visit?.growth ?? 0 }}%</h2>
+              <span>vs Bulan Lalu</span>
+            </div>
+
+          </div>
+        </div>
 
         <!-- Follow Up -->
+        <div class="col-xl-3 col-lg-6">
+          <div class="summary-card card-follow">
 
-        <div class="card shadow-sm border-0 mb-4">
-
-          <div class="card-header bg-white">
-            <h4 class="mb-0">
-              Follow Up
-            </h4>
-          </div>
-
-          <div class="card-body">
-
-            <div
-              class="widget-box bg-warning-subtle">
-
-              <div>
-
-                <h3>{{ dashboard.follow_up.today }}</h3>
-
-                <small>Follow Up Hari Ini</small>
-
-              </div>
-
+            <div class="summary-icon">
               <i class="ti ti-bell-ringing"></i>
-
             </div>
 
-            <div
-              class="widget-box bg-danger-subtle mt-3">
+            <div class="summary-content">
+              <small>Follow Up</small>
+              <h2>{{ dashboard.follow_up?.today ?? 0 }}</h2>
+              <span>Hari Ini</span>
+            </div>
 
-              <div>
+          </div>
+        </div>
 
-                <h3>{{ dashboard.follow_up.overdue }}</h3>
+        <!-- Overdue -->
+        <div class="col-xl-3 col-lg-6">
+          <div class="summary-card card-overdue">
 
-                <small>Overdue</small>
+            <div class="summary-icon">
+              <i class="ti ti-clock-exclamation"></i>
+            </div>
+
+            <div class="summary-content">
+              <small>Overdue</small>
+              <h2>{{ dashboard.follow_up?.overdue ?? 0 }}</h2>
+              <span>Belum Follow Up</span>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= SECOND ROW ================= -->
+
+      <div class="row mt-2">
+
+        <!-- Activity -->
+        <div class="col-lg-8">
+
+          <div class="card shadow-sm border-0">
+
+            <div class="card-header bg-white">
+              <h4 class="mb-0">
+                Ringkasan Aktivitas Bulan Ini
+              </h4>
+            </div>
+
+            <div class="card-body">
+
+              <div class="activity-item">
+
+                <div class="d-flex justify-content-between">
+                  <span>Total Lead</span>
+                  <strong>{{ dashboard.lead?.total ?? 0 }}</strong>
+                </div>
+
+                <div class="progress mt-2">
+                  <div
+                    class="progress-bar bg-primary"
+                    :style="{ width: leadWidth }">
+                  </div>
+                </div>
 
               </div>
 
-              <i class="ti ti-alert-circle"></i>
+              <div class="activity-item mt-4">
+
+                <div class="d-flex justify-content-between">
+                  <span>Total Customer</span>
+                  <strong>{{ dashboard.customer?.total ?? 0 }}</strong>
+                </div>
+
+                <div class="progress mt-2">
+                  <div
+                    class="progress-bar bg-success"
+                    :style="{ width: customerWidth }">
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="activity-item mt-4">
+
+                <div class="d-flex justify-content-between">
+                  <span>Total Visit</span>
+                  <strong>{{ dashboard.visit?.this_month ?? 0 }}</strong>
+                </div>
+
+                <div class="progress mt-2">
+                  <div
+                    class="progress-bar bg-info"
+                    :style="{ width: visitWidth }">
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="activity-item mt-4">
+
+                <div class="d-flex justify-content-between">
+                  <span>Sales Active</span>
+                  <strong>{{ dashboard.sales?.active ?? 0 }}</strong>
+                </div>
+
+                <div class="progress mt-2">
+                  <div
+                    class="progress-bar bg-warning"
+                    :style="{ width: salesWidth }">
+                  </div>
+                </div>
+
+              </div>
 
             </div>
 
@@ -296,46 +253,107 @@
 
         </div>
 
-        <!-- Visit Summary -->
+        <!-- Right Widget -->
+        <div class="col-lg-4">
 
-        <div class="card shadow-sm border-0">
+          <!-- Follow Up -->
 
-          <div class="card-header bg-white">
+          <div class="card shadow-sm border-0 mb-4">
 
-            <h4 class="mb-0">
+            <div class="card-header bg-white">
+              <h4 class="mb-0">
+                Follow Up
+              </h4>
+            </div>
 
-              Visit Summary
+            <div class="card-body">
 
-            </h4>
+              <div
+                class="widget-box bg-warning-subtle">
+
+                <div>
+
+                  <h3>{{ dashboard.follow_up?.today ?? 0 }}</h3>
+
+                  <small>Follow Up Hari Ini</small>
+
+                </div>
+
+                <i class="ti ti-bell-ringing"></i>
+
+              </div>
+
+              <div
+                class="widget-box bg-danger-subtle mt-3">
+
+                <div>
+
+                  <h3>{{ dashboard.follow_up?.overdue ?? 0 }}</h3>
+
+                  <small>Overdue</small>
+
+                </div>
+
+                <i class="ti ti-alert-circle"></i>
+
+              </div>
+
+              <div class="widget-status mt-3">
+                {{ followUpStatus }}
+              </div>
+
+            </div>
 
           </div>
 
-          <div class="card-body">
+          <!-- Visit Summary -->
 
-            <div class="visit-summary">
+          <div class="card shadow-sm border-0">
 
-              <div class="visit-row">
+            <div class="card-header bg-white">
 
-                <span>Hari Ini</span>
+              <h4 class="mb-0">
 
-                <strong>{{ dashboard.visit.today }}</strong>
+                Visit Summary
+
+              </h4>
+
+            </div>
+
+            <div class="card-body">
+
+              <div class="visit-summary">
+
+                <div class="visit-row">
+
+                  <span>Hari Ini</span>
+
+                  <strong>{{ dashboard.visit?.today ?? 0 }}</strong>
+
+                </div>
+
+                <div class="visit-row">
+
+                  <span>Bulan Ini</span>
+
+                  <strong>{{ dashboard.visit?.this_month ?? 0 }}</strong>
+
+                </div>
+
+                <div class="visit-row">
+
+                  <span>Growth</span>
+
+                  <strong :style="{ color: growthColor }">
+                    {{ growthPositive ? '▲' : '▼' }} {{ dashboard.visit?.growth ?? 0 }}%
+                  </strong>
+
+                </div>
 
               </div>
 
-              <div class="visit-row">
-
-                <span>Bulan Ini</span>
-
-                <strong>{{ dashboard.visit.this_month }}</strong>
-
-              </div>
-
-              <div class="visit-row">
-
-                <span>Growth</span>
-
-                <strong>{{ dashboard.visit.growth }}%</strong>
-
+              <div class="widget-status mt-2">
+                {{ visitStatus }}
               </div>
 
             </div>
@@ -346,186 +364,48 @@
 
       </div>
 
-    </div>
+    </template>
 
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useAuthStore } from '@/stores/authStore'
+import { useExecutiveSummaryDashboardStore } from '@/stores/executiveSummaryDashboard'
 
-/*
-|--------------------------------------------------------------------------
-| Dashboard Static Data
-|--------------------------------------------------------------------------
-*/
+const authStore = useAuthStore()
+const store     = useExecutiveSummaryDashboardStore()
 
-const loading = ref(false)
+// ── STORE REFS ──
+const {
+  summary: dashboard,
+  loadingSummary: loading,
+  leadWidth,
+  customerWidth,
+  visitWidth,
+  salesWidth,
+  followUpStatus,
+  visitStatus,
+  growthPositive,
+  growthColor,
+  periodText,
+} = storeToRefs(store)
 
-const dashboard = ref({
-  period: {
-    start_date: '2026-07-01',
-    end_date: '2026-07-31'
-  },
+// true kalau data sudah pernah diisi (dipakai supaya loading pertama full-screen,
+// tapi saat refresh berikutnya data lama tetap tampil sambil loading)
+const hasData = computed(() => !!dashboard.value?.period?.start_date)
 
-  lead: {
-    total: 4
-  },
-
-  customer: {
-    total: 11
-  },
-
-  visit: {
-    today: 0,
-    this_month: 8,
-    last_month: 0,
-    growth: 0
-  },
-
-  follow_up: {
-    today: 7,
-    overdue: 3
-  },
-
-  sales: {
-    active: 3
-  }
+// ── INIT ──
+onMounted(async () => {
+  if (!authStore.user) await authStore.fetchProfile()
+  await store.fetchSummary(authStore.user?.id_user)
 })
 
-/*
-|--------------------------------------------------------------------------
-| Total terbesar
-|--------------------------------------------------------------------------
-*/
-
-const highestValue = computed(() => {
-
-  return Math.max(
-    dashboard.value.lead.total,
-    dashboard.value.customer.total,
-    dashboard.value.visit.this_month,
-    dashboard.value.sales.active,
-    1
-  )
-
-})
-
-/*
-|--------------------------------------------------------------------------
-| Progress Width
-|--------------------------------------------------------------------------
-*/
-
-const leadWidth = computed(() => {
-
-  return `${(dashboard.value.lead.total / highestValue.value) * 100}%`
-
-})
-
-const customerWidth = computed(() => {
-
-  return `${(dashboard.value.customer.total / highestValue.value) * 100}%`
-
-})
-
-const visitWidth = computed(() => {
-
-  return `${(dashboard.value.visit.this_month / highestValue.value) * 100}%`
-
-})
-
-const salesWidth = computed(() => {
-
-  return `${(dashboard.value.sales.active / highestValue.value) * 100}%`
-
-})
-
-/*
-|--------------------------------------------------------------------------
-| Summary
-|--------------------------------------------------------------------------
-*/
-
-const totalActivity = computed(() => {
-
-  return (
-    dashboard.value.lead.total +
-    dashboard.value.customer.total +
-    dashboard.value.visit.this_month
-  )
-
-})
-
-const followUpStatus = computed(() => {
-
-  if (dashboard.value.follow_up.overdue > 0) {
-    return 'Perlu perhatian'
-  }
-
-  return 'Semua aman'
-
-})
-
-const visitStatus = computed(() => {
-
-  if (dashboard.value.visit.today > 0) {
-    return 'Ada kunjungan hari ini'
-  }
-
-  return 'Belum ada kunjungan'
-
-})
-
-/*
-|--------------------------------------------------------------------------
-| Formatter
-|--------------------------------------------------------------------------
-*/
-
-const formatDate = (date) => {
-
-  const options = {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  }
-
-  return new Date(date).toLocaleDateString(
-    'id-ID',
-    options
-  )
-
-}
-
-const periodText = computed(() => {
-
-  return `${formatDate(
-    dashboard.value.period.start_date
-  )} - ${formatDate(
-    dashboard.value.period.end_date
-  )}`
-
-})
-
-/*
-|--------------------------------------------------------------------------
-| Refresh Dummy
-|--------------------------------------------------------------------------
-*/
-
-const refresh = () => {
-
-  loading.value = true
-
-  setTimeout(() => {
-
-    loading.value = false
-
-    console.log('Dashboard refreshed.')
-
-  }, 1000)
-
+// ── REFRESH ──
+const refresh = async () => {
+  await store.fetchSummary(authStore.user?.id_user)
 }
 </script>
 
@@ -538,6 +418,38 @@ const refresh = () => {
 .dashboard-manager{
     min-height:100vh;
     background:#f5f7fb;
+}
+
+/* =====================================================
+   Loading (first load)
+===================================================== */
+
+.dm-loading-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    padding:80px 0;
+    color:#6b7280;
+}
+
+.spinner{
+    width:36px;
+    height:36px;
+    border:3px solid #e5e7eb;
+    border-top-color:#6366f1;
+    border-radius:50%;
+    animation:spin .7s linear infinite;
+}
+
+.spin-icon{
+    display:inline-block;
+    animation:spin .7s linear infinite;
+}
+
+@keyframes spin{
+    to{ transform:rotate(360deg); }
 }
 
 
@@ -865,6 +777,18 @@ const refresh = () => {
 
 }
 
+.widget-status{
+
+    font-size:.8rem;
+
+    color:#6b7280;
+
+    text-align:center;
+
+    font-weight:500;
+
+}
+
 
 /* =====================================================
    Visit Summary
@@ -924,6 +848,16 @@ const refresh = () => {
 .btn-primary:hover{
 
     transform:translateY(-2px);
+
+}
+
+.btn-primary:disabled{
+
+    opacity:.7;
+
+    cursor:not-allowed;
+
+    transform:none;
 
 }
 

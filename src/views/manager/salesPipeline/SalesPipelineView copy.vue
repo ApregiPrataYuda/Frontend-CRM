@@ -36,7 +36,6 @@
 
                 <button
                     class="btn btn-primary"
-                    :disabled="pipelineStore.loadingPipeline"
                     @click="refresh">
 
                     <i class="ti ti-refresh me-2"></i>
@@ -46,18 +45,6 @@
                 </button>
 
             </div>
-
-        </div>
-
-        <!-- =======================================================
-            ERROR STATE
-        ======================================================== -->
-
-        <div
-            v-if="pipelineStore.errorPipeline"
-            class="alert alert-danger">
-
-            Gagal memuat data pipeline. Silakan coba refresh kembali.
 
         </div>
 
@@ -200,7 +187,7 @@
                         <div class="chart-box">
 
                             <Doughnut
-                                :data="pipelineStore.leadSourceChart"
+                                :data="leadSourceChart"
                                 :options="doughnutOptions"
                             />
 
@@ -233,7 +220,7 @@
                         <div class="chart-box">
 
                             <Line
-                                :data="pipelineStore.monthlyConversionChart"
+                                :data="monthlyConversionChart"
                                 :options="lineOptions"
                             />
 
@@ -273,28 +260,16 @@
 
                         <div
                             class="pipeline-item"
-                            v-for="item in pipelineStore.pipelinePerSales"
+                            v-for="item in dashboard.pipeline_per_sales"
                             :key="item.id_user">
 
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-between">
 
-                                <div class="d-flex align-items-center gap-2">
+                                <strong>
 
-                                    <span
-                                        class="sales-avatar"
-                                        :style="{ background: pipelineStore.getAvatarColor(item.fullname) }">
+                                    {{ item.fullname }}
 
-                                        {{ pipelineStore.getInitials(item.fullname) }}
-
-                                    </span>
-
-                                    <strong class="text-capitalize">
-
-                                        {{ item.fullname }}
-
-                                    </strong>
-
-                                </div>
+                                </strong>
 
                                 <span>
 
@@ -312,14 +287,6 @@
                                 ></div>
 
                             </div>
-
-                        </div>
-
-                        <div
-                            v-if="!pipelineStore.hasPipelinePerSales"
-                            class="text-muted text-center py-4">
-
-                            No pipeline data yet.
 
                         </div>
 
@@ -350,7 +317,7 @@
                         <div class="chart-box">
 
                             <Doughnut
-                                :data="pipelineStore.customerStatusChart"
+                                :data="customerStatusChart"
                                 :options="doughnutOptions"
                             />
 
@@ -410,9 +377,7 @@
 
                             </div>
 
-                            <span
-                                class="badge"
-                                :class="pipelineStore.customerStatusBadge(customer.customer_status)">
+                            <span class="badge bg-success">
 
                                 {{ customer.customer_status }}
 
@@ -420,17 +385,11 @@
 
                         </div>
 
-                        <div class="mt-2 text-muted d-flex align-items-center gap-2">
+                        <div class="mt-2 text-muted">
 
-                            <span
-                                class="feed-avatar"
-                                :style="{ background: pipelineStore.getAvatarColor(customer.sales_name) }">
+                            <i class="ti ti-user me-2"></i>
 
-                                {{ pipelineStore.getInitials(customer.sales_name) }}
-
-                            </span>
-
-                            {{ customer.sales_name || 'Unassigned' }}
+                            {{ customer.sales_name }}
 
                         </div>
 
@@ -438,7 +397,7 @@
 
                             <i class="ti ti-calendar me-2"></i>
 
-                            {{ pipelineStore.formatDateTime(customer.created_at) }}
+                            {{ formatDateTime(customer.created_at) }}
 
                         </div>
 
@@ -447,7 +406,7 @@
                 </div>
 
                 <div
-                    v-if="!pipelineStore.hasLatestCustomer"
+                    v-if="dashboard.latest_customer.length===0"
                     class="text-center py-5">
 
                     <i
@@ -472,7 +431,7 @@
 
 
 <script setup>
-import { onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 
 import {
     Chart as ChartJS,
@@ -491,11 +450,6 @@ import {
     Line
 } from 'vue-chartjs'
 
-import { usePipelineDashboardStore } from '@/stores/pipelineDashboard'
-// Sesuaikan import ini dengan store auth/user yang sudah ada di project kamu,
-// dipakai untuk mengirim ?user_id= ke API seperti store lain (leads, activity, dll).
-import { useAuthStore } from '@/stores/authStore'
-
 ChartJS.register(
     ArcElement,
     CategoryScale,
@@ -507,19 +461,249 @@ ChartJS.register(
     Filler
 )
 
-const pipelineStore = usePipelineDashboardStore()
-const authStore      = useAuthStore()
+const loading = ref(false)
 
-// Data mentah dari store, dipakai langsung di template (KPI, timeline, dll)
-const dashboard = computed(() => pipelineStore.dashboard)
+const dashboard = ref({
 
-/*
-|--------------------------------------------------------------------------
-| Chart Options (statis, tidak tergantung data)
-|--------------------------------------------------------------------------
-*/
+    summary:{
+        total_lead:4,
+        converted_lead:3,
+        open_lead:1,
+        conversion_rate:75
+    },
 
-const doughnutOptions = {
+    lead_source:[
+        {
+            lead_source:'Referral',
+            total:5
+        },
+        {
+            lead_source:'Website',
+            total:3
+        },
+        {
+            lead_source:'Cold Call',
+            total:1
+        },
+        {
+            lead_source:'Other',
+            total:1
+        },
+        {
+            lead_source:'Social Media',
+            total:1
+        }
+    ],
+
+    customer_status:[
+        {
+            customer_status:'Active',
+            total:11
+        }
+    ],
+
+    pipeline_per_sales:[
+        {
+            id_user:2,
+            fullname:'sputnix norwey',
+            total_customer:4
+        },
+        {
+            id_user:3,
+            fullname:'bortley england',
+            total_customer:3
+        },
+        {
+            id_user:4,
+            fullname:'willson denmark',
+            total_customer:3
+        },
+        {
+            id_user:1,
+            fullname:'apregi pratayuda',
+            total_customer:1
+        }
+    ],
+
+    monthly_conversion:[
+        {
+            date:'2026-07-08',
+            total:2
+        },
+        {
+            date:'2026-07-09',
+            total:9
+        }
+    ],
+
+    latest_customer:[
+        {
+            customer_code:'CUST-20260709-009',
+            company_name:'PT Sugizindo',
+            sales_name:'willson denmark',
+            customer_status:'Active',
+            created_at:'2026-07-09 11:13:32'
+        },
+        {
+            customer_code:'CUST-20260709-008',
+            company_name:'Asalta Mandiri Agung. PT',
+            sales_name:'willson denmark',
+            customer_status:'Active',
+            created_at:'2026-07-09 11:06:25'
+        },
+        {
+            customer_code:'CUST-20260709-007',
+            company_name:'PT Perwira Arthabaja Pasifik',
+            sales_name:'sputnix norwey',
+            customer_status:'Active',
+            created_at:'2026-07-09 10:58:58'
+        }
+    ]
+
+})
+
+/* ==========================================================
+    Progress Per Sales
+========================================================== */
+
+const maxCustomer = computed(() => {
+
+    return Math.max(
+        ...dashboard.value.pipeline_per_sales.map(
+            item => item.total_customer
+        ),
+        1
+    )
+
+})
+
+dashboard.value.pipeline_per_sales =
+dashboard.value.pipeline_per_sales.map(item=>({
+
+    ...item,
+
+    percent:
+        (
+            item.total_customer /
+            maxCustomer.value
+        ) * 100
+
+}))
+
+/* ==========================================================
+    Lead Source Doughnut
+========================================================== */
+
+const leadSourceChart = computed(() => ({
+
+    labels:
+        dashboard.value.lead_source.map(
+            item => item.lead_source
+        ),
+
+    datasets:[
+        {
+
+            data:
+                dashboard.value.lead_source.map(
+                    item => item.total
+                ),
+
+            backgroundColor:[
+                '#6366F1',
+                '#10B981',
+                '#F59E0B',
+                '#EF4444',
+                '#06B6D4'
+            ],
+
+            borderWidth:0
+
+        }
+    ]
+
+}))
+
+/* ==========================================================
+    Customer Status Doughnut
+========================================================== */
+
+const customerStatusChart = computed(() => ({
+
+    labels:
+        dashboard.value.customer_status.map(
+            item => item.customer_status
+        ),
+
+    datasets:[
+
+        {
+
+            data:
+                dashboard.value.customer_status.map(
+                    item => item.total
+                ),
+
+            backgroundColor:[
+                '#10B981',
+                '#EF4444',
+                '#F59E0B',
+                '#6366F1'
+            ],
+
+            borderWidth:0
+
+        }
+
+    ]
+
+}))
+
+/* ==========================================================
+    Monthly Conversion
+========================================================== */
+
+const monthlyConversionChart = computed(() => ({
+
+    labels:
+        dashboard.value.monthly_conversion.map(
+            item => item.date
+        ),
+
+    datasets:[
+
+        {
+
+            label:'Conversion',
+
+            data:
+                dashboard.value.monthly_conversion.map(
+                    item => item.total
+                ),
+
+            borderColor:'#4F46E5',
+
+            backgroundColor:'rgba(99,102,241,.15)',
+
+            fill:true,
+
+            tension:.35,
+
+            pointRadius:5,
+
+            pointHoverRadius:7
+
+        }
+
+    ]
+
+}))
+
+/* ==========================================================
+    Chart Option
+========================================================== */
+
+const doughnutOptions={
 
     responsive:true,
 
@@ -535,7 +719,7 @@ const doughnutOptions = {
 
 }
 
-const lineOptions = {
+const lineOptions={
 
     responsive:true,
 
@@ -558,23 +742,74 @@ const lineOptions = {
 
 }
 
-/*
-|--------------------------------------------------------------------------
-| Load & Refresh
-|--------------------------------------------------------------------------
-*/
+/* ==========================================================
+    Formatter
+========================================================== */
 
-const loadDashboard = () => {
-    pipelineStore.fetchPipeline(authStore.user?.id)
+const formatDateTime=(date)=>{
+
+    return new Date(date).toLocaleString(
+        'id-ID',
+        {
+
+            day:'2-digit',
+
+            month:'short',
+
+            year:'numeric',
+
+            hour:'2-digit',
+
+            minute:'2-digit'
+
+        }
+    )
+
 }
 
-const refresh = () => {
-    loadDashboard()
+/* ==========================================================
+    Refresh
+========================================================== */
+
+const refresh=()=>{
+
+    loading.value=true
+
+    setTimeout(()=>{
+
+        loading.value=false
+
+        console.log('Pipeline refreshed.')
+
+    },800)
+
 }
 
-onMounted(() => {
-    loadDashboard()
-})
+/* ==========================================================
+    Future API
+========================================================== */
+
+// import axios from '@/plugins/axios'
+//
+// const loadDashboard = async () => {
+//
+//     loading.value = true
+//
+//     try {
+//
+//         const { data } = await axios.get(
+//             '/dashboard/manager/pipeline'
+//         )
+//
+//         dashboard.value = data.data
+//
+//     } finally {
+//
+//         loading.value = false
+//
+//     }
+//
+// }
 
 </script>
 
@@ -816,30 +1051,6 @@ onMounted(() => {
 
 }
 
-.sales-avatar{
-
-    width:32px;
-
-    height:32px;
-
-    min-width:32px;
-
-    border-radius:50%;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    color:#fff;
-
-    font-weight:700;
-
-    font-size:.75rem;
-
-}
-
 /* ==========================================================
    CUSTOMER TIMELINE
 ========================================================== */
@@ -925,30 +1136,6 @@ onMounted(() => {
     border-color:#6366F1;
 
     box-shadow:0 10px 25px rgba(99,102,241,.10);
-
-}
-
-.feed-avatar{
-
-    width:22px;
-
-    height:22px;
-
-    min-width:22px;
-
-    border-radius:50%;
-
-    display:inline-flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    color:#fff;
-
-    font-weight:700;
-
-    font-size:.65rem;
 
 }
 

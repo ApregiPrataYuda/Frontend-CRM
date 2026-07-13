@@ -64,6 +64,7 @@
 
                     <button
                         class="btn btn-primary btn-header"
+                        :disabled="complaintStore.loadingComplaint"
                         @click="refresh">
 
                         <i class="fa-solid fa-rotate-right me-2"></i>
@@ -96,7 +97,7 @@
 
                     <h6>
 
-                        10 Jul 2026
+                        {{ lastUpdateText }}
 
                     </h6>
 
@@ -154,9 +155,9 @@
 
                     </small>
 
-                    <h6 class="text-success">
+                    <h6 :class="serviceStatusColor">
 
-                        Excellent
+                        {{ serviceStatusText }}
 
                     </h6>
 
@@ -165,6 +166,18 @@
             </div>
 
         </div>
+
+    </div>
+
+    <!-- ==========================================================
+        ERROR STATE
+    =========================================================== -->
+
+    <div
+        v-if="complaintStore.errorComplaint"
+        class="alert alert-danger">
+
+        Gagal memuat data complaint. Silakan coba refresh kembali.
 
     </div>
 
@@ -322,13 +335,6 @@
     </div>
 
     <!-- ==========================================================
-        NEXT :
-        DAILY TREND
-        COMPLAINT PERCENTAGE
-    =========================================================== -->
-
-
-        <!-- ==========================================================
         CHART SECTION
     =========================================================== -->
 
@@ -378,12 +384,12 @@
 
                 <div class="card-body-custom">
 
-                    <template v-if="dashboard.daily_trend.length">
+                    <template v-if="complaintStore.hasDailyTrend">
 
                         <div class="chart-container-lg">
 
                             <Line
-                                :data="dailyTrendChart"
+                                :data="complaintStore.dailyTrendChart"
                                 :options="lineOptions"
                             />
 
@@ -460,7 +466,7 @@
                         <div class="chart-container">
 
                             <Doughnut
-                                :data="percentageChart"
+                                :data="complaintStore.percentageChart"
                                 :options="doughnutOptions"
                             />
 
@@ -498,7 +504,7 @@
 
                             <strong>
 
-                                {{ (100 - dashboard.summary.complaint_rate).toFixed(2) }}%
+                                {{ complaintStore.noComplaintRate }}%
 
                             </strong>
 
@@ -573,11 +579,6 @@
     </div>
 
     <!-- ==========================================================
-        NEXT :
-        COMPLAINT PER SALES
-        COMPLAINT PER CUSTOMER
-    =========================================================== -->
-        <!-- ==========================================================
         COMPLAINT ANALYTICS
     =========================================================== -->
 
@@ -627,7 +628,7 @@
 
                 <div class="card-body-custom">
 
-                    <template v-if="dashboard.complaint_per_sales.length">
+                    <template v-if="complaintStore.hasComplaintPerSales">
 
                         <div
                             v-for="(item,index) in dashboard.complaint_per_sales"
@@ -642,9 +643,11 @@
 
                                 </div>
 
-                                <div class="leader-avatar">
+                                <div
+                                    class="leader-avatar"
+                                    :style="{ background: complaintStore.getAvatarColor(item.fullname) }">
 
-                                    {{ item.sales_name.charAt(0) }}
+                                    {{ complaintStore.getInitials(item.fullname) }}
 
                                 </div>
 
@@ -652,7 +655,7 @@
 
                                     <div class="leader-title">
 
-                                        {{ item.sales_name }}
+                                        {{ item.fullname }}
 
                                     </div>
 
@@ -670,7 +673,7 @@
 
                                 <h5>
 
-                                    {{ item.total }}
+                                    {{ item.total_complaint }}
 
                                 </h5>
 
@@ -758,10 +761,10 @@
 
                 <div class="card-body-custom">
 
-                    <template v-if="dashboard.complaint_per_customer.length">
+                    <template v-if="complaintStore.hasComplaintPerCustomer">
 
                         <div
-                            v-for="(item,index) in dashboard.complaint_per_customer"
+                            v-for="(item,index) in complaintStore.complaintPerCustomer"
                             :key="index"
                             class="customer-item">
 
@@ -783,15 +786,7 @@
 
                                     <div
                                         class="progress-bar bg-danger"
-                                        :style="{
-
-                                            width:
-
-                                            (item.total/dashboard.summary.total_complaint*100)
-
-                                            + '%'
-
-                                        }">
+                                        :style="{ width: item.percent + '%' }">
 
                                     </div>
 
@@ -801,7 +796,7 @@
 
                             <div class="customer-value">
 
-                                {{ item.total }}
+                                {{ item.total_complaint }}
 
                             </div>
 
@@ -840,10 +835,6 @@
     </div>
 
     <!-- ==========================================================
-        NEXT :
-        LATEST COMPLAINT TIMELINE
-    =========================================================== -->
-        <!-- ==========================================================
         LATEST COMPLAINT
     =========================================================== -->
 
@@ -889,13 +880,13 @@
 
                 <div class="card-body-custom">
 
-                    <template v-if="dashboard.latest_complaint.length">
+                    <template v-if="complaintStore.hasLatestComplaint">
 
                         <div class="timeline">
 
                             <div
                                 v-for="item in dashboard.latest_complaint"
-                                :key="item.id"
+                                :key="item.visit_code"
                                 class="timeline-item">
 
                                 <!-- Timeline Dot -->
@@ -917,13 +908,15 @@
 
                                             <h6 class="mb-1 fw-bold">
 
-                                                {{ item.title }}
+                                                {{ item.complaint_detail }}
 
                                             </h6>
 
-                                            <span class="badge bg-danger">
+                                            <span
+                                                class="badge"
+                                                :class="complaintStore.visitResultBadge(item.visit_result)">
 
-                                                Complaint
+                                                {{ complaintStore.formatVisitResult(item.visit_result) }}
 
                                             </span>
 
@@ -931,18 +924,11 @@
 
                                         <small class="text-muted">
 
-                                            {{ formatDateTime(item.complaint_at) }}
+                                            {{ complaintStore.formatDateTime(item.visit_at) }}
 
                                         </small>
 
                                     </div>
-
-                                    <p
-                                        class="text-muted mb-3">
-
-                                        {{ item.description }}
-
-                                    </p>
 
                                     <div class="row">
 
@@ -982,16 +968,15 @@
 
                                             <small class="text-muted">
 
-                                                Category
+                                                Visit Code
 
                                             </small>
 
                                             <div>
 
-                                                <span
-                                                    class="badge bg-warning text-dark">
+                                                <span class="badge bg-warning text-dark">
 
-                                                    {{ item.category }}
+                                                    {{ item.visit_code }}
 
                                                 </span>
 
@@ -1052,7 +1037,6 @@
 
 import {
 
-    ref,
     computed,
     onMounted
 
@@ -1082,6 +1066,11 @@ import {
 
 } from 'vue-chartjs'
 
+import { useComplaintDashboardStore } from '@/stores/complaintDashboard'
+// Sesuaikan import ini dengan store auth/user yang sudah ada di project kamu,
+// dipakai untuk mengirim ?user_id= ke API seperti store dashboard lain.
+import { useAuthStore } from '@/stores/authStore'
+
 ChartJS.register(
 
     CategoryScale,
@@ -1097,383 +1086,37 @@ ChartJS.register(
 
 )
 
+const complaintStore = useComplaintDashboardStore()
+const authStore       = useAuthStore()
+
+// Data mentah dari store, dipakai langsung di template
+const dashboard = computed(() => complaintStore.dashboard)
+
 /* ==========================================================
-STATE
+LAST UPDATE & SERVICE STATUS
 ========================================================== */
 
-const loading = ref(false)
-
-/* ==========================================================
-DASHBOARD
-========================================================== */
-
-const dashboard = ref({
-
-    summary:{
-
-        total_visit:120,
-
-        total_complaint:7,
-
-        complaint_rate:5.83
-
-    },
-
-    daily_trend:[
-
-        {
-
-            date:'01 Jul',
-
-            total:1
-
-        },
-
-        {
-
-            date:'02 Jul',
-
-            total:0
-
-        },
-
-        {
-
-            date:'03 Jul',
-
-            total:2
-
-        },
-
-        {
-
-            date:'04 Jul',
-
-            total:1
-
-        },
-
-        {
-
-            date:'05 Jul',
-
-            total:0
-
-        },
-
-        {
-
-            date:'06 Jul',
-
-            total:2
-
-        },
-
-        {
-
-            date:'07 Jul',
-
-            total:1
-
-        },
-
-        {
-
-            date:'08 Jul',
-
-            total:0
-
-        },
-
-        {
-
-            date:'09 Jul',
-
-            total:1
-
-        }
-
-    ],
-
-    complaint_per_sales:[
-
-        {
-
-            id_user:1,
-
-            sales_name:'John Smith',
-
-            total:3
-
-        },
-
-        {
-
-            id_user:2,
-
-            sales_name:'Michael',
-
-            total:2
-
-        },
-
-        {
-
-            id_user:3,
-
-            sales_name:'Anderson',
-
-            total:2
-
-        }
-
-    ],
-
-    complaint_per_customer:[
-
-        {
-
-            customer_name:'PT Perwira Steel',
-
-            total:3
-
-        },
-
-        {
-
-            customer_name:'PT Sugizindo',
-
-            total:2
-
-        },
-
-        {
-
-            customer_name:'PT Clavis Indonesia',
-
-            total:2
-
-        }
-
-    ],
-
-    complaint_percentage:[
-
-        {
-
-            label:'Complaint',
-
-            value:5.83
-
-        },
-
-        {
-
-            label:'No Complaint',
-
-            value:94.17
-
-        }
-
-    ],
-
-    latest_complaint:[
-
-        {
-
-            id:1,
-
-            title:'Late Delivery',
-
-            description:'Customer reported delayed shipment arrival.',
-
-            complaint_at:'2026-07-10 09:15:00',
-
-            sales_name:'John Smith',
-
-            customer_name:'PT Perwira Steel',
-
-            category:'Delivery'
-
-        },
-
-        {
-
-            id:2,
-
-            title:'Wrong Product',
-
-            description:'Delivered product does not match purchase order.',
-
-            complaint_at:'2026-07-09 14:40:00',
-
-            sales_name:'Michael',
-
-            customer_name:'PT Sugizindo',
-
-            category:'Product'
-
-        },
-
-        {
-
-            id:3,
-
-            title:'Damaged Goods',
-
-            description:'Products arrived with damaged packaging.',
-
-            complaint_at:'2026-07-08 10:20:00',
-
-            sales_name:'Anderson',
-
-            customer_name:'PT Clavis Indonesia',
-
-            category:'Quality'
-
-        }
-
-    ]
-
+const lastUpdateText = computed(() => {
+    const latest = dashboard.value.latest_complaint[0]
+    return latest ? complaintStore.formatDateTime(latest.visit_at) : '-'
 })
 
-/* ==========================================================
-FORMAT DATETIME
-========================================================== */
+// Threshold sederhana untuk label kualitas servis berdasarkan complaint rate
+const serviceStatusText = computed(() => {
+    const rate = dashboard.value.summary.complaint_rate ?? 0
+    if (rate === 0) return 'Excellent'
+    if (rate <= 10) return 'Good'
+    if (rate <= 25) return 'Needs Attention'
+    return 'Critical'
+})
 
-const formatDateTime = (date)=>{
-
-    return new Intl.DateTimeFormat(
-
-        'id-ID',
-
-        {
-
-            day:'2-digit',
-
-            month:'short',
-
-            year:'numeric',
-
-            hour:'2-digit',
-
-            minute:'2-digit'
-
-        }
-
-    ).format(
-
-        new Date(date)
-
-    )
-
-}
-
-/* ==========================================================
-REFRESH
-========================================================== */
-
-const refresh = ()=>{
-
-    loading.value = true
-
-    setTimeout(()=>{
-
-        loading.value = false
-
-    },700)
-
-}
-
-/* ==========================================================
-LINE CHART
-========================================================== */
-
-const dailyTrendChart = computed(() => ({
-
-    labels: dashboard.value.daily_trend.map(
-        item => item.date
-    ),
-
-    datasets: [
-
-        {
-
-            label: 'Complaint',
-
-            data: dashboard.value.daily_trend.map(
-                item => item.total
-            ),
-
-            borderColor: '#EF4444',
-
-            backgroundColor: 'rgba(239,68,68,.12)',
-
-            fill: true,
-
-            tension: .35,
-
-            borderWidth: 3,
-
-            pointRadius: 5,
-
-            pointHoverRadius: 8,
-
-            pointBackgroundColor: '#EF4444',
-
-            pointBorderColor: '#ffffff',
-
-            pointBorderWidth: 2
-
-        }
-
-    ]
-
-}))
-
-/* ==========================================================
-DOUGHNUT
-========================================================== */
-
-const percentageChart = computed(() => ({
-
-    labels: [
-
-        'Complaint',
-
-        'No Complaint'
-
-    ],
-
-    datasets: [
-
-        {
-
-            data: [
-
-                dashboard.value.summary.complaint_rate,
-
-                100 - dashboard.value.summary.complaint_rate
-
-            ],
-
-            backgroundColor: [
-
-                '#EF4444',
-
-                '#10B981'
-
-            ],
-
-            borderWidth: 0,
-
-            hoverOffset: 8
-
-        }
-
-    ]
-
-}))
+const serviceStatusColor = computed(() => {
+    const rate = dashboard.value.summary.complaint_rate ?? 0
+    if (rate === 0) return 'text-success'
+    if (rate <= 10) return 'text-primary'
+    if (rate <= 25) return 'text-warning'
+    return 'text-danger'
+})
 
 /* ==========================================================
 LINE OPTION
@@ -1578,46 +1221,16 @@ const doughnutOptions = {
 }
 
 /* ==========================================================
-LOAD DASHBOARD
+LOAD & REFRESH
 ========================================================== */
 
-const loadDashboard = async () => {
-
-    loading.value = true
-
-    try {
-
-        /*
-        const { data } = await axios.get(
-
-            '/api/dashboard/manager/complaint'
-
-        )
-
-        dashboard.value = data.data
-        */
-
-        console.log("Dashboard Loaded")
-
-    }
-
-    catch(error){
-
-        console.error(error)
-
-    }
-
-    finally{
-
-        loading.value = false
-
-    }
-
+const loadDashboard = () => {
+    complaintStore.fetchComplaint(authStore.user?.id)
 }
 
-/* ==========================================================
-MOUNT
-========================================================== */
+const refresh = () => {
+    loadDashboard()
+}
 
 onMounted(()=>{
 
@@ -2331,12 +1944,6 @@ LEADERBOARD SALES
     height:48px;
 
     border-radius:50%;
-
-    background:linear-gradient(
-        135deg,
-        #3b82f6,
-        #2563eb
-    );
 
     display:flex;
 

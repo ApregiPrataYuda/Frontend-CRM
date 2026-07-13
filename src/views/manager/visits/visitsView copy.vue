@@ -288,9 +288,12 @@
                             <div class="rank">
 
                                 <span v-if="index==0">🥇</span>
-<span v-else-if="index==1">🥈</span>
-<span v-else-if="index==2">🥉</span>
-<span v-else>#{{ index+1 }}</span>
+
+                                <span v-else-if="index==1">🥈</span>
+
+                                <span v-else-if="index==2">🥉</span>
+
+                                <span v-else>#{{ index+1 }}</span>
 
                             </div>
 
@@ -400,12 +403,11 @@
 
                                 <div class="mt-3 d-flex gap-2 flex-wrap">
 
-                                    <span
-                                            class="badge"
-                                            :class="visitResultBadge(visit.visit_result)"
-                                        >
-                                            {{ visit.visit_result }}
-                                        </span>
+                                    <span class="badge bg-primary">
+
+                                        {{ visit.visit_result }}
+
+                                    </span>
 
                                     <span
                                         v-if="visit.has_complaint"
@@ -459,8 +461,7 @@
 
 
 <script setup>
-import { computed, onMounted } from 'vue'
-import { storeToRefs } from 'pinia'
+import { ref, computed } from 'vue'
 
 import {
     Chart as ChartJS,
@@ -479,10 +480,6 @@ import {
     Line
 } from 'vue-chartjs'
 
-// import { useLoginStore } from '@/stores/loginStore'
-import { useAuthStore } from '@/stores/authStore'
-import { useVisitDashboardStore } from '@/stores/visitDashboard'
-
 ChartJS.register(
     ArcElement,
     CategoryScale,
@@ -494,63 +491,127 @@ ChartJS.register(
     Filler
 )
 
-// ==========================================================
-// STORE
-// ==========================================================
+const loading = ref(false)
 
-const authStore = useAuthStore()
+const dashboard = ref({
 
-const visitStore = useVisitDashboardStore()
+    summary:{
+        total_visit:8,
+        done:8,
+        ongoing:0,
+        checked_in:0,
+        cancelled:0,
+        complaint:1,
+        potential_order:2,
+        average_duration_minutes:1.6
+    },
 
-const {
-    dashboard,
-    loadingVisit
-} = storeToRefs(visitStore)
+    visit_result:[
+        {
+            visit_result:'complaint_handled',
+            total:1
+        },
+        {
+            visit_result:'improved',
+            total:1
+        },
+        {
+            visit_result:'maintained',
+            total:4
+        },
+        {
+            visit_result:'potential_customers',
+            total:1
+        },
+        {
+            visit_result:'upsell_identified',
+            total:1
+        }
+    ],
 
-const {
-    fetchVisitDashboard,
-    formatDateTime,
-    visitResultBadge,
-    medal
-} = visitStore
+    top_sales:[
+        {
+            id_user:2,
+            fullname:'sputnix norwey',
+            total_visit:4
+        },
+        {
+            id_user:3,
+            fullname:'bortley england',
+            total_visit:2
+        },
+        {
+            id_user:4,
+            fullname:'willson denmark',
+            total_visit:2
+        }
+    ],
 
-// ==========================================================
-// LOAD DATA
-// ==========================================================
+    daily_trend:[
+        {
+            date:'2026-07-09',
+            total:8
+        }
+    ],
 
-onMounted(() => {
-
-    fetchVisitDashboard(authStore.user.id)
+    visit_list:[
+        {
+            visit_code:'VIS-202607-00008',
+            customer_name:'PT Perwira Arthabaja Pasifik',
+            sales_name:'sputnix norwey',
+            visit_at:'2026-07-09 15:13:04',
+            visit_status:'DONE',
+            visit_result:'maintained',
+            has_complaint:false,
+            has_potential_order:false
+        },
+        {
+            visit_code:'VIS-202607-00007',
+            customer_name:'PT Sugizindo',
+            sales_name:'willson denmark',
+            visit_at:'2026-07-09 11:13:55',
+            visit_status:'DONE',
+            visit_result:'maintained',
+            has_complaint:false,
+            has_potential_order:false
+        },
+        {
+            visit_code:'VIS-202607-00005',
+            customer_name:'PT Mayora',
+            sales_name:'bortley england',
+            visit_at:'2026-07-09 10:41:19',
+            visit_status:'DONE',
+            visit_result:'upsell_identified',
+            has_complaint:false,
+            has_potential_order:true
+        }
+    ]
 
 })
 
-// ==========================================================
-// DOUGHNUT CHART
-// ==========================================================
+/* ==========================================================
+    Doughnut Chart
+========================================================== */
 
 const visitResultChart = computed(() => ({
 
-    labels: dashboard.value.visit_result.map(item => item.visit_result),
+    labels: dashboard.value.visit_result.map(item=>item.visit_result),
 
-    datasets: [
+    datasets:[
 
         {
 
-            data: dashboard.value.visit_result.map(item => item.total),
+            data: dashboard.value.visit_result.map(item=>item.total),
 
-            backgroundColor: [
-
+            backgroundColor:[
                 '#6366F1',
                 '#10B981',
                 '#F59E0B',
                 '#EF4444',
-                '#06B6D4',
-                '#8B5CF6',
-                '#EC4899'
-
+                '#06B6D4'
             ],
 
-            borderWidth: 0
+            borderWidth:0
 
         }
 
@@ -558,19 +619,19 @@ const visitResultChart = computed(() => ({
 
 }))
 
-const doughnutOptions = {
+const doughnutOptions={
 
-    responsive: true,
+    responsive:true,
 
-    maintainAspectRatio: false,
+    maintainAspectRatio:false,
 
-    cutout: '70%',
+    cutout:'70%',
 
-    plugins: {
+    plugins:{
 
-        legend: {
+        legend:{
 
-            position: 'bottom'
+            position:'bottom'
 
         }
 
@@ -578,33 +639,33 @@ const doughnutOptions = {
 
 }
 
-// ==========================================================
-// LINE CHART
-// ==========================================================
+/* ==========================================================
+    Line Chart
+========================================================== */
 
-const dailyTrendChart = computed(() => ({
+const dailyTrendChart=computed(()=>({
 
-    labels: dashboard.value.daily_trend.map(item => item.date),
+    labels:dashboard.value.daily_trend.map(item=>item.date),
 
-    datasets: [
+    datasets:[
 
         {
 
-            label: 'Visit',
+            label:'Visit',
 
-            data: dashboard.value.daily_trend.map(item => item.total),
+            data:dashboard.value.daily_trend.map(item=>item.total),
 
-            borderColor: '#4F46E5',
+            borderColor:'#4F46E5',
 
-            backgroundColor: 'rgba(99,102,241,.15)',
+            backgroundColor:'rgba(99,102,241,.15)',
 
-            fill: true,
+            fill:true,
 
-            tension: .35,
+            tension:.35,
 
-            pointRadius: 5,
+            pointRadius:5,
 
-            pointHoverRadius: 7
+            pointHoverRadius:7
 
         }
 
@@ -612,32 +673,28 @@ const dailyTrendChart = computed(() => ({
 
 }))
 
-const lineOptions = {
+const lineOptions={
 
-    responsive: true,
+    responsive:true,
 
-    maintainAspectRatio: false,
+    maintainAspectRatio:false,
 
-    plugins: {
+    plugins:{
 
-        legend: {
-
-            display: false
-
+        legend:{
+            display:false
         }
 
     },
 
-    scales: {
+    scales:{
 
-        y: {
+        y:{
 
-            beginAtZero: true,
+            beginAtZero:true,
 
-            ticks: {
-
-                precision: 0
-
+            ticks:{
+                precision:0
             }
 
         }
@@ -646,15 +703,11 @@ const lineOptions = {
 
 }
 
-// ==========================================================
-// SUMMARY
-// ==========================================================
+/* ==========================================================
+    Summary
+========================================================== */
 
-const completionRate = computed(() => {
-
-    const total = dashboard.value.summary.total_visit
-
-    if (!total) return 0
+const completionRate=computed(()=>{
 
     return (
 
@@ -662,21 +715,86 @@ const completionRate = computed(() => {
 
         /
 
-        total
+        dashboard.value.summary.total_visit
 
-    ) * 100
+    )*100
 
 })
 
-// ==========================================================
-// REFRESH
-// ==========================================================
+/* ==========================================================
+    Formatter
+========================================================== */
 
-const refresh = () => {
+const formatDateTime=(date)=>{
 
-    fetchVisitDashboard(loginStore.user.id)
+    return new Date(date).toLocaleString(
+
+        'id-ID',
+
+        {
+
+            day:'2-digit',
+
+            month:'short',
+
+            year:'numeric',
+
+            hour:'2-digit',
+
+            minute:'2-digit'
+
+        }
+
+    )
 
 }
+
+/* ==========================================================
+    Refresh
+========================================================== */
+
+const refresh=()=>{
+
+    loading.value=true
+
+    setTimeout(()=>{
+
+        loading.value=false
+
+        console.log('Dashboard refreshed')
+
+    },800)
+
+}
+
+/* ==========================================================
+    Future API
+========================================================== */
+
+// import axios from '@/plugins/axios'
+//
+// const loadDashboard = async () => {
+//
+//     loading.value = true
+//
+//     try {
+//
+//         const { data } = await axios.get(
+//
+//             '/dashboard/manager/visit'
+//
+//         )
+//
+//         dashboard.value = data.data
+//
+//     } finally {
+//
+//         loading.value = false
+//
+//     }
+//
+// }
+
 </script>
 
 

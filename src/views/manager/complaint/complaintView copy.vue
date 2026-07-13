@@ -1,6 +1,6 @@
 <template>
 
-<div class="potential-dashboard container-fluid py-4">
+<div class="complaint-dashboard container-fluid py-4">
 
     <!-- ==========================================================
         HEADER
@@ -16,29 +16,29 @@
 
                 <div class="d-flex align-items-center gap-3">
 
-                    <div class="header-icon success">
+                    <div class="header-icon">
 
-                        <i class="fa-solid fa-sack-dollar"></i>
+                        <i class="fa-solid fa-file-circle-exclamation"></i>
 
                     </div>
 
                     <div>
 
-                        <span class="dashboard-label text-success">
+                        <span class="dashboard-label">
 
-                            SALES OPPORTUNITY
+                            CUSTOMER SERVICE
 
                         </span>
 
                         <h2 class="dashboard-title">
 
-                            Potential Order Dashboard
+                            Complaint Dashboard
 
                         </h2>
 
                         <p class="dashboard-subtitle mb-0">
 
-                            Monitor sales opportunities and closing performance.
+                            Monitor customer complaints and service quality in real time.
 
                         </p>
 
@@ -63,8 +63,7 @@
                     </button>
 
                     <button
-                        class="btn btn-success btn-header"
-                        :disabled="potentialStore.loadingPotential"
+                        class="btn btn-primary btn-header"
                         @click="refresh">
 
                         <i class="fa-solid fa-rotate-right me-2"></i>
@@ -81,11 +80,11 @@
 
         <hr class="my-4">
 
-        <!-- SUMMARY -->
+        <!-- MINI SUMMARY -->
 
         <div class="row g-3">
 
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-3 col-md-6">
 
                 <div class="mini-stat">
 
@@ -97,7 +96,7 @@
 
                     <h6>
 
-                        {{ lastUpdateText }}
+                        10 Jul 2026
 
                     </h6>
 
@@ -105,27 +104,7 @@
 
             </div>
 
-            <div class="col-lg-4 col-md-6">
-
-                <div class="mini-stat">
-
-                    <small>
-
-                        Potential Rate
-
-                    </small>
-
-                    <h6>
-
-                        {{ dashboard.summary.potential_rate }}%
-
-                    </h6>
-
-                </div>
-
-            </div>
-
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-3 col-md-6">
 
                 <div class="mini-stat">
 
@@ -145,19 +124,47 @@
 
             </div>
 
+            <div class="col-lg-3 col-md-6">
+
+                <div class="mini-stat">
+
+                    <small>
+
+                        Complaint Rate
+
+                    </small>
+
+                    <h6>
+
+                        {{ dashboard.summary.complaint_rate }} %
+
+                    </h6>
+
+                </div>
+
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+
+                <div class="mini-stat">
+
+                    <small>
+
+                        Service Status
+
+                    </small>
+
+                    <h6 class="text-success">
+
+                        Excellent
+
+                    </h6>
+
+                </div>
+
+            </div>
+
         </div>
-
-    </div>
-
-    <!-- ==========================================================
-        ERROR STATE
-    =========================================================== -->
-
-    <div
-        v-if="potentialStore.errorPotential"
-        class="alert alert-danger">
-
-        Gagal memuat data potential order. Silakan coba refresh kembali.
 
     </div>
 
@@ -189,7 +196,11 @@
 
                     <div class="kpi-footer">
 
-                        Customer Visit
+                        <span>
+
+                            Customer Visit
+
+                        </span>
 
                     </div>
 
@@ -205,23 +216,23 @@
 
         </div>
 
-        <!-- Potential Order -->
+        <!-- Complaint -->
 
         <div class="col-xl-4 col-md-6">
 
-            <div class="kpi-card card-success">
+            <div class="kpi-card card-danger">
 
                 <div class="kpi-content">
 
                     <small>
 
-                        Potential Order
+                        Total Complaint
 
                     </small>
 
                     <h2>
 
-                        {{ dashboard.summary.total_potential_order }}
+                        {{ dashboard.summary.total_complaint }}
 
                     </h2>
 
@@ -229,7 +240,7 @@
 
                         <span>
 
-                            Sales Opportunity
+                            Customer Complaint
 
                         </span>
 
@@ -239,7 +250,7 @@
 
                 <div class="kpi-icon">
 
-                    <i class="fa-solid fa-sack-dollar"></i>
+                    <i class="fa-solid fa-triangle-exclamation"></i>
 
                 </div>
 
@@ -247,23 +258,23 @@
 
         </div>
 
-        <!-- Potential Rate -->
+        <!-- Rate -->
 
         <div class="col-xl-4 col-md-12">
 
-            <div class="kpi-card card-emerald">
+            <div class="kpi-card card-warning">
 
                 <div class="kpi-content">
 
                     <small>
 
-                        Potential Rate
+                        Complaint Rate
 
                     </small>
 
                     <h2>
 
-                        {{ dashboard.summary.potential_rate }}%
+                        {{ dashboard.summary.complaint_rate }}%
 
                     </h2>
 
@@ -273,29 +284,24 @@
                             class="progress-bar bg-light"
                             role="progressbar"
                             :style="{
-
-                                width:
-
-                                dashboard.summary.potential_rate + '%'
-
+                                width: dashboard.summary.complaint_rate + '%'
                             }">
 
                         </div>
 
                     </div>
 
-                    <div
-                        class="d-flex justify-content-between mt-2">
+                    <div class="d-flex justify-content-between mt-2">
 
                         <small>
 
-                            Visit Conversion
+                            Complaint Ratio
 
                         </small>
 
                         <small>
 
-                            {{ dashboard.summary.potential_rate }}%
+                            {{ dashboard.summary.complaint_rate }}%
 
                         </small>
 
@@ -305,7 +311,7 @@
 
                 <div class="kpi-icon">
 
-                    <i class="fa-solid fa-chart-line"></i>
+                    <i class="fa-solid fa-chart-pie"></i>
 
                 </div>
 
@@ -316,14 +322,21 @@
     </div>
 
     <!-- ==========================================================
+        NEXT :
+        DAILY TREND
+        COMPLAINT PERCENTAGE
+    =========================================================== -->
+
+
+        <!-- ==========================================================
         CHART SECTION
     =========================================================== -->
 
     <div class="row g-4 mb-4">
 
-        <!-- =====================================================
-            DAILY POTENTIAL TREND
-        ====================================================== -->
+        <!-- ======================================================
+            DAILY COMPLAINT TREND
+        ======================================================= -->
 
         <div class="col-xl-8">
 
@@ -337,21 +350,21 @@
 
                             <h5 class="mb-1">
 
-                                <i class="fa-solid fa-chart-line text-success me-2"></i>
+                                <i class="fa-solid fa-chart-line text-primary me-2"></i>
 
-                                Daily Potential Trend
+                                Daily Complaint Trend
 
                             </h5>
 
                             <small class="text-muted">
 
-                                Daily potential order generated
+                                Daily complaint activity
 
                             </small>
 
                         </div>
 
-                        <span class="badge bg-success">
+                        <span class="badge bg-primary">
 
                             {{ dashboard.daily_trend.length }}
 
@@ -365,66 +378,14 @@
 
                 <div class="card-body-custom">
 
-                    <template v-if="potentialStore.hasDailyTrend">
+                    <template v-if="dashboard.daily_trend.length">
 
                         <div class="chart-container-lg">
 
                             <Line
-                                :data="potentialStore.dailyTrendChart"
+                                :data="dailyTrendChart"
                                 :options="lineOptions"
                             />
-
-                        </div>
-
-                        <div class="row mt-4">
-
-                            <div class="col-md-4">
-
-                                <div class="trend-summary">
-
-                                    <small>Total Potential</small>
-
-                                    <h4>
-
-                                        {{ dashboard.summary.total_potential_order }}
-
-                                    </h4>
-
-                                </div>
-
-                            </div>
-
-                            <div class="col-md-4">
-
-                                <div class="trend-summary">
-
-                                    <small>Visit</small>
-
-                                    <h4>
-
-                                        {{ dashboard.summary.total_visit }}
-
-                                    </h4>
-
-                                </div>
-
-                            </div>
-
-                            <div class="col-md-4">
-
-                                <div class="trend-summary">
-
-                                    <small>Conversion</small>
-
-                                    <h4 class="text-success">
-
-                                        {{ dashboard.summary.potential_rate }}%
-
-                                    </h4>
-
-                                </div>
-
-                            </div>
 
                         </div>
 
@@ -438,13 +399,13 @@
 
                             <h5>
 
-                                No Potential Trend
+                                No Trend Data
 
                             </h5>
 
                             <p>
 
-                                There is no potential order activity during this period.
+                                There is no complaint trend for this period.
 
                             </p>
 
@@ -458,9 +419,9 @@
 
         </div>
 
-        <!-- =====================================================
-            POTENTIAL PERCENTAGE
-        ====================================================== -->
+        <!-- ======================================================
+            COMPLAINT PERCENTAGE
+        ======================================================= -->
 
         <div class="col-xl-4">
 
@@ -468,21 +429,25 @@
 
                 <div class="card-header-custom">
 
-                    <div>
+                    <div class="d-flex justify-content-between align-items-center">
 
-                        <h5 class="mb-1">
+                        <div>
 
-                            <i class="fa-solid fa-chart-pie text-success me-2"></i>
+                            <h5 class="mb-1">
 
-                            Potential Percentage
+                                <i class="fa-solid fa-chart-pie text-danger me-2"></i>
 
-                        </h5>
+                                Complaint Percentage
 
-                        <small class="text-muted">
+                            </h5>
 
-                            Opportunity Distribution
+                            <small class="text-muted">
 
-                        </small>
+                                Complaint vs Visit
+
+                            </small>
+
+                        </div>
 
                     </div>
 
@@ -495,25 +460,9 @@
                         <div class="chart-container">
 
                             <Doughnut
-                                :data="potentialStore.percentageChart"
+                                :data="percentageChart"
                                 :options="doughnutOptions"
                             />
-
-                        </div>
-
-                        <div class="text-center mt-3">
-
-                            <h2 class="fw-bold text-success">
-
-                                {{ dashboard.summary.potential_rate }}%
-
-                            </h2>
-
-                            <small class="text-muted">
-
-                                Opportunity Rate
-
-                            </small>
 
                         </div>
 
@@ -523,15 +472,33 @@
 
                             <div>
 
-                                <span class="dot dot-success"></span>
+                                <span class="dot dot-danger"></span>
 
-                                Potential
+                                Complaint
 
                             </div>
 
                             <strong>
 
-                                {{ dashboard.summary.total_potential_order }}
+                                {{ dashboard.summary.complaint_rate }}%
+
+                            </strong>
+
+                        </div>
+
+                        <div class="percentage-item">
+
+                            <div>
+
+                                <span class="dot dot-success"></span>
+
+                                No Complaint
+
+                            </div>
+
+                            <strong>
+
+                                {{ (100 - dashboard.summary.complaint_rate).toFixed(2) }}%
 
                             </strong>
 
@@ -543,7 +510,7 @@
 
                                 <span class="dot dot-primary"></span>
 
-                                Visit
+                                Total Visit
 
                             </div>
 
@@ -561,13 +528,13 @@
 
                                 <span class="dot dot-warning"></span>
 
-                                Not Potential
+                                Complaint
 
                             </div>
 
                             <strong>
 
-                                {{ potentialStore.notPotentialCount }}
+                                {{ dashboard.summary.total_complaint }}
 
                             </strong>
 
@@ -579,17 +546,17 @@
 
                         <div class="empty-chart">
 
-                            <i class="fa-solid fa-seedling"></i>
+                            <i class="fa-solid fa-face-smile"></i>
 
                             <h5>
 
-                                No Opportunity
+                                Excellent Service
 
                             </h5>
 
                             <p>
 
-                                No potential order has been recorded.
+                                There are no complaint records during this period.
 
                             </p>
 
@@ -606,13 +573,18 @@
     </div>
 
     <!-- ==========================================================
-        PERFORMANCE
+        NEXT :
+        COMPLAINT PER SALES
+        COMPLAINT PER CUSTOMER
+    =========================================================== -->
+        <!-- ==========================================================
+        COMPLAINT ANALYTICS
     =========================================================== -->
 
     <div class="row g-4 mb-4">
 
         <!-- =====================================================
-            TOP SALES OPPORTUNITY
+            COMPLAINT PER SALES
         ====================================================== -->
 
         <div class="col-xl-6">
@@ -627,23 +599,23 @@
 
                             <h5 class="mb-1">
 
-                                <i class="fa-solid fa-trophy text-warning me-2"></i>
+                                <i class="fa-solid fa-ranking-star text-primary me-2"></i>
 
-                                Top Sales Opportunity
+                                Complaint Per Sales
 
                             </h5>
 
                             <small class="text-muted">
 
-                                Sales with highest potential order
+                                Top sales with complaint cases
 
                             </small>
 
                         </div>
 
-                        <span class="badge bg-success">
+                        <span class="badge bg-primary">
 
-                            {{ dashboard.potential_per_sales.length }}
+                            {{ dashboard.complaint_per_sales.length }}
 
                             Sales
 
@@ -655,86 +627,56 @@
 
                 <div class="card-body-custom">
 
-                    <template v-if="potentialStore.hasPotentialPerSales">
+                    <template v-if="dashboard.complaint_per_sales.length">
 
                         <div
-
-                            v-for="(item,index) in potentialStore.potentialPerSales"
-
+                            v-for="(item,index) in dashboard.complaint_per_sales"
                             :key="item.id_user"
+                            class="leaderboard-item">
 
-                            class="sales-rank-card"
+                            <div class="leader-left">
 
-                        >
+                                <div class="leader-rank">
 
-                            <div class="sales-rank">
-
-                                <div
-                                    class="rank-circle"
-
-                                    :class="{
-
-                                        gold:index===0,
-
-                                        silver:index===1,
-
-                                        bronze:index===2
-
-                                    }">
-
-                                    {{ index+1 }}
+                                    {{ index + 1 }}
 
                                 </div>
 
-                            </div>
+                                <div class="leader-avatar">
 
-                            <div
-                                class="sales-avatar"
-                                :style="{ background: potentialStore.getAvatarColor(item.fullname) }">
-
-                                {{ potentialStore.getInitials(item.fullname) }}
-
-                            </div>
-
-                            <div class="flex-grow-1">
-
-                                <div class="fw-bold">
-
-                                    {{ item.fullname }}
+                                    {{ item.sales_name.charAt(0) }}
 
                                 </div>
 
-                                <small class="text-muted">
+                                <div>
 
-                                    Sales Executive
+                                    <div class="leader-title">
 
-                                </small>
-
-                                <div class="progress mt-2">
-
-                                    <div
-
-                                        class="progress-bar bg-success"
-
-                                        :style="{ width: item.percent + '%' }">
+                                        {{ item.sales_name }}
 
                                     </div>
 
+                                    <small class="text-muted">
+
+                                        Sales Executive
+
+                                    </small>
+
                                 </div>
 
                             </div>
 
-                            <div class="text-end">
+                            <div class="leader-right">
 
-                                <h4 class="mb-0 text-success">
+                                <h5>
 
-                                    {{ item.total_potential }}
+                                    {{ item.total }}
 
-                                </h4>
+                                </h5>
 
                                 <small>
 
-                                    Potential
+                                    Complaint
 
                                 </small>
 
@@ -752,13 +694,13 @@
 
                             <h5>
 
-                                No Sales Data
+                                No Complaint
 
                             </h5>
 
                             <p>
 
-                                No sales opportunity available.
+                                No complaint data per sales.
 
                             </p>
 
@@ -773,7 +715,7 @@
         </div>
 
         <!-- =====================================================
-            TOP CUSTOMER
+            COMPLAINT PER CUSTOMER
         ====================================================== -->
 
         <div class="col-xl-6">
@@ -788,23 +730,23 @@
 
                             <h5 class="mb-1">
 
-                                <i class="fa-solid fa-building text-primary me-2"></i>
+                                <i class="fa-solid fa-building text-danger me-2"></i>
 
-                                Top Customer Opportunity
+                                Complaint Per Customer
 
                             </h5>
 
                             <small class="text-muted">
 
-                                Customer with biggest opportunity
+                                Customers with complaint records
 
                             </small>
 
                         </div>
 
-                        <span class="badge bg-primary">
+                        <span class="badge bg-danger">
 
-                            {{ dashboard.potential_per_customer.length }}
+                            {{ dashboard.complaint_per_customer.length }}
 
                             Customer
 
@@ -816,49 +758,40 @@
 
                 <div class="card-body-custom">
 
-                    <template
-
-                        v-if="potentialStore.hasPotentialPerCustomer"
-
-                    >
+                    <template v-if="dashboard.complaint_per_customer.length">
 
                         <div
+                            v-for="(item,index) in dashboard.complaint_per_customer"
+                            :key="index"
+                            class="customer-item">
 
-                            v-for="item in potentialStore.potentialPerCustomer"
-
-                            :key="item.customer_name"
-
-                            class="customer-card"
-
-                        >
-
-                            <div class="customer-icon">
+                            <div class="customer-avatar">
 
                                 <i class="fa-solid fa-building"></i>
 
                             </div>
 
-                            <div class="flex-grow-1">
+                            <div class="customer-content">
 
-                                <div class="fw-semibold">
+                                <div class="customer-name">
 
                                     {{ item.customer_name }}
 
                                 </div>
 
-                                <small class="text-muted">
-
-                                    Opportunity Customer
-
-                                </small>
-
                                 <div class="progress mt-2">
 
                                     <div
+                                        class="progress-bar bg-danger"
+                                        :style="{
 
-                                        class="progress-bar bg-primary"
+                                            width:
 
-                                        :style="{ width: item.percent + '%' }">
+                                            (item.total/dashboard.summary.total_complaint*100)
+
+                                            + '%'
+
+                                        }">
 
                                     </div>
 
@@ -866,19 +799,9 @@
 
                             </div>
 
-                            <div class="text-end">
+                            <div class="customer-value">
 
-                                <h4 class="mb-0">
-
-                                    {{ item.total_potential }}
-
-                                </h4>
-
-                                <small>
-
-                                    Opportunity
-
-                                </small>
+                                {{ item.total }}
 
                             </div>
 
@@ -890,17 +813,17 @@
 
                         <div class="empty-chart">
 
-                            <i class="fa-solid fa-building"></i>
+                            <i class="fa-solid fa-face-smile"></i>
 
                             <h5>
 
-                                No Customer
+                                Excellent
 
                             </h5>
 
                             <p>
 
-                                No customer opportunity available.
+                                No customer complaint available.
 
                             </p>
 
@@ -917,7 +840,11 @@
     </div>
 
     <!-- ==========================================================
-        LATEST POTENTIAL ORDER
+        NEXT :
+        LATEST COMPLAINT TIMELINE
+    =========================================================== -->
+        <!-- ==========================================================
+        LATEST COMPLAINT
     =========================================================== -->
 
     <div class="row">
@@ -934,25 +861,25 @@
 
                             <h5 class="mb-1">
 
-                                <i class="fa-solid fa-clock-rotate-left text-success me-2"></i>
+                                <i class="fa-solid fa-clock-rotate-left text-danger me-2"></i>
 
-                                Latest Potential Order
+                                Latest Complaint Timeline
 
                             </h5>
 
                             <small class="text-muted">
 
-                                Latest sales opportunities generated
+                                Latest customer complaint activities
 
                             </small>
 
                         </div>
 
-                        <span class="badge bg-success">
+                        <span class="badge bg-danger">
 
-                            {{ dashboard.latest_potential_order.length }}
+                            {{ dashboard.latest_complaint.length }}
 
-                            Opportunities
+                            Records
 
                         </span>
 
@@ -962,51 +889,41 @@
 
                 <div class="card-body-custom">
 
-                    <template
-
-                        v-if="potentialStore.hasLatestPotentialOrder"
-
-                    >
+                    <template v-if="dashboard.latest_complaint.length">
 
                         <div class="timeline">
 
                             <div
+                                v-for="item in dashboard.latest_complaint"
+                                :key="item.id"
+                                class="timeline-item">
 
-                                v-for="item in dashboard.latest_potential_order"
+                                <!-- Timeline Dot -->
 
-                                :key="item.visit_code"
+                                <div class="timeline-dot">
 
-                                class="timeline-item"
-
-                            >
-
-                                <!-- DOT -->
-
-                                <div class="timeline-dot success">
-
-                                    <i class="fa-solid fa-sack-dollar"></i>
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
 
                                 </div>
 
-                                <!-- CONTENT -->
+                                <!-- Timeline Content -->
 
                                 <div class="timeline-content">
 
-                                    <div class="d-flex justify-content-between align-items-start flex-wrap">
+                                    <div
+                                        class="d-flex justify-content-between align-items-start flex-wrap mb-2">
 
                                         <div>
 
-                                            <h5 class="mb-1">
+                                            <h6 class="mb-1 fw-bold">
 
-                                                {{ item.potential_order_detail }}
+                                                {{ item.title }}
 
-                                            </h5>
+                                            </h6>
 
-                                            <span
-                                                class="badge"
-                                                :class="potentialStore.visitResultBadge(item.visit_result)">
+                                            <span class="badge bg-danger">
 
-                                                {{ potentialStore.formatVisitResult(item.visit_result) }}
+                                                Complaint
 
                                             </span>
 
@@ -1014,13 +931,20 @@
 
                                         <small class="text-muted">
 
-                                            {{ potentialStore.formatDateTime(item.visit_at) }}
+                                            {{ formatDateTime(item.complaint_at) }}
 
                                         </small>
 
                                     </div>
 
-                                    <div class="row mt-4">
+                                    <p
+                                        class="text-muted mb-3">
+
+                                        {{ item.description }}
+
+                                    </p>
+
+                                    <div class="row">
 
                                         <div class="col-lg-4">
 
@@ -1058,13 +982,18 @@
 
                                             <small class="text-muted">
 
-                                                Visit Code
+                                                Category
 
                                             </small>
 
-                                            <div class="fw-semibold">
+                                            <div>
 
-                                                {{ item.visit_code }}
+                                                <span
+                                                    class="badge bg-warning text-dark">
+
+                                                    {{ item.category }}
+
+                                                </span>
 
                                             </div>
 
@@ -1086,17 +1015,20 @@
 
                         <div class="empty-chart">
 
-                            <i class="fa-solid fa-seedling text-success"></i>
+                            <i
+                                class="fa-solid fa-circle-check text-success">
+
+                            </i>
 
                             <h4 class="mt-3">
 
-                                No Potential Order
+                                Excellent Service
 
                             </h4>
 
                             <p class="text-muted">
 
-                                There are no sales opportunities during this period.
+                                There are no complaint records for this period.
 
                             </p>
 
@@ -1120,6 +1052,7 @@
 
 import {
 
+    ref,
     computed,
     onMounted
 
@@ -1149,11 +1082,6 @@ import {
 
 } from 'vue-chartjs'
 
-import { usePotentialOrdersDashboardStore } from '@/stores/potentialOrdersDashboard'
-// Sesuaikan import ini dengan store auth/user yang sudah ada di project kamu,
-// dipakai untuk mengirim ?user_id= ke API seperti store dashboard lain.
-import { useAuthStore } from '@/stores/authStore'
-
 ChartJS.register(
 
     CategoryScale,
@@ -1169,20 +1097,383 @@ ChartJS.register(
 
 )
 
-const potentialStore = usePotentialOrdersDashboardStore()
-const authStore        = useAuthStore()
-
-// Data mentah dari store, dipakai langsung di template
-const dashboard = computed(() => potentialStore.dashboard)
-
 /* ==========================================================
-LAST UPDATE
+STATE
 ========================================================== */
 
-const lastUpdateText = computed(() => {
-    const latest = dashboard.value.latest_potential_order[0]
-    return latest ? potentialStore.formatDateTime(latest.visit_at) : '-'
+const loading = ref(false)
+
+/* ==========================================================
+DASHBOARD
+========================================================== */
+
+const dashboard = ref({
+
+    summary:{
+
+        total_visit:120,
+
+        total_complaint:7,
+
+        complaint_rate:5.83
+
+    },
+
+    daily_trend:[
+
+        {
+
+            date:'01 Jul',
+
+            total:1
+
+        },
+
+        {
+
+            date:'02 Jul',
+
+            total:0
+
+        },
+
+        {
+
+            date:'03 Jul',
+
+            total:2
+
+        },
+
+        {
+
+            date:'04 Jul',
+
+            total:1
+
+        },
+
+        {
+
+            date:'05 Jul',
+
+            total:0
+
+        },
+
+        {
+
+            date:'06 Jul',
+
+            total:2
+
+        },
+
+        {
+
+            date:'07 Jul',
+
+            total:1
+
+        },
+
+        {
+
+            date:'08 Jul',
+
+            total:0
+
+        },
+
+        {
+
+            date:'09 Jul',
+
+            total:1
+
+        }
+
+    ],
+
+    complaint_per_sales:[
+
+        {
+
+            id_user:1,
+
+            sales_name:'John Smith',
+
+            total:3
+
+        },
+
+        {
+
+            id_user:2,
+
+            sales_name:'Michael',
+
+            total:2
+
+        },
+
+        {
+
+            id_user:3,
+
+            sales_name:'Anderson',
+
+            total:2
+
+        }
+
+    ],
+
+    complaint_per_customer:[
+
+        {
+
+            customer_name:'PT Perwira Steel',
+
+            total:3
+
+        },
+
+        {
+
+            customer_name:'PT Sugizindo',
+
+            total:2
+
+        },
+
+        {
+
+            customer_name:'PT Clavis Indonesia',
+
+            total:2
+
+        }
+
+    ],
+
+    complaint_percentage:[
+
+        {
+
+            label:'Complaint',
+
+            value:5.83
+
+        },
+
+        {
+
+            label:'No Complaint',
+
+            value:94.17
+
+        }
+
+    ],
+
+    latest_complaint:[
+
+        {
+
+            id:1,
+
+            title:'Late Delivery',
+
+            description:'Customer reported delayed shipment arrival.',
+
+            complaint_at:'2026-07-10 09:15:00',
+
+            sales_name:'John Smith',
+
+            customer_name:'PT Perwira Steel',
+
+            category:'Delivery'
+
+        },
+
+        {
+
+            id:2,
+
+            title:'Wrong Product',
+
+            description:'Delivered product does not match purchase order.',
+
+            complaint_at:'2026-07-09 14:40:00',
+
+            sales_name:'Michael',
+
+            customer_name:'PT Sugizindo',
+
+            category:'Product'
+
+        },
+
+        {
+
+            id:3,
+
+            title:'Damaged Goods',
+
+            description:'Products arrived with damaged packaging.',
+
+            complaint_at:'2026-07-08 10:20:00',
+
+            sales_name:'Anderson',
+
+            customer_name:'PT Clavis Indonesia',
+
+            category:'Quality'
+
+        }
+
+    ]
+
 })
+
+/* ==========================================================
+FORMAT DATETIME
+========================================================== */
+
+const formatDateTime = (date)=>{
+
+    return new Intl.DateTimeFormat(
+
+        'id-ID',
+
+        {
+
+            day:'2-digit',
+
+            month:'short',
+
+            year:'numeric',
+
+            hour:'2-digit',
+
+            minute:'2-digit'
+
+        }
+
+    ).format(
+
+        new Date(date)
+
+    )
+
+}
+
+/* ==========================================================
+REFRESH
+========================================================== */
+
+const refresh = ()=>{
+
+    loading.value = true
+
+    setTimeout(()=>{
+
+        loading.value = false
+
+    },700)
+
+}
+
+/* ==========================================================
+LINE CHART
+========================================================== */
+
+const dailyTrendChart = computed(() => ({
+
+    labels: dashboard.value.daily_trend.map(
+        item => item.date
+    ),
+
+    datasets: [
+
+        {
+
+            label: 'Complaint',
+
+            data: dashboard.value.daily_trend.map(
+                item => item.total
+            ),
+
+            borderColor: '#EF4444',
+
+            backgroundColor: 'rgba(239,68,68,.12)',
+
+            fill: true,
+
+            tension: .35,
+
+            borderWidth: 3,
+
+            pointRadius: 5,
+
+            pointHoverRadius: 8,
+
+            pointBackgroundColor: '#EF4444',
+
+            pointBorderColor: '#ffffff',
+
+            pointBorderWidth: 2
+
+        }
+
+    ]
+
+}))
+
+/* ==========================================================
+DOUGHNUT
+========================================================== */
+
+const percentageChart = computed(() => ({
+
+    labels: [
+
+        'Complaint',
+
+        'No Complaint'
+
+    ],
+
+    datasets: [
+
+        {
+
+            data: [
+
+                dashboard.value.summary.complaint_rate,
+
+                100 - dashboard.value.summary.complaint_rate
+
+            ],
+
+            backgroundColor: [
+
+                '#EF4444',
+
+                '#10B981'
+
+            ],
+
+            borderWidth: 0,
+
+            hoverOffset: 8
+
+        }
+
+    ]
+
+}))
 
 /* ==========================================================
 LINE OPTION
@@ -1214,10 +1505,6 @@ const lineOptions = {
 
             backgroundColor: '#1E293B',
 
-            titleColor: '#fff',
-
-            bodyColor: '#fff',
-
             padding: 12,
 
             displayColors: false
@@ -1234,12 +1521,6 @@ const lineOptions = {
 
                 display: false
 
-            },
-
-            ticks: {
-
-                color: '#64748B'
-
             }
 
         },
@@ -1250,15 +1531,13 @@ const lineOptions = {
 
             ticks: {
 
-                precision: 0,
-
-                color: '#64748B'
+                precision: 0
 
             },
 
             grid: {
 
-                color: '#EDF2F7'
+                color: '#EEF2F7'
 
             }
 
@@ -1290,11 +1569,7 @@ const doughnutOptions = {
 
         tooltip: {
 
-            backgroundColor: '#1E293B',
-
-            titleColor: '#fff',
-
-            bodyColor: '#fff'
+            backgroundColor: '#1E293B'
 
         }
 
@@ -1303,18 +1578,48 @@ const doughnutOptions = {
 }
 
 /* ==========================================================
-LOAD & REFRESH
+LOAD DASHBOARD
 ========================================================== */
 
-const loadDashboard = () => {
-    potentialStore.fetchPotentialOrders(authStore.user?.id)
+const loadDashboard = async () => {
+
+    loading.value = true
+
+    try {
+
+        /*
+        const { data } = await axios.get(
+
+            '/api/dashboard/manager/complaint'
+
+        )
+
+        dashboard.value = data.data
+        */
+
+        console.log("Dashboard Loaded")
+
+    }
+
+    catch(error){
+
+        console.error(error)
+
+    }
+
+    finally{
+
+        loading.value = false
+
+    }
+
 }
 
-const refresh = () => {
-    loadDashboard()
-}
+/* ==========================================================
+MOUNT
+========================================================== */
 
-onMounted(() => {
+onMounted(()=>{
 
     loadDashboard()
 
@@ -1323,12 +1628,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-
 /* ==========================================================
 PAGE
 ========================================================== */
 
-.potential-dashboard{
+.complaint-dashboard{
 
     min-height:100vh;
 
@@ -1354,14 +1658,12 @@ HEADER
 
     padding:30px;
 
-    border:1px solid #edf2f7;
+    border:1px solid #eef2f7;
 
     box-shadow:
         0 15px 40px rgba(15,23,42,.06);
 
 }
-
-/* Background Decoration */
 
 .dashboard-header::before{
 
@@ -1376,9 +1678,13 @@ HEADER
     border-radius:50%;
 
     background:
+
         radial-gradient(
-            rgba(16,185,129,.08),
+
+            rgba(239,68,68,.08),
+
             transparent
+
         );
 
     right:-140px;
@@ -1400,9 +1706,13 @@ HEADER
     border-radius:50%;
 
     background:
+
         radial-gradient(
-            rgba(34,197,94,.08),
+
+            rgba(59,130,246,.08),
+
             transparent
+
         );
 
     left:-80px;
@@ -1417,11 +1727,11 @@ HEADER ICON
 
 .header-icon{
 
-    width:78px;
+    width:76px;
 
-    height:78px;
+    height:76px;
 
-    border-radius:22px;
+    border-radius:20px;
 
     display:flex;
 
@@ -1429,29 +1739,31 @@ HEADER ICON
 
     align-items:center;
 
-    color:#fff;
-
     font-size:34px;
 
-    flex-shrink:0;
-
-}
-
-.header-icon.success{
+    color:#fff;
 
     background:
+
         linear-gradient(
+
             135deg,
-            #059669,
-            #10b981
+
+            #ef4444,
+
+            #dc2626
+
         );
 
     box-shadow:
-        0 18px 35px rgba(16,185,129,.30);
+
+        0 15px 30px rgba(239,68,68,.28);
 
 }
 
 .dashboard-label{
+
+    color:#dc2626;
 
     font-size:.78rem;
 
@@ -1463,13 +1775,13 @@ HEADER ICON
 
 .dashboard-title{
 
-    margin:6px 0;
-
     font-size:2rem;
 
     font-weight:700;
 
     color:#0f172a;
+
+    margin:6px 0;
 
 }
 
@@ -1482,7 +1794,7 @@ HEADER ICON
 }
 
 /* ==========================================================
-HEADER ACTION
+HEADER BUTTON
 ========================================================== */
 
 .header-action{
@@ -1499,7 +1811,7 @@ HEADER ACTION
 
 .btn-header{
 
-    padding:10px 18px;
+    padding:11px 18px;
 
     border-radius:12px;
 
@@ -1535,12 +1847,13 @@ MINI STAT
 
 .mini-stat:hover{
 
+    background:#ffffff;
+
     transform:translateY(-4px);
 
-    background:#fff;
-
     box-shadow:
-        0 12px 25px rgba(15,23,42,.06);
+
+        0 12px 24px rgba(15,23,42,.06);
 
 }
 
@@ -1550,6 +1863,8 @@ MINI STAT
 
     color:#94a3b8;
 
+    font-size:.8rem;
+
     margin-bottom:8px;
 
 }
@@ -1558,11 +1873,11 @@ MINI STAT
 
     margin:0;
 
-    font-size:1.05rem;
+    color:#0f172a;
 
     font-weight:700;
 
-    color:#0f172a;
+    font-size:1.05rem;
 
 }
 
@@ -1576,19 +1891,19 @@ KPI CARD
 
     overflow:hidden;
 
-    min-height:180px;
+    min-height:170px;
 
     border-radius:22px;
+
+    padding:26px;
+
+    color:#fff;
 
     display:flex;
 
     justify-content:space-between;
 
     align-items:center;
-
-    padding:26px;
-
-    color:#fff;
 
     transition:.35s;
 
@@ -1601,11 +1916,12 @@ KPI CARD
     transform:translateY(-8px);
 
     box-shadow:
-        0 24px 45px rgba(0,0,0,.16);
+
+        0 22px 40px rgba(0,0,0,.18);
 
 }
 
-/* Decoration */
+/* background decoration */
 
 .kpi-card::before{
 
@@ -1613,9 +1929,9 @@ KPI CARD
 
     position:absolute;
 
-    width:190px;
+    width:180px;
 
-    height:190px;
+    height:180px;
 
     border-radius:50%;
 
@@ -1641,9 +1957,9 @@ KPI CARD
 
     background:rgba(255,255,255,.05);
 
-    left:-35px;
+    left:-40px;
 
-    bottom:-35px;
+    bottom:-40px;
 
 }
 
@@ -1657,25 +1973,25 @@ KPI CONTENT
 
     z-index:2;
 
-    width:100%;
-
 }
 
 .kpi-content small{
 
+    display:block;
+
     opacity:.92;
 
-    display:block;
+    font-size:.9rem;
 
 }
 
 .kpi-content h2{
 
-    margin:10px 0;
-
     font-size:42px;
 
     font-weight:700;
+
+    margin:10px 0 8px;
 
 }
 
@@ -1683,13 +1999,13 @@ KPI CONTENT
 
     display:flex;
 
-    justify-content:space-between;
-
     align-items:center;
 
-    font-size:.88rem;
+    gap:8px;
 
-    opacity:.95;
+    opacity:.9;
+
+    font-size:.9rem;
 
 }
 
@@ -1724,103 +2040,76 @@ KPI ICON
 }
 
 /* ==========================================================
-CARD COLOR
+KPI COLOR
 ========================================================== */
 
 .card-primary{
 
     background:
+
         linear-gradient(
+
             135deg,
+
             #2563eb,
+
             #3b82f6
+
         );
 
 }
 
-.card-success{
+.card-danger{
 
     background:
+
         linear-gradient(
+
             135deg,
-            #059669,
-            #10b981
+
+            #dc2626,
+
+            #ef4444
+
         );
 
 }
 
-.card-emerald{
+.card-warning{
 
     background:
+
         linear-gradient(
+
             135deg,
-            #047857,
-            #34d399
+
+            #ea580c,
+
+            #fb923c
+
         );
 
 }
 
 /* ==========================================================
-PROGRESS
+BOOTSTRAP PROGRESS
 ========================================================== */
 
 .progress{
 
     height:8px;
 
+    background:rgba(255,255,255,.20);
+
     border-radius:999px;
 
     overflow:hidden;
-
-    background:rgba(255,255,255,.18);
 
 }
 
 .progress-bar{
 
     border-radius:999px;
-
-}
-
-/* ==========================================================
-BUTTON
-========================================================== */
-
-.btn{
-
-    border-radius:12px;
-
-}
-
-/* ==========================================================
-FADE
-========================================================== */
-
-.dashboard-header,
-
-.kpi-card{
-
-    animation:fadeUp .45s ease;
-
-}
-
-@keyframes fadeUp{
-
-    from{
-
-        opacity:0;
-
-        transform:translateY(25px);
-
-    }
-
-    to{
-
-        opacity:1;
-
-        transform:translateY(0);
-
-    }
 
 }
 
@@ -1847,7 +2136,7 @@ DASHBOARD CARD
 
 .dashboard-card:hover{
 
-    transform:translateY(-4px);
+    transform:translateY(-5px);
 
     box-shadow:0 20px 45px rgba(15,23,42,.10);
 
@@ -1867,6 +2156,8 @@ DASHBOARD CARD
 
     margin:0;
 
+    font-size:1.05rem;
+
     font-weight:700;
 
     color:#0f172a;
@@ -1882,40 +2173,6 @@ DASHBOARD CARD
 .card-body-custom{
 
     padding:24px;
-
-}
-
-/* ==========================================================
-TREND SUMMARY
-========================================================== */
-
-.trend-summary{
-
-    background:#f8fafc;
-
-    border:1px solid #edf2f7;
-
-    border-radius:14px;
-
-    padding:16px;
-
-    text-align:center;
-
-}
-
-.trend-summary small{
-
-    color:#94a3b8;
-
-}
-
-.trend-summary h4{
-
-    margin-top:8px;
-
-    margin-bottom:0;
-
-    font-weight:700;
 
 }
 
@@ -1977,15 +2234,15 @@ PERCENTAGE
 
 }
 
-.dot-success{
-
-    background:#10b981;
-
-}
-
 .dot-primary{
 
     background:#2563eb;
+
+}
+
+.dot-success{
+
+    background:#10b981;
 
 }
 
@@ -1995,41 +2252,61 @@ PERCENTAGE
 
 }
 
+.dot-danger{
+
+    background:#ef4444;
+
+}
+
 /* ==========================================================
-TOP SALES
+LEADERBOARD SALES
 ========================================================== */
 
-.sales-rank-card{
+.leaderboard-item{
 
     display:flex;
 
-    align-items:center;
+    justify-content:space-between;
 
-    gap:16px;
+    align-items:center;
 
     padding:16px;
 
     border-radius:16px;
 
-    transition:.3s;
+    transition:.25s;
 
-    margin-bottom:14px;
+    margin-bottom:12px;
+
+    border:1px solid transparent;
 
 }
 
-.sales-rank-card:hover{
+.leaderboard-item:hover{
 
     background:#f8fafc;
 
-    transform:translateX(6px);
+    border-color:#e2e8f0;
+
+    transform:translateX(4px);
 
 }
 
-.rank-circle{
+.leader-left{
 
-    width:40px;
+    display:flex;
 
-    height:40px;
+    align-items:center;
+
+    gap:14px;
+
+}
+
+.leader-rank{
+
+    width:38px;
+
+    height:38px;
 
     border-radius:50%;
 
@@ -2039,41 +2316,27 @@ TOP SALES
 
     align-items:center;
 
+    background:#2563eb;
+
     color:#fff;
 
     font-weight:700;
 
-    background:#94a3b8;
-
 }
 
-.rank-circle.gold{
+.leader-avatar{
 
-    background:#f59e0b;
+    width:48px;
 
-}
-
-.rank-circle.silver{
-
-    background:#94a3b8;
-
-}
-
-.rank-circle.bronze{
-
-    background:#b45309;
-
-}
-
-.sales-avatar{
-
-    width:52px;
-
-    height:52px;
+    height:48px;
 
     border-radius:50%;
 
-    color:#fff;
+    background:linear-gradient(
+        135deg,
+        #3b82f6,
+        #2563eb
+    );
 
     display:flex;
 
@@ -2081,9 +2344,35 @@ TOP SALES
 
     align-items:center;
 
+    color:#fff;
+
+    font-size:18px;
+
     font-weight:700;
 
-    font-size:20px;
+}
+
+.leader-title{
+
+    font-weight:600;
+
+    color:#0f172a;
+
+}
+
+.leader-right{
+
+    text-align:right;
+
+}
+
+.leader-right h5{
+
+    margin:0;
+
+    color:#ef4444;
+
+    font-weight:700;
 
 }
 
@@ -2091,7 +2380,7 @@ TOP SALES
 CUSTOMER
 ========================================================== */
 
-.customer-card{
+.customer-item{
 
     display:flex;
 
@@ -2103,17 +2392,17 @@ CUSTOMER
 
 }
 
-.customer-icon{
+.customer-avatar{
 
-    width:52px;
+    width:48px;
 
-    height:52px;
+    height:48px;
 
-    border-radius:16px;
+    border-radius:14px;
 
-    background:#d1fae5;
+    background:#fee2e2;
 
-    color:#059669;
+    color:#dc2626;
 
     display:flex;
 
@@ -2121,13 +2410,33 @@ CUSTOMER
 
     align-items:center;
 
-    font-size:22px;
+    font-size:20px;
 
 }
 
-.customer-card:last-child{
+.customer-content{
 
-    margin-bottom:0;
+    flex:1;
+
+}
+
+.customer-name{
+
+    font-weight:600;
+
+    color:#0f172a;
+
+}
+
+.customer-value{
+
+    min-width:45px;
+
+    text-align:right;
+
+    font-weight:700;
+
+    color:#dc2626;
 
 }
 
@@ -2139,7 +2448,7 @@ TIMELINE
 
     position:relative;
 
-    padding-left:30px;
+    padding-left:28px;
 
 }
 
@@ -2165,7 +2474,7 @@ TIMELINE
 
     position:relative;
 
-    margin-bottom:30px;
+    margin-bottom:28px;
 
 }
 
@@ -2179,15 +2488,17 @@ TIMELINE
 
     position:absolute;
 
-    left:-30px;
+    left:-28px;
 
-    top:8px;
+    top:10px;
 
-    width:32px;
+    width:30px;
 
-    height:32px;
+    height:30px;
 
     border-radius:50%;
+
+    background:#ef4444;
 
     display:flex;
 
@@ -2199,25 +2510,19 @@ TIMELINE
 
     font-size:13px;
 
-    box-shadow:0 8px 20px rgba(16,185,129,.30);
-
-}
-
-.timeline-dot.success{
-
-    background:#10b981;
+    box-shadow:0 5px 15px rgba(239,68,68,.35);
 
 }
 
 .timeline-content{
 
-    background:#fff;
+    background:#ffffff;
 
     border:1px solid #edf2f7;
 
-    border-radius:18px;
+    border-radius:16px;
 
-    padding:22px;
+    padding:20px;
 
     transition:.3s;
 
@@ -2225,9 +2530,9 @@ TIMELINE
 
 .timeline-content:hover{
 
-    border-color:#a7f3d0;
+    border-color:#fecaca;
 
-    box-shadow:0 15px 30px rgba(16,185,129,.08);
+    box-shadow:0 10px 30px rgba(239,68,68,.08);
 
 }
 
@@ -2249,31 +2554,31 @@ EMPTY
 
     text-align:center;
 
+    color:#94a3b8;
+
 }
 
 .empty-chart i{
 
-    font-size:60px;
+    font-size:58px;
+
+    margin-bottom:20px;
 
     color:#cbd5e1;
-
-    margin-bottom:18px;
 
 }
 
 .empty-chart h5{
 
+    color:#475569;
+
     font-weight:700;
 
-    margin-bottom:10px;
-
-    color:#334155;
+    margin-bottom:8px;
 
 }
 
 .empty-chart p{
-
-    color:#94a3b8;
 
     max-width:280px;
 
@@ -2285,19 +2590,45 @@ BADGE
 
 .badge{
 
-    border-radius:999px;
-
     padding:7px 14px;
+
+    border-radius:999px;
 
     font-weight:600;
 
 }
 
-.bg-emerald{
+/* ==========================================================
+ANIMATION
+========================================================== */
 
-    background:#34d399;
+.dashboard-card,
 
-    color:#065f46;
+.kpi-card,
+
+.dashboard-header{
+
+    animation:fadeUp .45s ease;
+
+}
+
+@keyframes fadeUp{
+
+    from{
+
+        opacity:0;
+
+        transform:translateY(25px);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateY(0);
+
+    }
 
 }
 
@@ -2333,7 +2664,7 @@ RESPONSIVE
 
     .dashboard-title{
 
-        font-size:1.5rem;
+        font-size:1.6rem;
 
     }
 
@@ -2357,7 +2688,7 @@ RESPONSIVE
 
     .timeline{
 
-        padding-left:20px;
+        padding-left:18px;
 
     }
 
@@ -2373,14 +2704,21 @@ RESPONSIVE
 
     }
 
-    .sales-rank-card{
+    .leaderboard-item{
 
         flex-direction:column;
 
         align-items:flex-start;
 
+        gap:12px;
+
+    }
+
+    .leader-right{
+
+        text-align:left;
+
     }
 
 }
-
 </style>

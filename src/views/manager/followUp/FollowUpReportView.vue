@@ -1,18 +1,25 @@
 <template>
+
     <div class="followup-dashboard container-fluid py-4">
 
-        <!-- ================= HEADER ================= -->
+        <!-- =======================================================
+            HEADER
+        ======================================================== -->
 
         <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
 
             <div>
 
                 <h2 class="fw-bold mb-1">
+
                     Follow Up Dashboard
+
                 </h2>
 
                 <p class="text-muted mb-0">
+
                     Team Follow Up Monitoring
+
                 </p>
 
             </div>
@@ -23,17 +30,21 @@
 
                     <i class="ti ti-calendar me-2"></i>
 
-                    July 2026
+                    {{ currentMonthLabel }}
 
                 </button>
 
                 <button
                     class="btn btn-primary"
+                    :disabled="loading"
                     @click="refresh">
 
-                    <i class="ti ti-refresh me-2"></i>
+                    <i
+                        class="ti ti-refresh me-2"
+                        :class="{ 'spin-icon': loading }">
+                    </i>
 
-                    Refresh
+                    {{ loading ? 'Refreshing...' : 'Refresh' }}
 
                 </button>
 
@@ -41,163 +52,485 @@
 
         </div>
 
-        <!-- ================= KPI ================= -->
+        <!-- =======================================================
+            LOADING
+        ======================================================== -->
 
-        <div class="row g-4 mb-4">
+        <div
+            v-if="loading && !hasData"
+            class="sp-loading-wrap">
 
-            <div class="col-xl col-md-6">
+            <div class="spinner"></div>
 
-                <div class="kpi-card card-indigo">
+            <span>
 
-                    <div class="kpi-icon">
+                Loading Follow Up Dashboard...
 
-                        <i class="ti ti-phone"></i>
-
-                    </div>
-
-                    <div>
-
-                        <small>Total Follow Up</small>
-
-                        <h2>{{ dashboard.summary.total_follow_up }}</h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="col-xl col-md-6">
-
-                <div class="kpi-card card-warning">
-
-                    <div class="kpi-icon">
-
-                        <i class="ti ti-clock-hour-4"></i>
-
-                    </div>
-
-                    <div>
-
-                        <small>Pending</small>
-
-                        <h2>{{ dashboard.summary.pending }}</h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="col-xl col-md-6">
-
-                <div class="kpi-card card-success">
-
-                    <div class="kpi-icon">
-
-                        <i class="ti ti-circle-check"></i>
-
-                    </div>
-
-                    <div>
-
-                        <small>Done</small>
-
-                        <h2>{{ dashboard.summary.done }}</h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="col-xl col-md-6">
-
-                <div class="kpi-card card-danger">
-
-                    <div class="kpi-icon">
-
-                        <i class="ti ti-alert-circle"></i>
-
-                    </div>
-
-                    <div>
-
-                        <small>Overdue</small>
-
-                        <h2>{{ dashboard.summary.overdue }}</h2>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="col-xl col-md-6">
-
-                <div class="kpi-card card-secondary">
-
-                    <div class="kpi-icon">
-
-                        <i class="ti ti-circle-x"></i>
-
-                    </div>
-
-                    <div>
-
-                        <small>Cancelled</small>
-
-                        <h2>{{ dashboard.summary.cancelled }}</h2>
-
-                    </div>
-
-                </div>
-
-            </div>
+            </span>
 
         </div>
 
-        <!-- ================= CHART ================= -->
+        <template v-else>
 
-        <div class="row g-4 mb-4">
+            <!-- =======================================================
+                KPI
+            ======================================================== -->
 
-            <!-- Activity Type -->
+            <div class="row g-4 mb-4">
 
-            <div class="col-lg-6">
+                <!-- TOTAL -->
 
-                <div class="card shadow-sm border-0">
+                <div class="col-xl col-md-6">
 
-                    <div class="card-header bg-white">
+                    <div class="kpi-card card-indigo">
 
-                        <h4 class="mb-0">
+                        <div class="kpi-icon">
 
-                            Activity Type
+                            <i class="ti ti-phone"></i>
 
-                        </h4>
+                        </div>
+
+                        <div>
+
+                            <small>Total Follow Up</small>
+
+                            <h2>
+
+                                {{ dashboard.summary.total_follow_up }}
+
+                            </h2>
+
+                            <div class="kpi-footer">
+
+                                <i class="ti ti-trending-up me-1"></i>
+
+                                All Activities
+
+                            </div>
+
+                        </div>
 
                     </div>
 
-                    <div class="card-body">
+                </div>
 
-                        <div
-                            v-for="item in dashboard.activity"
-                            :key="item.follow_up_type"
-                            class="activity-item">
+                <!-- PENDING -->
+
+                <div class="col-xl col-md-6">
+
+                    <div class="kpi-card card-warning">
+
+                        <div class="kpi-icon">
+
+                            <i class="ti ti-clock-hour-4"></i>
+
+                        </div>
+
+                        <div>
+
+                            <small>Pending</small>
+
+                            <h2>
+
+                                {{ dashboard.summary.pending }}
+
+                            </h2>
+
+                            <div class="kpi-footer">
+
+                                {{ pendingRate }}%
+
+                                Pending
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- DONE -->
+
+                <div class="col-xl col-md-6">
+
+                    <div class="kpi-card card-success">
+
+                        <div class="kpi-icon">
+
+                            <i class="ti ti-circle-check"></i>
+
+                        </div>
+
+                        <div>
+
+                            <small>Completed</small>
+
+                            <h2>
+
+                                {{ dashboard.summary.done }}
+
+                            </h2>
+
+                            <div class="kpi-footer">
+
+                                {{ completionRate }}%
+
+                                Completed
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- OVERDUE -->
+
+                <div class="col-xl col-md-6">
+
+                    <div class="kpi-card card-danger">
+
+                        <div class="kpi-icon">
+
+                            <i class="ti ti-alert-circle"></i>
+
+                        </div>
+
+                        <div>
+
+                            <small>Overdue</small>
+
+                            <h2>
+
+                                {{ dashboard.summary.overdue }}
+
+                            </h2>
+
+                            <div class="kpi-footer">
+
+                                {{ overdueRate }}%
+
+                                Need Attention
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- CANCELLED -->
+
+                <div class="col-xl col-md-6">
+
+                    <div class="kpi-card card-secondary">
+
+                        <div class="kpi-icon">
+
+                            <i class="ti ti-circle-x"></i>
+
+                        </div>
+
+                        <div>
+
+                            <small>Cancelled</small>
+
+                            <h2>
+
+                                {{ dashboard.summary.cancelled }}
+
+                            </h2>
+
+                            <div class="kpi-footer">
+
+                                {{ cancelledRate }}%
+
+                                Cancelled
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =======================================================
+                TOP PERFORMER + TEAM SUMMARY
+            ======================================================== -->
+
+            <div class="row g-4 mb-4">
+
+                <!-- TOP PERFORMER -->
+
+                <div class="col-xl-5">
+
+                    <div class="card border-0 shadow-sm h-100">
+
+                        <div class="card-header bg-white">
+
+                            <h4 class="mb-0">
+
+                                🏆 Top Follow Up Performer
+
+                            </h4>
+
+                        </div>
+
+                        <div class="card-body">
 
                             <div
-                                class="d-flex justify-content-between mb-2">
+                                v-if="!bestSales"
+                                class="empty-state">
+
+                                No Top Performer
+
+                            </div>
+
+                            <template v-else>
+
+                                <div class="top-user">
+
+                                    <div class="avatar-xl">
+
+                                        <i class="ti ti-user"></i>
+
+                                    </div>
+
+                                    <h3 class="mt-3 mb-1">
+
+                                        {{ bestSales.fullname }}
+
+                                    </h3>
+
+                                    <p class="text-muted mb-4">
+
+                                        Best Sales Follow Up This Month
+
+                                    </p>
+
+                                    <div class="score-circle">
+
+                                        {{ bestSales.total_follow_up }}
+
+                                    </div>
+
+                                </div>
+
+                                <div class="row mt-4 text-center">
+
+                                    <div class="col">
+
+                                        <h4>
+
+                                            {{ bestSales.total_follow_up }}
+
+                                        </h4>
+
+                                        <small>
+
+                                            Follow Up
+
+                                        </small>
+
+                                    </div>
+
+                                    <div class="col">
+
+                                        <h4>
+
+                                            {{ dashboard.summary.pending }}
+
+                                        </h4>
+
+                                        <small>
+
+                                            Pending
+
+                                        </small>
+
+                                    </div>
+
+                                    <div class="col">
+
+                                        <h4>
+
+                                            {{ dashboard.summary.done }}
+
+                                        </h4>
+
+                                        <small>
+
+                                            Done
+
+                                        </small>
+
+                                    </div>
+
+                                </div>
+
+                            </template>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- TEAM SUMMARY -->
+
+                <div class="col-xl-7">
+
+                    <div class="card border-0 shadow-sm h-100">
+
+                        <div class="card-header bg-white">
+
+                            <h4 class="mb-0">
+
+                                Team Summary
+
+                            </h4>
+
+                        </div>
+
+                        <div class="card-body">
+
+                            <!-- Pending -->
+
+                            <div class="summary-item">
+
+                                <div>
+
+                                    Pending Follow Up
+
+                                </div>
 
                                 <strong>
 
-                                    {{ item.follow_up_type }}
+                                    {{ dashboard.summary.pending }}
 
                                 </strong>
 
-                                <span>
+                            </div>
 
-                                    {{ item.total }}
+                            <div class="progress mb-4">
 
-                                </span>
+                                <div
+                                    class="progress-bar bg-warning"
+                                    :style="{
+                                        width: pendingRate + '%'
+                                    }">
+                                </div>
+
+                            </div>
+
+                            <!-- Done -->
+
+                            <div class="summary-item">
+
+                                <div>
+
+                                    Completed
+
+                                </div>
+
+                                <strong>
+
+                                    {{ dashboard.summary.done }}
+
+                                </strong>
+
+                            </div>
+
+                            <div class="progress mb-4">
+
+                                <div
+                                    class="progress-bar bg-success"
+                                    :style="{
+                                        width: completionRate + '%'
+                                    }">
+                                </div>
+
+                            </div>
+
+                            <!-- Overdue -->
+
+                            <div class="summary-item">
+
+                                <div>
+
+                                    Overdue
+
+                                </div>
+
+                                <strong>
+
+                                    {{ dashboard.summary.overdue }}
+
+                                </strong>
+
+                            </div>
+
+                            <div class="progress mb-4">
+
+                                <div
+                                    class="progress-bar bg-danger"
+                                    :style="{
+                                        width: overdueRate + '%'
+                                    }">
+                                </div>
+
+                            </div>
+
+                            <!-- Cancelled -->
+
+                            <div class="summary-item">
+
+                                <div>
+
+                                    Cancelled
+
+                                </div>
+
+                                <strong>
+
+                                    {{ dashboard.summary.cancelled }}
+
+                                </strong>
+
+                            </div>
+
+                            <div class="progress mb-4">
+
+                                <div
+                                    class="progress-bar bg-secondary"
+                                    :style="{
+                                        width: cancelledRate + '%'
+                                    }">
+                                </div>
+
+                            </div>
+
+                            <!-- Closed -->
+
+                            <div class="summary-item">
+
+                                <div>
+
+                                    Closed
+
+                                </div>
+
+                                <strong>
+
+                                    {{ dashboard.summary.closed }}
+
+                                </strong>
 
                             </div>
 
@@ -206,126 +539,227 @@
                                 <div
                                     class="progress-bar bg-primary"
                                     :style="{
-                                        width:item.percentage+'%'
-                                    }"
-                                ></div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <!-- Daily Trend -->
-
-            <div class="col-lg-6">
-
-                <div class="card shadow-sm border-0 h-100">
-
-                    <div class="card-header bg-white">
-
-                        <h4 class="mb-0">
-
-                            Daily Trend
-
-                        </h4>
-
-                    </div>
-
-                    <div class="card-body">
-
-                        <div class="chart-placeholder">
-
-                            <i class="ti ti-chart-line"></i>
-
-                            <h5>
-
-                                Daily Trend Chart
-
-                            </h5>
-
-                            <p class="text-muted">
-
-                                ApexCharts will be placed here
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- ================= BOTTOM ================= -->
-
-        <div class="row g-4">
-
-            <!-- Top Sales -->
-
-            <div class="col-lg-5">
-
-                <div class="card border-0 shadow-sm">
-
-                    <div class="card-header bg-white">
-
-                        <h4 class="mb-0">
-
-                            Top Sales Follow Up
-
-                        </h4>
-
-                    </div>
-
-                    <div class="card-body">
-
-                        <div
-                            class="sales-item"
-                            v-for="(item,index) in dashboard.top_sales"
-                            :key="item.id_user">
-
-                            <div class="rank">
-
-                                <span v-if="index==0">🥇</span>
-
-                                <span v-else-if="index==1">🥈</span>
-
-                                <span v-else-if="index==2">🥉</span>
-
-                                <span v-else>
-
-                                    {{ index+1 }}
-
-                                </span>
-
-                            </div>
-
-                            <div class="flex-grow-1">
-
-                                <div class="fw-bold">
-
-                                    {{ item.fullname }}
-
+                                        width: closedRate + '%'
+                                    }">
                                 </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+                        <!-- =======================================================
+                DAILY TREND + STATUS
+            ======================================================== -->
+
+            <div class="row g-4 mb-4">
+
+                <!-- DAILY TREND -->
+
+                <div class="col-xl-8">
+
+                    <div class="card border-0 shadow-sm h-100">
+
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <h4 class="mb-1">
+
+                                    📈 Daily Follow Up Trend
+
+                                </h4>
 
                                 <small class="text-muted">
 
-                                    {{ item.total_follow_up }} Follow Up
+                                    Daily Follow Up Activity
 
                                 </small>
 
                             </div>
 
-                            <div class="badge bg-primary">
+                            <span class="badge bg-primary">
 
-                                {{ item.total_follow_up }}
+                                {{ dashboard.daily_trend.length }}
+
+                                Days
+
+                            </span>
+
+                        </div>
+
+                        <div class="card-body">
+
+                            <div
+                                v-if="!dashboard.daily_trend.length"
+                                class="empty-state">
+
+                                <i class="ti ti-chart-line"></i>
+
+                                <h5 class="mt-3">
+
+                                    No Trend Available
+
+                                </h5>
+
+                            </div>
+
+                            <template v-else>
+
+                                <div class="chart-wrapper">
+
+                                    <canvas
+                                        ref="dailyTrendChart"
+                                        height="130">
+                                    </canvas>
+
+                                </div>
+
+                            </template>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- STATUS -->
+
+                <div class="col-xl-4">
+
+                    <div class="card border-0 shadow-sm h-100">
+
+                        <div class="card-header bg-white">
+
+                            <h4 class="mb-0">
+
+                                📊 Follow Up Status
+
+                            </h4>
+
+                        </div>
+
+                        <div class="card-body">
+
+                            <div class="chart-wrapper">
+
+                                <canvas
+                                    ref="statusChart"
+                                    height="240">
+                                </canvas>
+
+                            </div>
+
+                            <div class="row mt-4">
+
+                                <div class="col-6 mb-3">
+
+                                    <div class="status-box">
+
+                                        <div class="status-dot bg-warning"></div>
+
+                                        <div>
+
+                                            <small>
+
+                                                Pending
+
+                                            </small>
+
+                                            <h5>
+
+                                                {{ dashboard.summary.pending }}
+
+                                            </h5>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col-6 mb-3">
+
+                                    <div class="status-box">
+
+                                        <div class="status-dot bg-success"></div>
+
+                                        <div>
+
+                                            <small>
+
+                                                Done
+
+                                            </small>
+
+                                            <h5>
+
+                                                {{ dashboard.summary.done }}
+
+                                            </h5>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col-6">
+
+                                    <div class="status-box">
+
+                                        <div class="status-dot bg-danger"></div>
+
+                                        <div>
+
+                                            <small>
+
+                                                Overdue
+
+                                            </small>
+
+                                            <h5>
+
+                                                {{ dashboard.summary.overdue }}
+
+                                            </h5>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="col-6">
+
+                                    <div class="status-box">
+
+                                        <div class="status-dot bg-secondary"></div>
+
+                                        <div>
+
+                                            <small>
+
+                                                Cancelled
+
+                                            </small>
+
+                                            <h5>
+
+                                                {{ dashboard.summary.cancelled }}
+
+                                            </h5>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
 
                             </div>
 
@@ -337,98 +771,210 @@
 
             </div>
 
-            <!-- Overdue -->
+            <!-- =======================================================
+                ACTIVITY TYPE
+            ======================================================== -->
 
-            <div class="col-lg-7">
+            <div class="row g-4 mb-4">
 
-                <div class="card border-0 shadow-sm">
+                <div class="col-12">
 
-                    <div class="card-header bg-white">
+                    <div class="card border-0 shadow-sm">
 
-                        <h4 class="mb-0">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
 
-                            Overdue Follow Up
+                            <div>
+
+                                <h4 class="mb-1">
+
+                                    📞 Activity Type
+
+                                </h4>
+
+                                <small class="text-muted">
+
+                                    Follow Up Activity Distribution
+
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                        <div class="card-body">
+
+                            <div
+                                v-if="!activity.length"
+                                class="empty-state">
+
+                                No Activity Data
+
+                            </div>
+
+                            <template v-else>
+
+                                <div class="chart-wrapper mb-5">
+
+                                    <canvas
+                                        ref="activityChart"
+                                        height="110">
+                                    </canvas>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div
+                                        class="col-xl-4 col-md-6 mb-4"
+                                        v-for="item in activity"
+                                        :key="item.follow_up_type">
+
+                                        <div class="activity-card">
+
+                                            <div class="d-flex justify-content-between mb-2">
+
+                                                <strong>
+
+                                                    {{ item.follow_up_type }}
+
+                                                </strong>
+
+                                                <span class="badge bg-primary">
+
+                                                    {{ item.total }}
+
+                                                </span>
+
+                                            </div>
+
+                                            <div class="progress">
+
+                                                <div
+                                                    class="progress-bar bg-primary"
+                                                    :style="{
+                                                        width:item.percentage+'%'
+                                                    }">
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </template>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+                        <!-- =======================================================
+                LEADERBOARD
+            ======================================================== -->
+
+            <div class="card border-0 shadow-sm mb-4">
+
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <h4 class="mb-1">
+
+                            🏆 Sales Leaderboard
 
                         </h4>
 
+                        <small class="text-muted">
+
+                            Ranking Based On Total Follow Up
+
+                        </small>
+
                     </div>
 
-                    <div class="card-body">
+                    <span class="badge bg-primary">
 
-                        <div
-                            class="overdue-card"
-                            v-for="item in dashboard.overdue_list"
-                            :key="item.follow_up_code">
+                        {{ dashboard.top_sales.length }}
 
-                            <div
-                                class="d-flex justify-content-between">
+                        Sales
 
-                                <div>
+                    </span>
 
-                                    <div class="fw-bold">
+                </div>
 
-                                        {{ item.follow_up_code }}
+                <div class="card-body">
 
-                                    </div>
+                    <div
+                        v-if="!dashboard.top_sales.length"
+                        class="empty-state">
 
-                                    <div class="text-muted">
+                        No Sales Ranking
 
-                                        {{ item.customer_name }}
+                    </div>
 
-                                    </div>
+                    <div
+                        v-else
+                        class="ranking-item"
+                        v-for="(item,index) in dashboard.top_sales"
+                        :key="item.id_user">
 
-                                </div>
+                        <!-- Rank -->
 
-                                <span class="badge bg-danger">
+                        <div class="rank">
 
-                                    {{ item.overdue_days }} Days
+                            {{ medal(index) }}
 
-                                </span>
+                        </div>
+
+                        <!-- Avatar -->
+
+                        <div class="avatar">
+
+                            <i class="ti ti-user"></i>
+
+                        </div>
+
+                        <!-- Name -->
+
+                        <div class="flex-grow-1 ms-3">
+
+                            <div class="fw-bold">
+
+                                {{ item.fullname }}
 
                             </div>
 
-                            <hr>
+                            <small class="text-muted">
 
-                            <div class="row">
+                                {{ item.total_follow_up }}
 
-                                <div class="col-md-4">
+                                Follow Up
 
-                                    <strong>Sales</strong>
+                            </small>
 
-                                    <div>
+                            <div class="progress mt-2">
 
-                                        {{ item.sales_name }}
-
-                                    </div>
-
-                                </div>
-
-                                <div class="col-md-4">
-
-                                    <strong>Type</strong>
-
-                                    <div>
-
-                                        {{ item.follow_up_type }}
-
-                                    </div>
-
-                                </div>
-
-                                <div class="col-md-4">
-
-                                    <strong>Status</strong>
-
-                                    <div>
-
-                                        <span
-                                            class="badge bg-warning">
-
-                                            {{ item.status }}
-
-                                        </span>
-
-                                    </div>
+                                <div
+                                    class="progress-bar bg-primary"
+                                    :style="{
+                                        width:
+                                        (
+                                            item.total_follow_up /
+                                            Math.max(
+                                                ...dashboard.top_sales.map(
+                                                    s => s.total_follow_up
+                                                ),
+                                                1
+                                            )
+                                        ) * 100 + '%'
+                                    }">
 
                                 </div>
 
@@ -436,19 +982,11 @@
 
                         </div>
 
-                        <div
-                            v-if="dashboard.overdue_list.length===0"
-                            class="text-center py-5">
+                        <!-- Score -->
 
-                            <i
-                                class="ti ti-circle-check text-success"
-                                style="font-size:60px"></i>
+                        <div class="score">
 
-                            <h5 class="mt-3">
-
-                                No Overdue Follow Up
-
-                            </h5>
+                            {{ item.total_follow_up }}
 
                         </div>
 
@@ -458,336 +996,770 @@
 
             </div>
 
-        </div>
+            <!-- =======================================================
+                OVERDUE FOLLOW UP
+            ======================================================== -->
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <h4 class="mb-1">
+
+                            🚨 Overdue Follow Up
+
+                        </h4>
+
+                        <small class="text-muted">
+
+                            Need Immediate Attention
+
+                        </small>
+
+                    </div>
+
+                    <span class="badge bg-danger">
+
+                        {{ dashboard.overdue_list.length }}
+
+                        Items
+
+                    </span>
+
+                </div>
+
+                <div class="card-body">
+
+                    <div
+                        v-if="!dashboard.overdue_list.length"
+                        class="empty-state">
+
+                        <i
+                            class="ti ti-circle-check text-success"
+                            style="font-size:60px">
+                        </i>
+
+                        <h5 class="mt-3">
+
+                            Great Job 🎉
+
+                        </h5>
+
+                        <p>
+
+                            There are no overdue follow ups.
+
+                        </p>
+
+                    </div>
+
+                    <div
+                        v-else
+                        class="row g-4">
+
+                        <div
+                            class="col-xl-6"
+                            v-for="item in dashboard.overdue_list"
+                            :key="item.follow_up_code">
+
+                            <div class="overdue-modern-card">
+
+                                <div class="overdue-ribbon">
+
+                                    {{ item.overdue_days }}
+
+                                    Days
+
+                                </div>
+
+                                <div class="mb-3">
+
+                                    <h5 class="fw-bold mb-1">
+
+                                        {{ item.follow_up_code }}
+
+                                    </h5>
+
+                                    <small class="text-muted">
+
+                                        {{ item.customer_name }}
+
+                                    </small>
+
+                                </div>
+
+                                <div class="row g-3">
+
+                                    <div class="col-6">
+
+                                        <small class="text-muted">
+
+                                            Sales
+
+                                        </small>
+
+                                        <div class="fw-semibold">
+
+                                            {{ item.sales_name }}
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-6">
+
+                                        <small class="text-muted">
+
+                                            Type
+
+                                        </small>
+
+                                        <div class="fw-semibold">
+
+                                            {{ item.follow_up_type }}
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-6">
+
+                                        <small class="text-muted">
+
+                                            Schedule
+
+                                        </small>
+
+                                        <div>
+
+                                            {{ formatDateTime(item.follow_up_at) }}
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-6">
+
+                                        <small class="text-muted">
+
+                                            Status
+
+                                        </small>
+
+                                        <div>
+
+                                            <span
+                                                class="badge"
+                                                :class="statusClass(item.status)">
+
+                                                {{ item.status }}
+
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </template>
 
     </div>
+
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
 
-const loading = ref(false)
+import {
+    computed,
+    onMounted,
+    onBeforeUnmount,
+    ref,
+    watch,
+    nextTick
+} from 'vue'
 
-const dashboard = ref({
+import {
+    storeToRefs
+} from 'pinia'
 
-    summary: {
-        total_follow_up: 12,
-        pending: 8,
-        done: 4,
-        cancelled: 0,
-        closed: 0,
-        overdue: 2
-    },
+import {
+    Chart,
+    LineController,
+    LineElement,
+    PointElement,
+    LinearScale,
+    CategoryScale,
+    DoughnutController,
+    ArcElement,
+    BarController,
+    BarElement,
+    Tooltip,
+    Legend,
+    Filler
+} from 'chart.js'
 
-    activity: [
-        {
-            follow_up_type: 'CALL',
-            total: 1
-        },
-        {
-            follow_up_type: 'EMAIL',
-            total: 1
-        },
-        {
-            follow_up_type: 'MEETING',
-            total: 1
-        },
-        {
-            follow_up_type: 'VISIT',
-            total: 4
-        },
-        {
-            follow_up_type: 'WHATSAPP',
-            total: 5
-        }
-    ],
+import { useAuthStore } from '@/stores/authStore'
+import { useFollowUpDashboardStore } from '@/stores/followUpDashboard'
 
-    result: [],
+Chart.register(
 
-    top_sales: [
-        {
-            id_user: 1,
-            fullname: 'apregi pratayuda',
-            total_follow_up: 3
-        },
-        {
-            id_user: 2,
-            fullname: 'sputnix norwey',
-            total_follow_up: 3
-        },
-        {
-            id_user: 3,
-            fullname: 'bortley england',
-            total_follow_up: 2
-        },
-        {
-            id_user: 4,
-            fullname: 'willson denmark',
-            total_follow_up: 2
-        }
-    ],
+    LineController,
+    LineElement,
+    PointElement,
+    LinearScale,
+    CategoryScale,
 
-    overdue_list: [
-        {
-            follow_up_code: 'FU-20260708-XVYR5X',
-            customer_name: 'PT Maju Jaya',
-            sales_name: 'apregi pratayuda',
-            follow_up_type: 'CALL',
-            follow_up_at: '2026-07-07 17:28:52',
-            status: 'PENDING',
-            overdue_days: 3
-        },
-        {
-            follow_up_code: 'FU-20260708-WUXZJP',
-            customer_name: 'PT Maju Jaya',
-            sales_name: 'apregi pratayuda',
-            follow_up_type: 'EMAIL',
-            follow_up_at: '2026-07-07 17:28:52',
-            status: 'PENDING',
-            overdue_days: 3
-        }
-    ],
+    DoughnutController,
+    ArcElement,
 
-    daily_trend: [
-        {
-            date: '2026-07-07',
-            total: 3
-        },
-        {
-            date: '2026-07-10',
-            total: 7
-        },
-        {
-            date: '2026-07-12',
-            total: 1
-        },
-        {
-            date: '2026-07-13',
-            total: 1
-        }
-    ]
+    BarController,
+    BarElement,
 
-})
+    Tooltip,
+    Legend,
+    Filler
 
-/*
-|--------------------------------------------------------------------------
-| Activity Percentage
-|--------------------------------------------------------------------------
-*/
+)
 
-const maxActivity = computed(() => {
+// ======================================================
+// STORE
+// ======================================================
 
-    return Math.max(
-        ...dashboard.value.activity.map(i => i.total),
-        1
-    )
+const authStore = useAuthStore()
 
-})
+const store = useFollowUpDashboardStore()
 
-dashboard.value.activity = dashboard.value.activity.map(item => ({
+const {
 
-    ...item,
+    followUp: dashboard,
 
-    percentage: (
-        item.total /
-        maxActivity.value
-    ) * 100
+    loadingFollowUp: loading,
 
-}))
+    hasData,
 
-/*
-|--------------------------------------------------------------------------
-| Summary
-|--------------------------------------------------------------------------
-*/
+    activity,
 
-const completionRate = computed(() => {
+    completionRate,
 
-    return (
-        (
-            dashboard.value.summary.done /
-            dashboard.value.summary.total_follow_up
-        ) * 100
-    ).toFixed(1)
+    pendingRate,
 
-})
+    overdueRate,
 
-const pendingRate = computed(() => {
+    cancelledRate,
 
-    return (
-        (
-            dashboard.value.summary.pending /
-            dashboard.value.summary.total_follow_up
-        ) * 100
-    ).toFixed(1)
+    closedRate,
 
-})
+    trendCategories,
 
-const overdueRate = computed(() => {
+    trendSeries,
 
-    return (
-        (
-            dashboard.value.summary.overdue /
-            dashboard.value.summary.total_follow_up
-        ) * 100
-    ).toFixed(1)
+    bestSales
 
-})
+} = storeToRefs(store)
 
-/*
-|--------------------------------------------------------------------------
-| Chart Data
-|--------------------------------------------------------------------------
-*/
+const {
 
-const trendCategories = computed(() => {
+    fetchFollowUp,
 
-    return dashboard.value.daily_trend.map(item => item.date)
+    medal,
 
-})
+    statusClass,
 
-const trendSeries = computed(() => {
+    formatDateTime
 
-    return dashboard.value.daily_trend.map(item => item.total)
+} = store
 
-})
+// ======================================================
+// HEADER
+// ======================================================
 
-/*
-|--------------------------------------------------------------------------
-| Formatter
-|--------------------------------------------------------------------------
-*/
+const currentMonthLabel = computed(() => {
 
-const formatDate = date => {
+    return new Date().toLocaleDateString(
 
-    return new Date(date).toLocaleDateString(
         'id-ID',
+
         {
-            day: '2-digit',
-            month: 'short',
+
+            month: 'long',
+
             year: 'numeric'
+
         }
+
     )
 
-}
+})
 
-const formatDateTime = date => {
+// ======================================================
+// CHART REF
+// ======================================================
 
-    return new Date(date).toLocaleString(
-        'id-ID'
-    )
+const dailyTrendChart = ref(null)
 
-}
+const statusChart = ref(null)
 
-/*
-|--------------------------------------------------------------------------
-| Badge Color
-|--------------------------------------------------------------------------
-*/
+const activityChart = ref(null)
 
-const statusClass = status => {
+let dailyTrendInstance = null
 
-    switch (status) {
+let statusInstance = null
 
-        case 'DONE':
-            return 'bg-success'
+let activityInstance = null
 
-        case 'PENDING':
-            return 'bg-warning'
+// ======================================================
+// DESTROY CHART
+// ======================================================
 
-        case 'CANCELLED':
-            return 'bg-danger'
+const destroyCharts = () => {
 
-        case 'CLOSED':
-            return 'bg-primary'
+    if (dailyTrendInstance) {
 
-        default:
-            return 'bg-secondary'
+        dailyTrendInstance.destroy()
+
+        dailyTrendInstance = null
+
+    }
+
+    if (statusInstance) {
+
+        statusInstance.destroy()
+
+        statusInstance = null
+
+    }
+
+    if (activityInstance) {
+
+        activityInstance.destroy()
+
+        activityInstance = null
 
     }
 
 }
 
-/*
-|--------------------------------------------------------------------------
-| Overdue Color
-|--------------------------------------------------------------------------
-*/
+// ======================================================
+// MOUNT
+// ======================================================
 
-const overdueClass = days => {
+onMounted(async () => {
 
-    if (days >= 7)
-        return 'text-danger'
+    if (!authStore.user) {
 
-    if (days >= 3)
-        return 'text-warning'
+        await authStore.fetchProfile()
 
-    return 'text-success'
+    }
+
+    await fetchFollowUp(
+
+        authStore.user?.id_user
+
+    )
+
+})
+
+// ======================================================
+// UNMOUNT
+// ======================================================
+
+onBeforeUnmount(() => {
+
+    destroyCharts()
+
+})
+
+// ======================================================
+// WATCH
+// ======================================================
+
+watch(
+
+    dashboard,
+
+    async () => {
+
+        await nextTick()
+
+        destroyCharts()
+
+        createDailyTrendChart()
+
+        createStatusChart()
+
+        createActivityChart()
+
+    },
+
+    {
+
+        deep: true
+
+    }
+
+)
+
+// ======================================================
+// REFRESH
+// ======================================================
+
+const refresh = async () => {
+
+    await fetchFollowUp(
+
+        authStore.user?.id_user
+
+    )
 
 }
 
-/*
-|--------------------------------------------------------------------------
-| Refresh
-|--------------------------------------------------------------------------
-*/
+// ======================================================
+// DAILY TREND CHART
+// ======================================================
 
-const refresh = () => {
+const createDailyTrendChart = () => {
 
-    loading.value = true
+    if (!dailyTrendChart.value) return
 
-    setTimeout(() => {
+    dailyTrendInstance = new Chart(
 
-        loading.value = false
+        dailyTrendChart.value,
 
-        console.log('Dashboard refreshed')
+        {
 
-    }, 1000)
+            type: 'line',
+
+            data: {
+
+                labels: trendCategories.value,
+
+                datasets: [
+
+                    {
+
+                        label: 'Follow Up',
+
+                        data: trendSeries.value,
+
+                        borderColor: '#4f46e5',
+
+                        backgroundColor: 'rgba(79,70,229,.12)',
+
+                        fill: true,
+
+                        tension: .35,
+
+                        pointRadius: 5,
+
+                        pointHoverRadius: 7,
+
+                        borderWidth: 3
+
+                    }
+
+                ]
+
+            },
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                plugins: {
+
+                    legend: {
+
+                        display: false
+
+                    }
+
+                },
+
+                scales: {
+
+                    y: {
+
+                        beginAtZero: true,
+
+                        ticks: {
+
+                            precision: 0
+
+                        },
+
+                        grid: {
+
+                            color: '#eef2f7'
+
+                        }
+
+                    },
+
+                    x: {
+
+                        grid: {
+
+                            display: false
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    )
 
 }
 
-/*
-|--------------------------------------------------------------------------
-| Future API
-|--------------------------------------------------------------------------
-*/
+// ======================================================
+// STATUS DOUGHNUT
+// ======================================================
 
-// import axios from '@/plugins/axios'
-//
-// const loadDashboard = async () => {
-//
-//     loading.value = true
-//
-//     try {
-//
-//         const { data } = await axios.get(
-//             '/dashboard/manager/follow-up'
-//         )
-//
-//         dashboard.value = data.data
-//
-//     } finally {
-//
-//         loading.value = false
-//
-//     }
-//
-// }
+const createStatusChart = () => {
+
+    if (!statusChart.value) return
+
+    statusInstance = new Chart(
+
+        statusChart.value,
+
+        {
+
+            type: 'doughnut',
+
+            data: {
+
+                labels: [
+
+                    'Pending',
+
+                    'Done',
+
+                    'Cancelled',
+
+                    'Closed',
+
+                    'Overdue'
+
+                ],
+
+                datasets: [
+
+                    {
+
+                        data: [
+
+                            dashboard.value.summary.pending,
+
+                            dashboard.value.summary.done,
+
+                            dashboard.value.summary.cancelled,
+
+                            dashboard.value.summary.closed,
+
+                            dashboard.value.summary.overdue
+
+                        ],
+
+                        backgroundColor: [
+
+                            '#f59e0b',
+
+                            '#10b981',
+
+                            '#64748b',
+
+                            '#3b82f6',
+
+                            '#ef4444'
+
+                        ],
+
+                        borderWidth: 0,
+
+                        hoverOffset: 8
+
+                    }
+
+                ]
+
+            },
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                cutout: '70%',
+
+                plugins: {
+
+                    legend: {
+
+                        position: 'bottom',
+
+                        labels: {
+
+                            boxWidth: 12,
+
+                            padding: 18
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    )
+
+}
+
+// ======================================================
+// ACTIVITY CHART
+// ======================================================
+
+const createActivityChart = () => {
+
+    if (!activityChart.value) return
+
+    activityInstance = new Chart(
+
+        activityChart.value,
+
+        {
+
+            type: 'bar',
+
+            data: {
+
+                labels: activity.value.map(
+
+                    item => item.follow_up_type
+
+                ),
+
+                datasets: [
+
+                    {
+
+                        label: 'Total',
+
+                        data: activity.value.map(
+
+                            item => item.total
+
+                        ),
+
+                        backgroundColor: '#4f46e5',
+
+                        borderRadius: 10,
+
+                        borderSkipped: false,
+
+                        barThickness: 18
+
+                    }
+
+                ]
+
+            },
+
+            options: {
+
+                indexAxis: 'y',
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                plugins: {
+
+                    legend: {
+
+                        display: false
+
+                    }
+
+                },
+
+                scales: {
+
+                    x: {
+
+                        beginAtZero: true,
+
+                        ticks: {
+
+                            precision: 0
+
+                        },
+
+                        grid: {
+
+                            color: '#eef2f7'
+
+                        }
+
+                    },
+
+                    y: {
+
+                        grid: {
+
+                            display: false
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    )
+
+}
+
+// ======================================================
+// END SCRIPT
+// ======================================================
 
 </script>
 
 <style scoped>
-
 /* ==========================================================
    PAGE
 ========================================================== */
 
 .followup-dashboard{
-
-    background:#f5f7fb;
-
     min-height:100vh;
-
+    background:#f5f7fb;
 }
 
 /* ==========================================================
@@ -795,35 +1767,29 @@ const refresh = () => {
 ========================================================== */
 
 .card{
-
     border:none;
-
     border-radius:18px;
-
     overflow:hidden;
-
     box-shadow:0 10px 30px rgba(15,23,42,.08);
+    transition:.3s;
+}
 
+.card:hover{
+    box-shadow:0 18px 45px rgba(15,23,42,.12);
 }
 
 .card-header{
-
     background:#fff;
-
-    padding:22px 24px;
-
     border-bottom:1px solid #edf2f7;
-
+    padding:22px 24px;
 }
 
 .card-body{
-
     padding:24px;
-
 }
 
 /* ==========================================================
-   KPI
+   KPI CARD
 ========================================================== */
 
 .kpi-card{
@@ -832,23 +1798,23 @@ const refresh = () => {
 
     overflow:hidden;
 
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    min-height:145px;
+
+    padding:24px;
+
     border-radius:18px;
 
     color:#fff;
 
-    padding:24px;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:space-between;
-
-    min-height:140px;
+    cursor:pointer;
 
     transition:.35s;
-
-    cursor:pointer;
 
 }
 
@@ -856,7 +1822,7 @@ const refresh = () => {
 
     transform:translateY(-8px);
 
-    box-shadow:0 18px 35px rgba(0,0,0,.18);
+    box-shadow:0 18px 40px rgba(0,0,0,.18);
 
 }
 
@@ -874,7 +1840,7 @@ const refresh = () => {
 
     background:rgba(255,255,255,.08);
 
-    right:-60px;
+    right:-70px;
 
     top:-70px;
 
@@ -894,9 +1860,9 @@ const refresh = () => {
 
     background:rgba(255,255,255,.05);
 
-    left:-35px;
+    left:-40px;
 
-    bottom:-35px;
+    bottom:-40px;
 
 }
 
@@ -910,31 +1876,47 @@ const refresh = () => {
 
     display:flex;
 
-    align-items:center;
-
     justify-content:center;
 
-    font-size:32px;
+    align-items:center;
 
-    background:rgba(255,255,255,.15);
+    background:rgba(255,255,255,.18);
 
     backdrop-filter:blur(8px);
 
-}
-
-.kpi-card h2{
-
-    font-size:40px;
-
-    margin:8px 0 0;
-
-    font-weight:700;
+    font-size:32px;
 
 }
 
 .kpi-card small{
 
     opacity:.9;
+
+    font-size:.9rem;
+
+}
+
+.kpi-card h2{
+
+    margin-top:10px;
+
+    margin-bottom:0;
+
+    font-size:40px;
+
+    font-weight:700;
+
+    line-height:1;
+
+}
+
+.kpi-footer{
+
+    margin-top:12px;
+
+    font-size:.82rem;
+
+    opacity:.95;
 
 }
 
@@ -973,176 +1955,6 @@ const refresh = () => {
 }
 
 /* ==========================================================
-   ACTIVITY
-========================================================== */
-
-.activity-item{
-
-    margin-bottom:25px;
-
-}
-
-.activity-item:last-child{
-
-    margin-bottom:0;
-
-}
-
-.progress{
-
-    height:10px;
-
-    background:#edf2f7;
-
-    border-radius:20px;
-
-}
-
-.progress-bar{
-
-    border-radius:20px;
-
-}
-
-/* ==========================================================
-   CHART PLACEHOLDER
-========================================================== */
-
-.chart-placeholder{
-
-    height:330px;
-
-    display:flex;
-
-    flex-direction:column;
-
-    justify-content:center;
-
-    align-items:center;
-
-    color:#94a3b8;
-
-}
-
-.chart-placeholder i{
-
-    font-size:70px;
-
-    margin-bottom:20px;
-
-}
-
-.chart-placeholder h5{
-
-    color:#334155;
-
-    font-weight:600;
-
-}
-
-/* ==========================================================
-   TOP SALES
-========================================================== */
-
-.sales-item{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:16px;
-
-    padding:16px;
-
-    border-radius:14px;
-
-    transition:.3s;
-
-    margin-bottom:12px;
-
-}
-
-.sales-item:last-child{
-
-    margin-bottom:0;
-
-}
-
-.sales-item:hover{
-
-    background:#f8fafc;
-
-    transform:translateX(6px);
-
-}
-
-.rank{
-
-    width:45px;
-
-    font-size:24px;
-
-    text-align:center;
-
-    font-weight:bold;
-
-}
-
-/* ==========================================================
-   OVERDUE
-========================================================== */
-
-.overdue-card{
-
-    border:1px solid #edf2f7;
-
-    border-radius:16px;
-
-    padding:20px;
-
-    margin-bottom:18px;
-
-    transition:.3s;
-
-    background:#fff;
-
-}
-
-.overdue-card:last-child{
-
-    margin-bottom:0;
-
-}
-
-.overdue-card:hover{
-
-    border-color:#ef4444;
-
-    box-shadow:0 10px 25px rgba(239,68,68,.10);
-
-}
-
-.overdue-card hr{
-
-    margin:18px 0;
-
-}
-
-/* ==========================================================
-   BADGE
-========================================================== */
-
-.badge{
-
-    border-radius:30px;
-
-    padding:8px 14px;
-
-    font-weight:600;
-
-}
-
-/* ==========================================================
    BUTTON
 ========================================================== */
 
@@ -1166,6 +1978,546 @@ const refresh = () => {
 
 }
 
+.btn-light{
+
+    background:#fff;
+
+}
+
+/* ==========================================================
+   LOADING
+========================================================== */
+
+.sp-loading-wrap{
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:center;
+
+    align-items:center;
+
+    min-height:420px;
+
+    color:#64748b;
+
+}
+
+.spinner{
+
+    width:52px;
+
+    height:52px;
+
+    border-radius:50%;
+
+    border:4px solid #e2e8f0;
+
+    border-top-color:#4f46e5;
+
+    animation:spin .8s linear infinite;
+
+    margin-bottom:18px;
+
+}
+
+.spin-icon{
+
+    animation:spin 1s linear infinite;
+
+}
+
+@keyframes spin{
+
+    to{
+
+        transform:rotate(360deg);
+
+    }
+
+}
+
+/* ==========================================================
+   EMPTY STATE
+========================================================== */
+
+.empty-state{
+
+    min-height:260px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:center;
+
+    align-items:center;
+
+    color:#94a3b8;
+
+}
+
+.empty-state i{
+
+    font-size:70px;
+
+    margin-bottom:18px;
+
+}
+
+.empty-state h5{
+
+    color:#475569;
+
+    font-weight:600;
+
+}
+
+/* ==========================================================
+   CHART
+========================================================== */
+
+.chart-wrapper{
+
+    position:relative;
+
+    width:100%;
+
+    height:340px;
+
+}
+
+.chart-wrapper canvas{
+
+    width:100%!important;
+
+    height:100%!important;
+
+}
+
+/* ==========================================================
+   STATUS BOX
+========================================================== */
+
+.status-box{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:14px;
+
+    padding:14px 18px;
+
+    border-radius:14px;
+
+    background:#f8fafc;
+
+    transition:.3s;
+
+    border:1px solid transparent;
+
+}
+
+.status-box:hover{
+
+    transform:translateY(-4px);
+
+    border-color:#e2e8f0;
+
+    box-shadow:0 12px 25px rgba(15,23,42,.08);
+
+}
+
+.status-dot{
+
+    width:14px;
+
+    height:14px;
+
+    border-radius:50%;
+
+    flex-shrink:0;
+
+}
+
+.status-box h5{
+
+    margin:0;
+
+    font-weight:700;
+
+}
+
+.status-box small{
+
+    color:#64748b;
+
+}
+
+/* ==========================================================
+   ACTIVITY CARD
+========================================================== */
+
+.activity-card{
+
+    background:#fff;
+
+    border:1px solid #edf2f7;
+
+    border-radius:16px;
+
+    padding:18px;
+
+    transition:.3s;
+
+}
+
+.activity-card:hover{
+
+    transform:translateY(-6px);
+
+    border-color:#6366f1;
+
+    box-shadow:0 12px 25px rgba(99,102,241,.12);
+
+}
+
+.activity-card strong{
+
+    font-size:.95rem;
+
+}
+
+.activity-card .progress{
+
+    height:10px;
+
+    border-radius:30px;
+
+    background:#edf2f7;
+
+}
+
+.activity-card .progress-bar{
+
+    border-radius:30px;
+
+}
+
+/* ==========================================================
+   TOP PERFORMER
+========================================================== */
+
+.top-user{
+
+    text-align:center;
+
+}
+
+.avatar-xl{
+
+    width:130px;
+
+    height:130px;
+
+    margin:auto;
+
+    border-radius:50%;
+
+    background:linear-gradient(135deg,#4f46e5,#818cf8);
+
+    color:#fff;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-size:58px;
+
+    box-shadow:0 12px 35px rgba(79,70,229,.25);
+
+}
+
+.score-circle{
+
+    width:95px;
+
+    height:95px;
+
+    margin:22px auto;
+
+    border-radius:50%;
+
+    background:linear-gradient(135deg,#4f46e5,#818cf8);
+
+    color:#fff;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    font-size:34px;
+
+    font-weight:700;
+
+    box-shadow:0 10px 30px rgba(79,70,229,.25);
+
+}
+
+/* ==========================================================
+   TEAM SUMMARY
+========================================================== */
+
+.summary-item{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    font-weight:600;
+
+    margin-bottom:10px;
+
+}
+
+.summary-item strong{
+
+    font-size:15px;
+
+}
+
+.progress{
+
+    height:10px;
+
+    background:#edf2f7;
+
+    border-radius:30px;
+
+    overflow:hidden;
+
+}
+
+.progress-bar{
+
+    border-radius:30px;
+
+    transition:width .8s ease;
+
+}
+
+/* ==========================================================
+   BADGE
+========================================================== */
+
+.badge{
+
+    border-radius:30px;
+
+    padding:8px 14px;
+
+    font-weight:600;
+
+    letter-spacing:.2px;
+
+}
+
+/* ==========================================================
+   LEADERBOARD
+========================================================== */
+
+.ranking-item{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:18px;
+
+    padding:18px;
+
+    border-radius:18px;
+
+    transition:.35s;
+
+    margin-bottom:14px;
+
+    background:#fff;
+
+    border:1px solid transparent;
+
+}
+
+.ranking-item:last-child{
+
+    margin-bottom:0;
+
+}
+
+.ranking-item:hover{
+
+    transform:translateX(6px);
+
+    background:#f8fafc;
+
+    border-color:#e5e7eb;
+
+    box-shadow:0 12px 25px rgba(15,23,42,.08);
+
+}
+
+.rank{
+
+    width:55px;
+
+    text-align:center;
+
+    font-size:26px;
+
+    font-weight:bold;
+
+}
+
+.avatar{
+
+    width:60px;
+
+    height:60px;
+
+    border-radius:50%;
+
+    background:linear-gradient(135deg,#4f46e5,#818cf8);
+
+    color:#fff;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    font-size:28px;
+
+    flex-shrink:0;
+
+}
+
+.score{
+
+    min-width:72px;
+
+    height:52px;
+
+    border-radius:14px;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    background:#eef2ff;
+
+    color:#4f46e5;
+
+    font-size:24px;
+
+    font-weight:700;
+
+}
+
+/* ==========================================================
+   OVERDUE CARD
+========================================================== */
+
+.overdue-modern-card{
+
+    position:relative;
+
+    overflow:hidden;
+
+    border-radius:18px;
+
+    background:#fff;
+
+    border:1px solid #eef2f7;
+
+    padding:22px;
+
+    transition:.35s;
+
+}
+
+.overdue-modern-card:hover{
+
+    transform:translateY(-6px);
+
+    box-shadow:0 18px 35px rgba(239,68,68,.12);
+
+    border-color:#ef4444;
+
+}
+
+.overdue-modern-card::before{
+
+    content:"";
+
+    position:absolute;
+
+    left:0;
+
+    top:0;
+
+    width:6px;
+
+    height:100%;
+
+    background:#ef4444;
+
+}
+
+.overdue-ribbon{
+
+    position:absolute;
+
+    right:18px;
+
+    top:18px;
+
+    background:#ef4444;
+
+    color:#fff;
+
+    padding:6px 14px;
+
+    border-radius:30px;
+
+    font-size:.85rem;
+
+    font-weight:700;
+
+}
+
+.overdue-modern-card h5{
+
+    margin-bottom:4px;
+
+}
+
+.overdue-modern-card small{
+
+    color:#64748b;
+
+}
+
 /* ==========================================================
    SCROLLBAR
 ========================================================== */
@@ -1184,9 +2536,25 @@ const refresh = () => {
 
 }
 
+::-webkit-scrollbar-track{
+
+    background:#f8fafc;
+
+}
+
 /* ==========================================================
    RESPONSIVE
 ========================================================== */
+
+@media(max-width:1200px){
+
+    .chart-wrapper{
+
+        height:300px;
+
+    }
+
+}
 
 @media(max-width:992px){
 
@@ -1212,25 +2580,59 @@ const refresh = () => {
 
     }
 
+    .avatar-xl{
+
+        width:110px;
+
+        height:110px;
+
+        font-size:48px;
+
+    }
+
+    .score-circle{
+
+        width:80px;
+
+        height:80px;
+
+        font-size:28px;
+
+    }
+
 }
 
 @media(max-width:768px){
 
-    .sales-item{
+    .chart-wrapper{
+
+        height:260px;
+
+    }
+
+    .ranking-item{
 
         flex-wrap:wrap;
 
-    }
-
-    .rank{
-
-        width:auto;
+        gap:14px;
 
     }
 
-    .chart-placeholder{
+    .score{
 
-        height:250px;
+        width:100%;
+
+    }
+
+    .status-box{
+
+        margin-bottom:12px;
+
+    }
+
+    .overdue-modern-card{
+
+        padding:18px;
 
     }
 
@@ -1240,13 +2642,7 @@ const refresh = () => {
 
     .followup-dashboard{
 
-        padding:15px;
-
-    }
-
-    .kpi-card{
-
-        padding:18px;
+        padding:16px;
 
     }
 
@@ -1256,5 +2652,42 @@ const refresh = () => {
 
     }
 
+    .kpi-card{
+
+        padding:18px;
+
+    }
+
+    .chart-wrapper{
+
+        height:220px;
+
+    }
+
+    .avatar-xl{
+
+        width:90px;
+
+        height:90px;
+
+        font-size:42px;
+
+    }
+
+    .score-circle{
+
+        width:70px;
+
+        height:70px;
+
+        font-size:24px;
+
+    }
+
 }
+
+/* ==========================================================
+   END
+========================================================== */
+
 </style>

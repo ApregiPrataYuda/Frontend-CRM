@@ -31,7 +31,6 @@
 
                 <button
                     class="btn btn-primary"
-                    :disabled="leadsStore.loadingLeads"
                     @click="refresh">
 
                     <i class="ti ti-refresh me-2"></i>
@@ -41,18 +40,6 @@
                 </button>
 
             </div>
-
-        </div>
-
-        <!-- =========================
-            ERROR STATE
-        ========================== -->
-
-        <div
-            v-if="leadsStore.errorLeads"
-            class="alert alert-danger">
-
-            Gagal memuat data lead analytics. Silakan coba refresh kembali.
 
         </div>
 
@@ -282,7 +269,7 @@
                         <div class="chart-container-sm">
 
                             <Doughnut
-                                :data="leadsStore.leadSourceChart"
+                                :data="leadSourceChart"
                                 :options="doughnutOptions"
                             />
 
@@ -299,7 +286,7 @@
 
                                 <span
                                     class="activity-color"
-                                    :class="leadsStore.leadSourceDot(item.lead_source)">
+                                    :class="leadSourceDot(item.lead_source)">
                                 </span>
 
                                 {{ item.lead_source }}
@@ -347,7 +334,7 @@
                         <div class="chart-container-sm">
 
                             <Doughnut
-                                :data="leadsStore.leadCategoryChart"
+                                :data="leadCategoryChart"
                                 :options="doughnutOptions"
                             />
 
@@ -364,7 +351,7 @@
 
                                 <span
                                     class="activity-color"
-                                    :class="leadsStore.leadCategoryDot(item.name)">
+                                    :class="leadCategoryDot(item.name)">
                                 </span>
 
                                 {{ item.name }}
@@ -412,7 +399,7 @@
                         <div class="chart-container-sm">
 
                             <Doughnut
-                                :data="leadsStore.leadIndustryChart"
+                                :data="leadIndustryChart"
                                 :options="doughnutOptions"
                             />
 
@@ -429,7 +416,7 @@
 
                                 <span
                                     class="activity-color"
-                                    :class="leadsStore.leadIndustryDot(item.name)">
+                                    :class="leadIndustryDot(item.name)">
                                 </span>
 
                                 {{ item.name }}
@@ -512,14 +499,6 @@
 
                             </div>
 
-                            <div
-                                class="sales-avatar"
-                                :style="{ background: leadsStore.getAvatarColor(sale.fullname) }">
-
-                                {{ leadsStore.getInitials(sale.fullname) }}
-
-                            </div>
-
                             <div class="flex-grow-1">
 
                                 <strong class="text-capitalize">
@@ -545,7 +524,7 @@
                         </div>
 
                         <div
-                            v-if="!leadsStore.hasLeadPerSales"
+                            v-if="!dashboard.lead_per_sales.length"
                             class="text-muted text-center py-4">
 
                             No leads assigned yet.
@@ -599,7 +578,7 @@
                         <div class="chart-container-lg">
 
                             <Line
-                                :data="leadsStore.dailyTrendChart"
+                                :data="dailyTrendChart"
                                 :options="lineOptions"
                             />
 
@@ -719,7 +698,7 @@
 
                                             <span
                                                 class="badge"
-                                                :class="leadsStore.leadSourceBadge(item.lead_source)">
+                                                :class="leadSourceBadge(item.lead_source)">
 
                                                 {{ item.lead_source }}
 
@@ -731,7 +710,7 @@
 
                                             <span
                                                 class="badge"
-                                                :class="leadsStore.leadStatusBadge(item.lead_status)">
+                                                :class="leadStatusBadge(item.lead_status)">
 
                                                 {{ item.lead_status }}
 
@@ -759,13 +738,13 @@
 
                                         <td class="text-muted">
 
-                                            {{ leadsStore.formatDateTime(item.created_at) }}
+                                            {{ formatDateTime(item.created_at) }}
 
                                         </td>
 
                                     </tr>
 
-                                    <tr v-if="!leadsStore.hasLatestLead">
+                                    <tr v-if="!dashboard.latest_lead.length">
 
                                         <td
                                             colspan="8"
@@ -796,7 +775,7 @@
 
 
 <script setup>
-import { onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 
 import {
     Chart as ChartJS,
@@ -815,11 +794,6 @@ import {
     Line
 } from 'vue-chartjs'
 
-import { useLeadsDashboardStore } from '@/stores/leadsDashboard'
-// Sesuaikan import ini dengan store auth/user yang sudah ada di project kamu,
-// dipakai untuk mengirim ?user_id= ke API seperti store lain (executive summary, dll).
-import { useAuthStore } from '@/stores/authStore'
-
 ChartJS.register(
     ArcElement,
     CategoryScale,
@@ -831,56 +805,269 @@ ChartJS.register(
     Filler
 )
 
-const leadsStore = useLeadsDashboardStore()
-const authStore  = useAuthStore()
+const loading = ref(false)
 
-// Data mentah dari store, dipakai langsung di template (KPI, tabel, list)
-const dashboard = computed(() => leadsStore.dashboard)
+const dashboard = ref({
+
+    summary:{
+        total_lead:2,
+        new_lead:2,
+        converted:2,
+        open_lead:0,
+        conversion_rate:100
+    },
+
+    lead_source:[
+        {
+            lead_source:'Referral',
+            total:1
+        },
+        {
+            lead_source:'Website',
+            total:1
+        }
+    ],
+
+    lead_category:[
+        {
+            name:'Hot Lead',
+            total:1
+        },
+        {
+            name:'Warm Lead',
+            total:1
+        }
+    ],
+
+    lead_industry:[
+        {
+            name:'Manufacture',
+            total:1
+        },
+        {
+            name:'Retail',
+            total:1
+        }
+    ],
+
+    lead_per_sales:[
+        {
+            id_user:2,
+            fullname:'sputnix norwey',
+            total_lead:1
+        }
+    ],
+
+    daily_trend:[
+        {
+            date:'2026-07-10',
+            total:2
+        }
+    ],
+
+    latest_lead:[
+        {
+            id:1,
+            company_name:'PT Maju Jaya',
+            contact_name:'Andi Saputra',
+            phone:'081234567890',
+            email:'andi@majujaya.co.id',
+            lead_source:'Website',
+            lead_status:'Converted',
+            sales_name:null,
+            created_at:'2026-07-10 15:08:18'
+        },
+        {
+            id:2,
+            company_name:'PT Sukses Makmur',
+            contact_name:'Budi Santoso',
+            phone:'081298765432',
+            email:'budi@suksesmakmur.co.id',
+            lead_source:'Referral',
+            lead_status:'Converted',
+            sales_name:'sputnix norwey',
+            created_at:'2026-07-10 15:08:18'
+        }
+    ]
+
+})
 
 /*
 |--------------------------------------------------------------------------
-| Chart Options (statis, tidak tergantung data)
+| Doughnut Charts
 |--------------------------------------------------------------------------
 */
 
-const doughnutOptions = {
+const leadSourceChart = computed(() => ({
 
-    responsive: true,
+    labels: dashboard.value.lead_source.map(
+        item => item.lead_source
+    ),
 
-    maintainAspectRatio: false,
+    datasets:[
+        {
 
-    cutout: '70%',
+            data: dashboard.value.lead_source.map(
+                item => item.total
+            ),
 
-    plugins: {
+            backgroundColor:[
+                '#6366F1',
+                '#06B6D4',
+                '#F59E0B',
+                '#94A3B8',
+                '#8B5CF6'
+            ],
 
-        legend: {
-            display: false
+            borderWidth:0,
+
+            hoverOffset:8
+
+        }
+
+    ]
+
+}))
+
+const leadCategoryChart = computed(() => ({
+
+    labels: dashboard.value.lead_category.map(
+        item => item.name
+    ),
+
+    datasets:[
+        {
+
+            data: dashboard.value.lead_category.map(
+                item => item.total
+            ),
+
+            backgroundColor:[
+                '#EF4444',
+                '#F59E0B',
+                '#06B6D4',
+                '#94A3B8'
+            ],
+
+            borderWidth:0,
+
+            hoverOffset:8
+
+        }
+
+    ]
+
+}))
+
+const leadIndustryChart = computed(() => ({
+
+    labels: dashboard.value.lead_industry.map(
+        item => item.name
+    ),
+
+    datasets:[
+        {
+
+            data: dashboard.value.lead_industry.map(
+                item => item.total
+            ),
+
+            backgroundColor:[
+                '#8B5CF6',
+                '#64748B',
+                '#10B981',
+                '#FB923C',
+                '#0EA5E9'
+            ],
+
+            borderWidth:0,
+
+            hoverOffset:8
+
+        }
+
+    ]
+
+}))
+
+const doughnutOptions={
+
+    responsive:true,
+
+    maintainAspectRatio:false,
+
+    cutout:'70%',
+
+    plugins:{
+
+        legend:{
+            display:false
         }
 
     }
 
 }
 
-const lineOptions = {
+/*
+|--------------------------------------------------------------------------
+| Line Chart (Daily Trend)
+|--------------------------------------------------------------------------
+*/
 
-    responsive: true,
+const dailyTrendChart = computed(() => ({
 
-    maintainAspectRatio: false,
+    labels: dashboard.value.daily_trend.map(
+        item => item.date
+    ),
 
-    plugins: {
+    datasets:[
 
-        legend: {
-            display: false
+        {
+
+            label:'Lead',
+
+            data: dashboard.value.daily_trend.map(
+                item => item.total
+            ),
+
+            borderColor:'#4F46E5',
+
+            backgroundColor:'rgba(99,102,241,.12)',
+
+            fill:true,
+
+            tension:.35,
+
+            pointRadius:5,
+
+            pointHoverRadius:8
+
+        }
+
+    ]
+
+}))
+
+const lineOptions={
+
+    responsive:true,
+
+    maintainAspectRatio:false,
+
+    plugins:{
+
+        legend:{
+            display:false
         }
 
     },
 
-    scales: {
+    scales:{
 
-        y: {
-            beginAtZero: true,
-            ticks: {
-                precision: 0
+        y:{
+            beginAtZero:true,
+            ticks:{
+                precision:0
             }
         }
 
@@ -890,21 +1077,220 @@ const lineOptions = {
 
 /*
 |--------------------------------------------------------------------------
-| Load & Refresh
+| Formatter
 |--------------------------------------------------------------------------
 */
 
-const loadDashboard = () => {
-    leadsStore.fetchLeads(authStore.user?.id)
+const formatDateTime=(date)=>{
+
+    return new Intl.DateTimeFormat(
+        'id-ID',
+        {
+
+            day:'2-digit',
+
+            month:'short',
+
+            year:'numeric',
+
+            hour:'2-digit',
+
+            minute:'2-digit'
+
+        }
+
+    ).format(new Date(date))
+
 }
 
-const refresh = () => {
-    loadDashboard()
+/*
+|--------------------------------------------------------------------------
+| Badge / Dot - Lead Source
+|--------------------------------------------------------------------------
+*/
+
+const leadSourceBadge=(source)=>{
+
+    switch(source){
+
+        case 'Referral':
+            return 'badge-primary'
+
+        case 'Website':
+            return 'badge-info'
+
+        case 'Cold Call':
+            return 'badge-warning'
+
+        case 'Other':
+            return 'badge-secondary'
+
+        case 'Social Media':
+            return 'badge-purple'
+
+        default:
+            return 'badge-dark'
+
+    }
+
 }
 
-onMounted(() => {
-    loadDashboard()
-})
+const leadSourceDot=(source)=>{
+
+    switch(source){
+
+        case 'Referral':
+            return 'dot-primary'
+
+        case 'Website':
+            return 'dot-info'
+
+        case 'Cold Call':
+            return 'dot-warning'
+
+        case 'Other':
+            return 'dot-secondary'
+
+        case 'Social Media':
+            return 'dot-purple'
+
+        default:
+            return 'dot-dark'
+
+    }
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Dot - Lead Category
+|--------------------------------------------------------------------------
+*/
+
+const leadCategoryDot=(name)=>{
+
+    switch(name){
+
+        case 'Hot Lead':
+            return 'dot-danger'
+
+        case 'Warm Lead':
+            return 'dot-warning'
+
+        case 'Cold Lead':
+            return 'dot-info'
+
+        default:
+            return 'dot-dark'
+
+    }
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Dot - Lead Industry
+|--------------------------------------------------------------------------
+*/
+
+const leadIndustryDot=(name)=>{
+
+    switch(name){
+
+        case 'Manufacture':
+            return 'dot-purple'
+
+        case 'Retail':
+            return 'dot-secondary'
+
+        case 'Technology':
+            return 'dot-success'
+
+        case 'Logistics':
+            return 'dot-orange'
+
+        default:
+            return 'dot-dark'
+
+    }
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Badge - Lead Status
+|--------------------------------------------------------------------------
+*/
+
+const leadStatusBadge=(status)=>{
+
+    switch(status){
+
+        case 'Converted':
+            return 'badge-success'
+
+        case 'New':
+            return 'badge-primary'
+
+        case 'Open':
+            return 'badge-info'
+
+        case 'Qualified':
+            return 'badge-purple'
+
+        case 'Lost':
+            return 'badge-danger'
+
+        default:
+            return 'badge-dark'
+
+    }
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Refresh
+|--------------------------------------------------------------------------
+*/
+
+const refresh=()=>{
+
+    loading.value=true
+
+    setTimeout(()=>{
+
+        loading.value=false
+
+    },800)
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Future API
+|--------------------------------------------------------------------------
+*/
+
+// const loadDashboard = async () => {
+//
+//     loading.value = true
+//
+//     try {
+//
+//         const { data } = await axios.get(
+//             '/api/dashboard/manager/lead-analytics'
+//         )
+//
+//         dashboard.value = data.data
+//
+//     } finally {
+//
+//         loading.value = false
+//
+//     }
+//
+// }
 
 </script>
 
@@ -1302,32 +1688,6 @@ onMounted(() => {
     text-align:center;
 
     font-size:22px;
-
-}
-
-.sales-avatar{
-
-    width:42px;
-
-    height:42px;
-
-    min-width:42px;
-
-    border-radius:50%;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    color:#fff;
-
-    font-weight:700;
-
-    font-size:.85rem;
-
-    letter-spacing:.02em;
 
 }
 

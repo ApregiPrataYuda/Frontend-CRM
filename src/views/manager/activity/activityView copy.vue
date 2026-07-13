@@ -31,7 +31,6 @@
 
                 <button
                     class="btn btn-primary"
-                    :disabled="activityStore.loadingActivity"
                     @click="refresh">
 
                     <i class="ti ti-refresh me-2"></i>
@@ -41,18 +40,6 @@
                 </button>
 
             </div>
-
-        </div>
-
-        <!-- =========================
-            ERROR STATE
-        ========================== -->
-
-        <div
-            v-if="activityStore.errorActivity"
-            class="alert alert-danger">
-
-            Gagal memuat data activity. Silakan coba refresh kembali.
 
         </div>
 
@@ -177,7 +164,7 @@
                         <div class="chart-container">
 
                             <Doughnut
-                                :data="activityStore.activityTypeChart"
+                                :data="activityTypeChart"
                                 :options="doughnutOptions"
                             />
 
@@ -194,7 +181,7 @@
 
                                 <span
                                     class="activity-color"
-                                    :class="activityStore.activityDot(item.activity_type)">
+                                    :class="activityDot(item.activity_type)">
                                 </span>
 
                                 {{ item.activity_type }}
@@ -256,7 +243,7 @@
                         <div class="chart-container-lg">
 
                             <Line
-                                :data="activityStore.dailyTrendChart"
+                                :data="dailyTrendChart"
                                 :options="lineOptions"
                             />
 
@@ -338,14 +325,6 @@
 
                             </div>
 
-                            <div
-                                class="sales-avatar"
-                                :style="{ background: activityStore.getAvatarColor(sale.fullname) }">
-
-                                {{ activityStore.getInitials(sale.fullname) }}
-
-                            </div>
-
                             <div class="flex-grow-1">
 
                                 <strong class="text-capitalize">
@@ -371,7 +350,7 @@
                         </div>
 
                         <div
-                            v-if="!activityStore.hasTopSales"
+                            v-if="!dashboard.top_sales.length"
                             class="text-muted text-center py-4">
 
                             No sales activity yet.
@@ -441,7 +420,7 @@
 
                                     <span
                                         class="badge"
-                                        :class="activityStore.activityBadge(item.activity_type)">
+                                        :class="activityBadge(item.activity_type)">
 
                                         {{ item.activity_type }}
 
@@ -457,15 +436,9 @@
 
                                 <div class="feed-footer">
 
-                                    <span class="feed-sales">
+                                    <span>
 
-                                        <span
-                                            class="feed-avatar"
-                                            :style="{ background: activityStore.getAvatarColor(item.sales_name) }">
-
-                                            {{ activityStore.getInitials(item.sales_name) }}
-
-                                        </span>
+                                        <i class="ti ti-user me-1"></i>
 
                                         {{ item.sales_name }}
 
@@ -483,7 +456,7 @@
 
                                         <i class="ti ti-clock me-1"></i>
 
-                                        {{ activityStore.formatDateTime(item.activity_at) }}
+                                        {{ formatDateTime(item.activity_at) }}
 
                                     </span>
 
@@ -492,7 +465,7 @@
                             </div>
 
                             <div
-                                v-if="!activityStore.hasLatestActivity"
+                                v-if="!dashboard.latest_activity.length"
                                 class="text-muted text-center py-4">
 
                                 No recent activity.
@@ -514,7 +487,7 @@
 
 
 <script setup>
-import { onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 
 import {
     Chart as ChartJS,
@@ -533,11 +506,6 @@ import {
     Line
 } from 'vue-chartjs'
 
-import { useActivityDashboardStore } from '@/stores/activityDashboard'
-// Sesuaikan import ini dengan store auth/user yang sudah ada di project kamu,
-// dipakai untuk mengirim ?user_id= ke API seperti store lain (leads, executive summary, dll).
-import { useAuthStore } from '@/stores/authStore'
-
 ChartJS.register(
     ArcElement,
     CategoryScale,
@@ -549,56 +517,333 @@ ChartJS.register(
     Filler
 )
 
-const activityStore = useActivityDashboardStore()
-const authStore      = useAuthStore()
+const loading = ref(false)
 
-// Data mentah dari store, dipakai langsung di template (KPI, tabel/list, feed)
-const dashboard = computed(() => activityStore.dashboard)
+const dashboard = ref({
+
+    summary:{
+        total_activity:16,
+        today_activity:0
+    },
+
+    activity_type:[
+        {
+            activity_type:'CREATE',
+            total:8
+        },
+        {
+            activity_type:'RESULT_SUBMITTED',
+            total:2
+        },
+        {
+            activity_type:'EXECUTED',
+            total:1
+        },
+        {
+            activity_type:'FOLLOW_UP_CREATED',
+            total:1
+        },
+        {
+            activity_type:'LEAD_CONVERTED',
+            total:1
+        },
+        {
+            activity_type:'NEED_FOLLOW_UP',
+            total:1
+        },
+        {
+            activity_type:'NEXT_FOLLOW_UP_CREATED',
+            total:1
+        },
+        {
+            activity_type:'DEAL_CLOSED',
+            total:1
+        }
+    ],
+
+    top_sales:[
+        {
+            id_user:3,
+            fullname:'bortley england',
+            total_activity:8
+        },
+        {
+            id_user:2,
+            fullname:'sputnix norwey',
+            total_activity:5
+        },
+        {
+            id_user:4,
+            fullname:'willson denmark',
+            total_activity:2
+        }
+    ],
+
+    daily_trend:[
+        {
+            date:'2026-07-09',
+            total:16
+        }
+    ],
+
+    latest_activity:[
+        {
+            id:16,
+            activity_type:'CREATE',
+            title:'Follow Up Created Result Visit Customer',
+            description:'Follow up generated automatically after visit Customer VIS-202607-00008',
+            activity_at:'2026-07-09 15:16:19',
+            sales_name:'sputnix norwey',
+            customer_name:'PT Perwira Arthabaja Pasifik (Perwira Steel)'
+        },
+        {
+            id:15,
+            activity_type:'CREATE',
+            title:'Follow Up Created Result Visit Customer',
+            description:'Follow up generated automatically after visit Customer VIS-202607-00007',
+            activity_at:'2026-07-09 11:14:49',
+            sales_name:'willson denmark',
+            customer_name:'PT Sugizindo'
+        },
+        {
+            id:14,
+            activity_type:'CREATE',
+            title:'Follow Up Created Result Visit Customer',
+            description:'Follow up generated automatically after visit Customer VIS-202607-00006',
+            activity_at:'2026-07-09 11:09:16',
+            sales_name:'willson denmark',
+            customer_name:'Asalta Mandiri Agung. PT'
+        },
+        {
+            id:12,
+            activity_type:'EXECUTED',
+            title:'Follow Up Done',
+            description:'Follow up telah diselesaikan',
+            activity_at:'2026-07-09 10:58:58',
+            sales_name:'sputnix norwey',
+            customer_name:'PT Perwira Arthabaja Pasifik (Perwira Steel)'
+        },
+        {
+            id:13,
+            activity_type:'LEAD_CONVERTED',
+            title:'Lead Converted',
+            description:'Lead berhasil dikonversi menjadi customer',
+            activity_at:'2026-07-09 10:58:58',
+            sales_name:'sputnix norwey',
+            customer_name:'PT Perwira Arthabaja Pasifik (Perwira Steel)'
+        },
+        {
+            id:9,
+            activity_type:'NEED_FOLLOW_UP',
+            title:'Need Another Follow Up',
+            description:'Customer requires further follow up',
+            activity_at:'2026-07-09 10:48:08',
+            sales_name:'bortley england',
+            customer_name:'PT. Mayora Indah Tbk / Jayanti'
+        },
+        {
+            id:8,
+            activity_type:'RESULT_SUBMITTED',
+            title:'Follow Up Completed',
+            description:'Kesepakatan Belum terjadi di jadwaklan ulang',
+            activity_at:'2026-07-09 10:48:08',
+            sales_name:'bortley england',
+            customer_name:'PT. Mayora Indah Tbk / Jayanti'
+        },
+        {
+            id:10,
+            activity_type:'NEXT_FOLLOW_UP_CREATED',
+            title:'Next Follow Up Scheduled',
+            description:'System created next follow up',
+            activity_at:'2026-07-09 10:48:08',
+            sales_name:'bortley england',
+            customer_name:'PT. Mayora Indah Tbk / Jayanti'
+        },
+        {
+            id:11,
+            activity_type:'FOLLOW_UP_CREATED',
+            title:'New Follow Up Created',
+            description:'Generated automatically',
+            activity_at:'2026-07-09 10:48:08',
+            sales_name:'bortley england',
+            customer_name:'PT. Mayora Indah Tbk / Jayanti'
+        },
+        {
+            id:7,
+            activity_type:'DEAL_CLOSED',
+            title:'Deal Closed Successfully',
+            description:'Customer converted to deal',
+            activity_at:'2026-07-09 10:46:55',
+            sales_name:'bortley england',
+            customer_name:'PT. Nipama Mandiri'
+        },
+        {
+            id:6,
+            activity_type:'RESULT_SUBMITTED',
+            title:'Follow Up Completed',
+            description:'Pembelian Berhasil',
+            activity_at:'2026-07-09 10:46:55',
+            sales_name:'bortley england',
+            customer_name:'PT. Nipama Mandiri'
+        },
+        {
+            id:5,
+            activity_type:'CREATE',
+            title:'Follow Up Created Result Visit Customer',
+            description:'Follow up generated automatically after visit Customer VIS-202607-00005',
+            activity_at:'2026-07-09 10:42:32',
+            sales_name:'bortley england',
+            customer_name:'PT. Mayora Indah Tbk / Jayanti'
+        },
+        {
+            id:4,
+            activity_type:'CREATE',
+            title:'Follow Up Created Result Visit Customer',
+            description:'Follow up generated automatically after visit Customer VIS-202607-00004',
+            activity_at:'2026-07-09 10:37:35',
+            sales_name:'bortley england',
+            customer_name:'PT. Nipama Mandiri'
+        },
+        {
+            id:2,
+            activity_type:'CREATE',
+            title:'Follow Up Created Result Visit Customer',
+            description:'Follow up generated automatically after visit Customer VIS-202607-00002',
+            activity_at:'2026-07-09 10:27:08',
+            sales_name:'sputnix norwey',
+            customer_name:'PT. KENCANA GEMILANG (MIYAKO)'
+        },
+        {
+            id:1,
+            activity_type:'CREATE',
+            title:'Follow Up Created Result Visit Customer',
+            description:'Follow up generated automatically after visit Customer VIS-202607-00001',
+            activity_at:'2026-07-09 10:22:00',
+            sales_name:'sputnix norwey',
+            customer_name:'PT. Paragon Technology And Innovation - Jatake 2'
+        }
+    ]
+
+})
 
 /*
 |--------------------------------------------------------------------------
-| Chart Options (statis, tidak tergantung data)
+| Doughnut Chart
 |--------------------------------------------------------------------------
 */
 
-const doughnutOptions = {
+const activityTypeChart = computed(() => ({
 
-    responsive: true,
+    labels: dashboard.value.activity_type.map(
+        item => item.activity_type
+    ),
 
-    maintainAspectRatio: false,
+    datasets:[
+        {
 
-    cutout: '72%',
+            data: dashboard.value.activity_type.map(
+                item => item.total
+            ),
 
-    plugins: {
+            backgroundColor:[
+                '#6366F1',
+                '#F59E0B',
+                '#10B981',
+                '#06B6D4',
+                '#8B5CF6',
+                '#FB923C',
+                '#0EA5E9',
+                '#EF4444'
+            ],
 
-        legend: {
-            display: false
+            borderWidth:0,
+
+            hoverOffset:8
+
+        }
+
+    ]
+
+}))
+
+const doughnutOptions={
+
+    responsive:true,
+
+    maintainAspectRatio:false,
+
+    cutout:'72%',
+
+    plugins:{
+
+        legend:{
+            display:false
         }
 
     }
 
 }
 
-const lineOptions = {
+/*
+|--------------------------------------------------------------------------
+| Line Chart
+|--------------------------------------------------------------------------
+*/
 
-    responsive: true,
+const dailyTrendChart = computed(() => ({
 
-    maintainAspectRatio: false,
+    labels: dashboard.value.daily_trend.map(
+        item => item.date
+    ),
 
-    plugins: {
+    datasets:[
 
-        legend: {
-            display: false
+        {
+
+            label:'Activity',
+
+            data: dashboard.value.daily_trend.map(
+                item => item.total
+            ),
+
+            borderColor:'#4F46E5',
+
+            backgroundColor:'rgba(99,102,241,.12)',
+
+            fill:true,
+
+            tension:.35,
+
+            pointRadius:5,
+
+            pointHoverRadius:8
+
+        }
+
+    ]
+
+}))
+
+const lineOptions={
+
+    responsive:true,
+
+    maintainAspectRatio:false,
+
+    plugins:{
+
+        legend:{
+            display:false
         }
 
     },
 
-    scales: {
+    scales:{
 
-        y: {
-            beginAtZero: true,
-            ticks: {
-                precision: 0
+        y:{
+            beginAtZero:true,
+            ticks:{
+                precision:0
             }
         }
 
@@ -608,21 +853,157 @@ const lineOptions = {
 
 /*
 |--------------------------------------------------------------------------
-| Load & Refresh
+| Formatter
 |--------------------------------------------------------------------------
 */
 
-const loadDashboard = () => {
-    activityStore.fetchActivity(authStore.user?.id)
+const formatDateTime=(date)=>{
+
+    return new Intl.DateTimeFormat(
+        'id-ID',
+        {
+
+            day:'2-digit',
+
+            month:'short',
+
+            year:'numeric',
+
+            hour:'2-digit',
+
+            minute:'2-digit'
+
+        }
+
+    ).format(new Date(date))
+
 }
 
-const refresh = () => {
-    loadDashboard()
+/*
+|--------------------------------------------------------------------------
+| Badge
+|--------------------------------------------------------------------------
+*/
+
+const activityBadge=(type)=>{
+
+    switch(type){
+
+        case 'CREATE':
+            return 'badge-primary'
+
+        case 'EXECUTED':
+            return 'badge-success'
+
+        case 'RESULT_SUBMITTED':
+            return 'badge-warning'
+
+        case 'FOLLOW_UP_CREATED':
+            return 'badge-info'
+
+        case 'NEXT_FOLLOW_UP_CREATED':
+            return 'badge-secondary'
+
+        case 'LEAD_CONVERTED':
+            return 'badge-purple'
+
+        case 'DEAL_CLOSED':
+            return 'badge-danger'
+
+        case 'NEED_FOLLOW_UP':
+            return 'badge-orange'
+
+        default:
+            return 'badge-dark'
+
+    }
+
 }
 
-onMounted(() => {
-    loadDashboard()
-})
+/*
+|--------------------------------------------------------------------------
+| Dot Color
+|--------------------------------------------------------------------------
+*/
+
+const activityDot=(type)=>{
+
+    switch(type){
+
+        case 'CREATE':
+            return 'dot-primary'
+
+        case 'EXECUTED':
+            return 'dot-success'
+
+        case 'RESULT_SUBMITTED':
+            return 'dot-warning'
+
+        case 'FOLLOW_UP_CREATED':
+            return 'dot-info'
+
+        case 'NEXT_FOLLOW_UP_CREATED':
+            return 'dot-secondary'
+
+        case 'LEAD_CONVERTED':
+            return 'dot-purple'
+
+        case 'DEAL_CLOSED':
+            return 'dot-danger'
+
+        case 'NEED_FOLLOW_UP':
+            return 'dot-orange'
+
+        default:
+            return 'dot-dark'
+
+    }
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Refresh
+|--------------------------------------------------------------------------
+*/
+
+const refresh=()=>{
+
+    loading.value=true
+
+    setTimeout(()=>{
+
+        loading.value=false
+
+    },800)
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Future API
+|--------------------------------------------------------------------------
+*/
+
+// const loadDashboard = async () => {
+//
+//     loading.value = true
+//
+//     try {
+//
+//         const { data } = await axios.get(
+//             '/dashboard/manager/activity'
+//         )
+//
+//         dashboard.value = data.data
+//
+//     } finally {
+//
+//         loading.value = false
+//
+//     }
+//
+// }
 
 </script>
 
@@ -902,66 +1283,6 @@ onMounted(() => {
     text-align:center;
 
     font-size:22px;
-
-}
-
-.sales-avatar{
-
-    width:42px;
-
-    height:42px;
-
-    min-width:42px;
-
-    border-radius:50%;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    color:#fff;
-
-    font-weight:700;
-
-    font-size:.85rem;
-
-    letter-spacing:.02em;
-
-}
-
-.feed-sales{
-
-    display:inline-flex;
-
-    align-items:center;
-
-    gap:6px;
-
-}
-
-.feed-avatar{
-
-    width:20px;
-
-    height:20px;
-
-    min-width:20px;
-
-    border-radius:50%;
-
-    display:inline-flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    color:#fff;
-
-    font-weight:700;
-
-    font-size:.62rem;
 
 }
 

@@ -396,7 +396,7 @@ const routes = [
       {
         path: 'manager-executive-summary-report',
 
-        name: 'managerExecutiveSummaryReport',
+        name: 'Summary Report',
 
         component: () =>
           import('@/views/manager/executiveSummary/executiveSummaryView.vue'),
@@ -409,7 +409,7 @@ const routes = [
       {
         path: 'manager-sales-performance-report',
 
-        name: 'managerSalesPerformanceReport',
+        name: 'Sales Performance',
 
         component: () =>
           import('@/views/manager/salesPerformance/SalesPerformanceView.vue'),
@@ -423,7 +423,7 @@ const routes = [
       {
         path: 'manager-follow-up-report',
 
-        name: 'managerFollowUpReport',
+        name: 'Follow Up Report',
 
         component: () =>
           import('@/views/manager/followUp/FollowUpReportView.vue'),
@@ -436,10 +436,10 @@ const routes = [
       {
         path: 'manager-visit-report',
 
-        name: 'managerVisitReport',
+        name: 'Visit Report',
 
         component: () =>
-          import('@/views/manager/visits/VisitsView.vue'),
+          import('@/views/manager/visits/visitsView.vue'),
 
         meta: {
           role: [3]
@@ -449,7 +449,7 @@ const routes = [
       {
         path: 'manager-sales-pipeline-report',
 
-        name: 'managerSalesPipelineReport',
+        name: 'Sales Pipeline Report',
 
         component: () =>
           import('@/views/manager/salesPipeline/SalesPipelineView.vue'),
@@ -463,7 +463,7 @@ const routes = [
       {
         path: 'manager-activity-report',
 
-        name: 'managerActivityReport',
+        name: 'Activity Report',
 
         component: () =>
           import('@/views/manager/activity/activityView.vue'),

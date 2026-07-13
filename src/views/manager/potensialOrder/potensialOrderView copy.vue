@@ -38,7 +38,7 @@
 
                         <p class="dashboard-subtitle mb-0">
 
-                            Monitor sales opportunities and closing performance.
+                            Monitor sales opportunities, forecast revenue, and closing performance.
 
                         </p>
 
@@ -64,7 +64,6 @@
 
                     <button
                         class="btn btn-success btn-header"
-                        :disabled="potentialStore.loadingPotential"
                         @click="refresh">
 
                         <i class="fa-solid fa-rotate-right me-2"></i>
@@ -85,7 +84,7 @@
 
         <div class="row g-3">
 
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-3 col-md-6">
 
                 <div class="mini-stat">
 
@@ -97,7 +96,7 @@
 
                     <h6>
 
-                        {{ lastUpdateText }}
+                        10 Jul 2026
 
                     </h6>
 
@@ -105,7 +104,27 @@
 
             </div>
 
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-3 col-md-6">
+
+                <div class="mini-stat">
+
+                    <small>
+
+                        Forecast Revenue
+
+                    </small>
+
+                    <h6 class="text-success">
+
+                        Rp 1.25 B
+
+                    </h6>
+
+                </div>
+
+            </div>
+
+            <div class="col-lg-3 col-md-6">
 
                 <div class="mini-stat">
 
@@ -125,7 +144,7 @@
 
             </div>
 
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-3 col-md-6">
 
                 <div class="mini-stat">
 
@@ -146,18 +165,6 @@
             </div>
 
         </div>
-
-    </div>
-
-    <!-- ==========================================================
-        ERROR STATE
-    =========================================================== -->
-
-    <div
-        v-if="potentialStore.errorPotential"
-        class="alert alert-danger">
-
-        Gagal memuat data potential order. Silakan coba refresh kembali.
 
     </div>
 
@@ -225,13 +232,19 @@
 
                     </h2>
 
-                    <div class="kpi-footer">
+                    <div class="kpi-footer d-flex justify-content-between">
 
                         <span>
 
                             Sales Opportunity
 
                         </span>
+
+                        <strong>
+
+                            Rp 1.25 B
+
+                        </strong>
 
                     </div>
 
@@ -316,6 +329,11 @@
     </div>
 
     <!-- ==========================================================
+        NEXT :
+        DAILY TREND
+        POTENTIAL PERCENTAGE
+    =========================================================== -->
+        <!-- ==========================================================
         CHART SECTION
     =========================================================== -->
 
@@ -365,12 +383,12 @@
 
                 <div class="card-body-custom">
 
-                    <template v-if="potentialStore.hasDailyTrend">
+                    <template v-if="dashboard.daily_trend.length">
 
                         <div class="chart-container-lg">
 
                             <Line
-                                :data="potentialStore.dailyTrendChart"
+                                :data="dailyTrendChart"
                                 :options="lineOptions"
                             />
 
@@ -495,7 +513,7 @@
                         <div class="chart-container">
 
                             <Doughnut
-                                :data="potentialStore.percentageChart"
+                                :data="percentageChart"
                                 :options="doughnutOptions"
                             />
 
@@ -567,7 +585,7 @@
 
                             <strong>
 
-                                {{ potentialStore.notPotentialCount }}
+                                {{ dashboard.summary.total_visit - dashboard.summary.total_potential_order }}
 
                             </strong>
 
@@ -606,6 +624,11 @@
     </div>
 
     <!-- ==========================================================
+        NEXT :
+        POTENTIAL PER SALES
+        POTENTIAL PER CUSTOMER
+    =========================================================== -->
+        <!-- ==========================================================
         PERFORMANCE
     =========================================================== -->
 
@@ -655,11 +678,11 @@
 
                 <div class="card-body-custom">
 
-                    <template v-if="potentialStore.hasPotentialPerSales">
+                    <template v-if="dashboard.potential_per_sales.length">
 
                         <div
 
-                            v-for="(item,index) in potentialStore.potentialPerSales"
+                            v-for="(item,index) in dashboard.potential_per_sales"
 
                             :key="item.id_user"
 
@@ -688,11 +711,9 @@
 
                             </div>
 
-                            <div
-                                class="sales-avatar"
-                                :style="{ background: potentialStore.getAvatarColor(item.fullname) }">
+                            <div class="sales-avatar">
 
-                                {{ potentialStore.getInitials(item.fullname) }}
+                                {{ item.sales_name.charAt(0) }}
 
                             </div>
 
@@ -700,7 +721,7 @@
 
                                 <div class="fw-bold">
 
-                                    {{ item.fullname }}
+                                    {{ item.sales_name }}
 
                                 </div>
 
@@ -716,7 +737,17 @@
 
                                         class="progress-bar bg-success"
 
-                                        :style="{ width: item.percent + '%' }">
+                                        :style="{
+
+                                            width:
+
+                                            (item.total /
+
+                                            dashboard.summary.total_potential_order *100)
+
+                                            +'%'
+
+                                        }">
 
                                     </div>
 
@@ -728,7 +759,7 @@
 
                                 <h4 class="mb-0 text-success">
 
-                                    {{ item.total_potential }}
+                                    {{ item.total }}
 
                                 </h4>
 
@@ -818,13 +849,13 @@
 
                     <template
 
-                        v-if="potentialStore.hasPotentialPerCustomer"
+                        v-if="dashboard.potential_per_customer.length"
 
                     >
 
                         <div
 
-                            v-for="item in potentialStore.potentialPerCustomer"
+                            v-for="item in dashboard.potential_per_customer"
 
                             :key="item.customer_name"
 
@@ -858,7 +889,17 @@
 
                                         class="progress-bar bg-primary"
 
-                                        :style="{ width: item.percent + '%' }">
+                                        :style="{
+
+                                            width:
+
+                                            (item.total /
+
+                                            dashboard.summary.total_potential_order*100)
+
+                                            +'%'
+
+                                        }">
 
                                     </div>
 
@@ -870,7 +911,7 @@
 
                                 <h4 class="mb-0">
 
-                                    {{ item.total_potential }}
+                                    {{ item.total }}
 
                                 </h4>
 
@@ -917,6 +958,11 @@
     </div>
 
     <!-- ==========================================================
+        NEXT :
+        LATEST POTENTIAL ORDER
+    =========================================================== -->
+
+        <!-- ==========================================================
         LATEST POTENTIAL ORDER
     =========================================================== -->
 
@@ -964,7 +1010,7 @@
 
                     <template
 
-                        v-if="potentialStore.hasLatestPotentialOrder"
+                        v-if="dashboard.latest_potential_order.length"
 
                     >
 
@@ -974,7 +1020,7 @@
 
                                 v-for="item in dashboard.latest_potential_order"
 
-                                :key="item.visit_code"
+                                :key="item.id"
 
                                 class="timeline-item"
 
@@ -998,15 +1044,13 @@
 
                                             <h5 class="mb-1">
 
-                                                {{ item.potential_order_detail }}
+                                                {{ item.title }}
 
                                             </h5>
 
-                                            <span
-                                                class="badge"
-                                                :class="potentialStore.visitResultBadge(item.visit_result)">
+                                            <span class="badge bg-success">
 
-                                                {{ potentialStore.formatVisitResult(item.visit_result) }}
+                                                Potential Order
 
                                             </span>
 
@@ -1014,15 +1058,21 @@
 
                                         <small class="text-muted">
 
-                                            {{ potentialStore.formatDateTime(item.visit_at) }}
+                                            {{ formatDateTime(item.created_at) }}
 
                                         </small>
 
                                     </div>
 
+                                    <p class="text-muted mt-3">
+
+                                        {{ item.description }}
+
+                                    </p>
+
                                     <div class="row mt-4">
 
-                                        <div class="col-lg-4">
+                                        <div class="col-lg-3">
 
                                             <small class="text-muted">
 
@@ -1038,7 +1088,7 @@
 
                                         </div>
 
-                                        <div class="col-lg-4">
+                                        <div class="col-lg-3">
 
                                             <small class="text-muted">
 
@@ -1054,19 +1104,75 @@
 
                                         </div>
 
-                                        <div class="col-lg-4">
+                                        <div class="col-lg-3">
 
                                             <small class="text-muted">
 
-                                                Visit Code
+                                                Estimated Value
+
+                                            </small>
+
+                                            <div class="fw-bold text-success">
+
+                                                {{ item.estimated_value }}
+
+                                            </div>
+
+                                        </div>
+
+                                        <div class="col-lg-3">
+
+                                            <small class="text-muted">
+
+                                                Expected Closing
 
                                             </small>
 
                                             <div class="fw-semibold">
 
-                                                {{ item.visit_code }}
+                                                {{ item.expected_closing }}
 
                                             </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    <hr>
+
+                                    <div class="d-flex justify-content-between align-items-center">
+
+                                        <div>
+
+                                            <small class="text-muted">
+
+                                                Probability
+
+                                            </small>
+
+                                        </div>
+
+                                        <div>
+
+                                            <span
+
+                                                class="badge"
+
+                                                :class="{
+
+                                                    'bg-success':item.probability>=80,
+
+                                                    'bg-warning text-dark':item.probability>=50 && item.probability<80,
+
+                                                    'bg-danger':item.probability<50
+
+                                                }"
+
+                                            >
+
+                                                {{ item.probability }}%
+
+                                            </span>
 
                                         </div>
 
@@ -1120,6 +1226,7 @@
 
 import {
 
+    ref,
     computed,
     onMounted
 
@@ -1149,11 +1256,6 @@ import {
 
 } from 'vue-chartjs'
 
-import { usePotentialOrdersDashboardStore } from '@/stores/potentialOrdersDashboard'
-// Sesuaikan import ini dengan store auth/user yang sudah ada di project kamu,
-// dipakai untuk mengirim ?user_id= ke API seperti store dashboard lain.
-import { useAuthStore } from '@/stores/authStore'
-
 ChartJS.register(
 
     CategoryScale,
@@ -1169,20 +1271,377 @@ ChartJS.register(
 
 )
 
-const potentialStore = usePotentialOrdersDashboardStore()
-const authStore        = useAuthStore()
-
-// Data mentah dari store, dipakai langsung di template
-const dashboard = computed(() => potentialStore.dashboard)
-
 /* ==========================================================
-LAST UPDATE
+STATE
 ========================================================== */
 
-const lastUpdateText = computed(() => {
-    const latest = dashboard.value.latest_potential_order[0]
-    return latest ? potentialStore.formatDateTime(latest.visit_at) : '-'
+const loading = ref(false)
+
+/* ==========================================================
+DASHBOARD
+========================================================== */
+
+const dashboard = ref({
+
+    summary:{
+
+        total_visit:126,
+
+        total_potential_order:42,
+
+        potential_rate:33.3
+
+    },
+
+    daily_trend:[
+
+        {
+
+            date:'01 Jul',
+
+            total:2
+
+        },
+
+        {
+
+            date:'02 Jul',
+
+            total:5
+
+        },
+
+        {
+
+            date:'03 Jul',
+
+            total:3
+
+        },
+
+        {
+
+            date:'04 Jul',
+
+            total:6
+
+        },
+
+        {
+
+            date:'05 Jul',
+
+            total:4
+
+        },
+
+        {
+
+            date:'06 Jul',
+
+            total:8
+
+        },
+
+        {
+
+            date:'07 Jul',
+
+            total:5
+
+        },
+
+        {
+
+            date:'08 Jul',
+
+            total:4
+
+        },
+
+        {
+
+            date:'09 Jul',
+
+            total:5
+
+        }
+
+    ],
+
+    potential_per_sales:[
+
+        {
+
+            id_user:1,
+
+            sales_name:'John Smith',
+
+            total:18
+
+        },
+
+        {
+
+            id_user:2,
+
+            sales_name:'Michael Johnson',
+
+            total:13
+
+        },
+
+        {
+
+            id_user:3,
+
+            sales_name:'Anderson Lee',
+
+            total:11
+
+        }
+
+    ],
+
+    potential_per_customer:[
+
+        {
+
+            customer_name:'PT Astra International',
+
+            total:18
+
+        },
+
+        {
+
+            customer_name:'PT Panasonic',
+
+            total:13
+
+        },
+
+        {
+
+            customer_name:'PT Toyota Motor',
+
+            total:11
+
+        }
+
+    ],
+
+    latest_potential_order:[
+
+        {
+
+            id:1,
+
+            title:'Potential Order Created',
+
+            description:'Customer is interested in purchasing industrial pipe products.',
+
+            customer_name:'PT Astra International',
+
+            sales_name:'John Smith',
+
+            estimated_value:'Rp 325.000.000',
+
+            probability:90,
+
+            expected_closing:'25 Jul 2026',
+
+            created_at:'2026-07-10 09:15:00'
+
+        },
+
+        {
+
+            id:2,
+
+            title:'Quotation Submitted',
+
+            description:'Quotation has been sent to customer.',
+
+            customer_name:'PT Panasonic',
+
+            sales_name:'Michael Johnson',
+
+            estimated_value:'Rp 180.000.000',
+
+            probability:70,
+
+            expected_closing:'28 Jul 2026',
+
+            created_at:'2026-07-09 15:30:00'
+
+        },
+
+        {
+
+            id:3,
+
+            title:'Negotiation',
+
+            description:'Customer requested price adjustment before purchase.',
+
+            customer_name:'PT Toyota Motor',
+
+            sales_name:'Anderson Lee',
+
+            estimated_value:'Rp 150.000.000',
+
+            probability:55,
+
+            expected_closing:'30 Jul 2026',
+
+            created_at:'2026-07-08 13:10:00'
+
+        }
+
+    ]
+
 })
+
+/* ==========================================================
+FORMAT DATETIME
+========================================================== */
+
+const formatDateTime=(date)=>{
+
+    return new Intl.DateTimeFormat(
+
+        'id-ID',
+
+        {
+
+            day:'2-digit',
+
+            month:'short',
+
+            year:'numeric',
+
+            hour:'2-digit',
+
+            minute:'2-digit'
+
+        }
+
+    ).format(
+
+        new Date(date)
+
+    )
+
+}
+
+/* ==========================================================
+REFRESH
+========================================================== */
+
+const refresh=()=>{
+
+    loading.value=true
+
+    setTimeout(()=>{
+
+        loading.value=false
+
+    },700)
+
+}
+
+/* ==========================================================
+LINE CHART
+========================================================== */
+
+const dailyTrendChart = computed(() => ({
+
+    labels: dashboard.value.daily_trend.map(
+        item => item.date
+    ),
+
+    datasets: [
+
+        {
+
+            label: 'Potential Order',
+
+            data: dashboard.value.daily_trend.map(
+                item => item.total
+            ),
+
+            borderColor: '#10B981',
+
+            backgroundColor: 'rgba(16,185,129,.12)',
+
+            fill: true,
+
+            tension: .4,
+
+            borderWidth: 3,
+
+            pointRadius: 5,
+
+            pointHoverRadius: 8,
+
+            pointBackgroundColor: '#10B981',
+
+            pointBorderColor: '#ffffff',
+
+            pointBorderWidth: 2
+
+        }
+
+    ]
+
+}))
+
+/* ==========================================================
+DOUGHNUT CHART
+========================================================== */
+
+const percentageChart = computed(() => ({
+
+    labels: [
+
+        'Potential',
+
+        'No Potential'
+
+    ],
+
+    datasets: [
+
+        {
+
+            data: [
+
+                dashboard.value.summary.total_potential_order,
+
+                dashboard.value.summary.total_visit -
+
+                dashboard.value.summary.total_potential_order
+
+            ],
+
+            backgroundColor: [
+
+                '#10B981',
+
+                '#E2E8F0'
+
+            ],
+
+            borderWidth: 0,
+
+            hoverOffset: 10
+
+        }
+
+    ]
+
+}))
 
 /* ==========================================================
 LINE OPTION
@@ -1303,16 +1762,46 @@ const doughnutOptions = {
 }
 
 /* ==========================================================
-LOAD & REFRESH
+LOAD DASHBOARD
 ========================================================== */
 
-const loadDashboard = () => {
-    potentialStore.fetchPotentialOrders(authStore.user?.id)
+const loadDashboard = async () => {
+
+    loading.value = true
+
+    try {
+
+        /*
+        const { data } = await axios.get(
+
+            '/api/dashboard/manager/potential-order'
+
+        )
+
+        dashboard.value = data.data
+        */
+
+        console.log('Potential Dashboard Loaded')
+
+    }
+
+    catch(error){
+
+        console.error(error)
+
+    }
+
+    finally{
+
+        loading.value = false
+
+    }
+
 }
 
-const refresh = () => {
-    loadDashboard()
-}
+/* ==========================================================
+LIFECYCLE
+========================================================== */
 
 onMounted(() => {
 
@@ -2073,6 +2562,12 @@ TOP SALES
 
     border-radius:50%;
 
+    background:linear-gradient(
+        135deg,
+        #10b981,
+        #059669
+    );
+
     color:#fff;
 
     display:flex;
@@ -2290,14 +2785,6 @@ BADGE
     padding:7px 14px;
 
     font-weight:600;
-
-}
-
-.bg-emerald{
-
-    background:#34d399;
-
-    color:#065f46;
 
 }
 

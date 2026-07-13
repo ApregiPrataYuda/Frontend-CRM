@@ -1,20 +1,25 @@
 <template>
+
     <div class="customer-dashboard container-fluid py-4">
 
-        <!-- =========================
+        <!-- =======================================================
             HEADER
-        ========================== -->
+        ======================================================== -->
 
         <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
 
             <div>
 
                 <h2 class="fw-bold mb-1">
+
                     Customer Dashboard
+
                 </h2>
 
                 <p class="text-muted mb-0">
-                    Monitor customer growth and lead performance for your sales team.
+
+                    Customer Growth & Sales Monitoring
+
                 </p>
 
             </div>
@@ -25,17 +30,21 @@
 
                     <i class="ti ti-calendar me-2"></i>
 
-                    July 2026
+                    {{ currentMonthLabel }}
 
                 </button>
 
                 <button
                     class="btn btn-primary"
+                    :disabled="loadingCustomer"
                     @click="refresh">
 
-                    <i class="ti ti-refresh me-2"></i>
+                    <i
+                        class="ti ti-refresh me-2"
+                        :class="{ 'spin-icon': loadingCustomer }">
+                    </i>
 
-                    Refresh
+                    {{ loadingCustomer ? 'Refreshing...' : 'Refresh' }}
 
                 </button>
 
@@ -43,135 +52,133 @@
 
         </div>
 
-        <!-- =========================
-            KPI - MAIN
-        ========================== -->
+        <!-- =======================================================
+            LOADING
+        ======================================================== -->
 
-        <div class="row g-4 mb-4">
+        <div
+            v-if="loadingCustomer && !hasData"
+            class="sp-loading-wrap">
 
-            <div class="col-lg-4">
+            <div class="spinner"></div>
 
-                <div class="kpi-card card-indigo">
+            <span>
 
-                    <div class="kpi-icon">
+                Loading Customer Dashboard...
 
-                        <i class="ti ti-users"></i>
-
-                    </div>
-
-                    <div>
-
-                        <small>Total Customer</small>
-
-                        <h2>
-
-                            {{ dashboard.summary.total_customer }}
-
-                        </h2>
-
-                        <span class="kpi-text">
-
-                            Customers Recorded
-
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="col-lg-4">
-
-                <div class="kpi-card card-success">
-
-                    <div class="kpi-icon">
-
-                        <i class="ti ti-user-plus"></i>
-
-                    </div>
-
-                    <div>
-
-                        <small>New Customer</small>
-
-                        <h2>
-
-                            {{ dashboard.summary.new_customer }}
-
-                        </h2>
-
-                        <span class="kpi-text">
-
-                            Added This Month
-
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="col-lg-4">
-
-                <div class="kpi-card card-cyan">
-
-                    <div class="kpi-icon">
-
-                        <i class="ti ti-user-check"></i>
-
-                    </div>
-
-                    <div>
-
-                        <small>Active Customer</small>
-
-                        <h2>
-
-                            {{ dashboard.summary.active_customer }}
-
-                        </h2>
-
-                        <span class="kpi-text">
-
-                            Currently Active
-
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </div>
+            </span>
 
         </div>
 
-        <!-- =========================
-            KPI - STATUS BREAKDOWN
-        ========================== -->
+        <template v-else>
 
-        <div class="row g-4 mb-4">
+            <!-- =======================================================
+                KPI
+            ======================================================== -->
 
-            <div class="col-lg-4">
+            <div class="row g-4 mb-4">
 
-                <div class="mini-stat">
+                <!-- TOTAL CUSTOMER -->
 
-                    <div class="mini-stat-icon icon-slate">
+                <div class="col-xl col-md-6">
 
-                        <i class="ti ti-moon"></i>
+                    <div class="kpi-card card-indigo">
+
+                        <div class="kpi-icon">
+
+                            <i class="ti ti-users"></i>
+
+                        </div>
+
+                        <div>
+
+                            <small>Total Customer</small>
+
+                            <h2>
+
+                                {{ dashboard.summary.total_customer }}
+
+                            </h2>
+
+                            <div class="kpi-footer">
+
+                                Total Registered Customer
+
+                            </div>
+
+                        </div>
 
                     </div>
 
-                    <div>
+                </div>
 
-                        <small>Dormant Customer</small>
+                <!-- NEW -->
 
-                        <h4>
+                <div class="col-xl col-md-6">
 
-                            {{ dashboard.summary.dormant_customer }}
+                    <div class="kpi-card card-success">
 
-                        </h4>
+                        <div class="kpi-icon">
+
+                            <i class="ti ti-user-plus"></i>
+
+                        </div>
+
+                        <div>
+
+                            <small>New Customer</small>
+
+                            <h2>
+
+                                {{ dashboard.summary.new_customer }}
+
+                            </h2>
+
+                            <div class="kpi-footer">
+
+                                {{ newRate.toFixed(1) }}%
+
+                                Growth
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ACTIVE -->
+
+                <div class="col-xl col-md-6">
+
+                    <div class="kpi-card card-info">
+
+                        <div class="kpi-icon">
+
+                            <i class="ti ti-user-check"></i>
+
+                        </div>
+
+                        <div>
+
+                            <small>Active Customer</small>
+
+                            <h2>
+
+                                {{ dashboard.summary.active_customer }}
+
+                            </h2>
+
+                            <div class="kpi-footer">
+
+                                {{ activeRate.toFixed(1) }}%
+
+                                Active
+
+                            </div>
+
+                        </div>
 
                     </div>
 
@@ -179,25 +186,97 @@
 
             </div>
 
-            <div class="col-lg-4">
+            <!-- =======================================================
+                MINI STATUS
+            ======================================================== -->
 
-                <div class="mini-stat">
+            <div class="row g-4 mb-4">
 
-                    <div class="mini-stat-icon icon-dark">
+                <div class="col-lg-4">
 
-                        <i class="ti ti-power"></i>
+                    <div class="mini-stat">
+
+                        <div class="mini-stat-icon icon-slate">
+
+                            <i class="ti ti-moon"></i>
+
+                        </div>
+
+                        <div>
+
+                            <small>
+
+                                Dormant Customer
+
+                            </small>
+
+                            <h4>
+
+                                {{ dashboard.summary.dormant_customer }}
+
+                            </h4>
+
+                        </div>
 
                     </div>
 
-                    <div>
+                </div>
 
-                        <small>Inactive Customer</small>
+                <div class="col-lg-4">
 
-                        <h4>
+                    <div class="mini-stat">
 
-                            {{ dashboard.summary.inactive_customer }}
+                        <div class="mini-stat-icon icon-dark">
 
-                        </h4>
+                            <i class="ti ti-power"></i>
+
+                        </div>
+
+                        <div>
+
+                            <small>
+
+                                Inactive Customer
+
+                            </small>
+
+                            <h4>
+
+                                {{ dashboard.summary.inactive_customer }}
+
+                            </h4>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="col-lg-4">
+
+                    <div class="mini-stat">
+
+                        <div class="mini-stat-icon icon-danger">
+
+                            <i class="ti ti-user-x"></i>
+
+                        </div>
+
+                        <div>
+
+                            <small>
+
+                                Lost Customer
+
+                            </small>
+
+                            <h4>
+
+                                {{ dashboard.summary.lost_customer }}
+
+                            </h4>
+
+                        </div>
 
                     </div>
 
@@ -205,61 +284,31 @@
 
             </div>
 
-            <div class="col-lg-4">
+                        <!-- =======================================================
+                CHART
+            ======================================================== -->
 
-                <div class="mini-stat">
+            <div class="row g-4 mb-4">
 
-                    <div class="mini-stat-icon icon-danger">
+                <!-- LEAD SOURCE -->
 
-                        <i class="ti ti-user-x"></i>
+                <div class="col-xl-5">
 
-                    </div>
+                    <div class="card border-0 shadow-sm h-100">
 
-                    <div>
-
-                        <small>Lost Customer</small>
-
-                        <h4>
-
-                            {{ dashboard.summary.lost_customer }}
-
-                        </h4>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- =========================
-            CHART
-        ========================== -->
-
-        <div class="row g-4 mb-4">
-
-            <!-- Lead Source Distribution -->
-
-            <div class="col-lg-5">
-
-                <div class="card dashboard-card h-100">
-
-                    <div class="card-header">
-
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
 
                             <div>
 
-                                <h5 class="mb-0">
+                                <h4 class="mb-1">
 
-                                    Lead Source Distribution
+                                    🎯 Lead Source Distribution
 
-                                </h5>
+                                </h4>
 
                                 <small class="text-muted">
 
-                                    Where Customers Come From
+                                    Customer Acquisition Channel
 
                                 </small>
 
@@ -275,42 +324,62 @@
 
                         </div>
 
-                    </div>
+                        <div class="card-body">
 
-                    <div class="card-body">
+                            <div
+                                v-if="!dashboard.lead_source.length"
+                                class="empty-state">
 
-                        <div class="chart-container">
+                                <i class="ti ti-chart-pie"></i>
 
-                            <Doughnut
-                                :data="leadSourceChart"
-                                :options="doughnutOptions"
-                            />
+                                <h5 class="mt-3">
 
-                        </div>
+                                    No Lead Source
 
-                        <hr>
-
-                        <div
-                            v-for="item in dashboard.lead_source"
-                            :key="item.lead_source"
-                            class="activity-stat">
-
-                            <div>
-
-                                <span
-                                    class="activity-color"
-                                    :class="leadSourceDot(item.lead_source)">
-                                </span>
-
-                                {{ item.lead_source }}
+                                </h5>
 
                             </div>
 
-                            <strong>
+                            <template v-else>
 
-                                {{ item.total }}
+                                <div class="chart-wrapper">
 
-                            </strong>
+                                    <Doughnut
+                                        :data="leadSourceChart"
+                                        :options="doughnutOptions"
+                                    />
+
+                                </div>
+
+                                <div class="mt-4">
+
+                                    <div
+                                        v-for="item in dashboard.lead_source"
+                                        :key="item.lead_source"
+                                        class="activity-stat">
+
+                                        <div>
+
+                                            <span
+                                                class="activity-color"
+                                                :class="leadSourceDot(item.lead_source)">
+                                            </span>
+
+                                            {{ item.lead_source }}
+
+                                        </div>
+
+                                        <strong>
+
+                                            {{ item.total }}
+
+                                        </strong>
+
+                                    </div>
+
+                                </div>
+
+                            </template>
 
                         </div>
 
@@ -318,29 +387,25 @@
 
                 </div>
 
-            </div>
+                <!-- CUSTOMER GROWTH -->
 
-            <!-- Customer Growth -->
+                <div class="col-xl-7">
 
-            <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm h-100">
 
-                <div class="card dashboard-card h-100">
-
-                    <div class="card-header">
-
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
 
                             <div>
 
-                                <h5 class="mb-0">
+                                <h4 class="mb-1">
 
-                                    Customer Growth Trend
+                                    📈 Customer Growth
 
-                                </h5>
+                                </h4>
 
                                 <small class="text-muted">
 
-                                    New Customers Over Time
+                                    Daily Customer Acquisition
 
                                 </small>
 
@@ -354,16 +419,34 @@
 
                         </div>
 
-                    </div>
+                        <div class="card-body">
 
-                    <div class="card-body">
+                            <div
+                                v-if="!dashboard.customer_growth.length"
+                                class="empty-state">
 
-                        <div class="chart-container-lg">
+                                <i class="ti ti-chart-line"></i>
 
-                            <Line
-                                :data="customerGrowthChart"
-                                :options="lineOptions"
-                            />
+                                <h5 class="mt-3">
+
+                                    No Growth Data
+
+                                </h5>
+
+                            </div>
+
+                            <template v-else>
+
+                                <div class="chart-wrapper">
+
+                                    <Line
+                                        :data="customerGrowthChart"
+                                        :options="lineOptions"
+                                    />
+
+                                </div>
+
+                            </template>
 
                         </div>
 
@@ -373,105 +456,148 @@
 
             </div>
 
-        </div>
+                        <!-- =======================================================
+                TOP SALES + TOP CUSTOMER
+            ======================================================== -->
 
-        <!-- =========================
-            TOP SALES + TOP CUSTOMER
-        ========================== -->
+            <div class="row g-4 mb-4">
 
-        <div class="row g-4 mb-4">
+                <!-- ===================================================
+                    TOP SALES
+                ==================================================== -->
 
-            <!-- Top Sales -->
+                <div class="col-xl-5">
 
-            <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm h-100">
 
-                <div class="card dashboard-card h-100">
+                        <div class="card-header bg-white">
 
-                    <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
 
-                        <div class="d-flex justify-content-between align-items-center">
+                                <div>
 
-                            <div>
+                                    <h4 class="mb-1">
 
-                                <h5 class="mb-0">
+                                        🏆 Top Sales
 
-                                    Top Sales by Customer
+                                    </h4>
 
-                                </h5>
+                                    <small class="text-muted">
 
-                                <small class="text-muted">
+                                        Ranked by Customer Acquisition
 
-                                    Ranked by Customers Acquired
+                                    </small>
 
-                                </small>
+                                </div>
 
-                            </div>
+                                <span class="badge bg-primary">
 
-                        </div>
+                                    {{ dashboard.top_sales.length }}
 
-                    </div>
-
-                    <div class="card-body">
-
-                        <div
-                            v-for="(sale, index) in dashboard.top_sales"
-                            :key="sale.id_user"
-                            class="sales-item">
-
-                            <div class="rank">
-
-                                <i
-                                    v-if="index === 0"
-                                    class="ti ti-trophy text-warning">
-                                </i>
-
-                                <i
-                                    v-else-if="index === 1"
-                                    class="ti ti-medal text-secondary">
-                                </i>
-
-                                <i
-                                    v-else-if="index === 2"
-                                    class="ti ti-medal text-orange">
-                                </i>
-
-                                <span v-else>
-
-                                    {{ index + 1 }}
+                                    Sales
 
                                 </span>
 
                             </div>
 
-                            <div class="flex-grow-1">
+                        </div>
 
-                                <strong class="text-capitalize">
+                        <div class="card-body">
 
-                                    {{ sale.fullname }}
+                            <div
+                                v-if="!dashboard.top_sales.length"
+                                class="empty-state">
 
-                                </strong>
+                                <i class="ti ti-users"></i>
 
-                                <div class="text-muted small">
+                                <h5 class="mt-3">
 
-                                    {{ sale.total_customer }} Customer
+                                    No Sales Data
 
-                                </div>
+                                </h5>
 
                             </div>
 
-                            <span class="badge bg-primary">
+                            <template v-else>
 
-                                {{ sale.total_customer }}
+                                <div
+                                    class="ranking-item"
+                                    v-for="(item,index) in dashboard.top_sales"
+                                    :key="item.id_user">
 
-                            </span>
+                                    <div class="rank">
 
-                        </div>
+                                        {{ medal(index) }}
 
-                        <div
-                            v-if="!dashboard.top_sales.length"
-                            class="text-muted text-center py-4">
+                                    </div>
 
-                            No sales data yet.
+                                    <div class="avatar">
+
+                                        <i class="ti ti-user"></i>
+
+                                    </div>
+
+                                    <div class="flex-grow-1 ms-3">
+
+                                        <div class="fw-bold text-capitalize">
+
+                                            {{ item.fullname }}
+
+                                        </div>
+
+                                        <small class="text-muted">
+
+                                            {{ item.total_customer }}
+
+                                            Customer
+
+                                        </small>
+
+                                        <div class="progress mt-2">
+
+                                            <div
+                                                class="progress-bar bg-primary"
+                                                :style="{
+
+                                                    width:
+
+                                                    (
+
+                                                        item.total_customer
+
+                                                        /
+
+                                                        Math.max(
+
+                                                            ...dashboard.top_sales.map(
+
+                                                                s=>s.total_customer
+
+                                                            ),
+
+                                                            1
+
+                                                        )
+
+                                                    )*100+'%'
+
+                                                }">
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="score">
+
+                                        {{ item.total_customer }}
+
+                                    </div>
+
+                                </div>
+
+                            </template>
 
                         </div>
 
@@ -479,254 +605,144 @@
 
                 </div>
 
-            </div>
+                <!-- ===================================================
+                    TOP CUSTOMER
+                ==================================================== -->
 
-            <!-- Top Customer -->
+                <div class="col-xl-7">
 
-            <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm h-100">
 
-                <div class="card dashboard-card h-100">
+                        <div class="card-header bg-white">
 
-                    <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
 
-                        <div class="d-flex justify-content-between align-items-center">
+                                <div>
 
-                            <div>
+                                    <h4 class="mb-1">
 
-                                <h5 class="mb-0">
+                                        ⭐ Top Customer
 
-                                    Top Customers
+                                    </h4>
 
-                                </h5>
+                                    <small class="text-muted">
 
-                                <small class="text-muted">
+                                        Highest Visit Frequency
 
-                                    Ranked by Visit Frequency
+                                    </small>
 
-                                </small>
+                                </div>
+
+                                <span class="badge bg-success">
+
+                                    {{ dashboard.top_customer.length }}
+
+                                </span>
 
                             </div>
-
-                            <span class="badge bg-primary">
-
-                                {{ dashboard.top_customer.length }}
-
-                                Customer
-
-                            </span>
 
                         </div>
 
-                    </div>
-
-                    <div class="card-body">
-
-                        <div class="activity-feed">
-
-                            <div
-                                v-for="item in dashboard.top_customer"
-                                :key="item.customer_code"
-                                class="feed-card feed-card-sm">
-
-                                <div class="feed-header">
-
-                                    <span class="feed-title">
-
-                                        {{ item.company_name }}
-
-                                    </span>
-
-                                    <span class="badge badge-success">
-
-                                        {{ item.total_visit }} Visit
-
-                                    </span>
-
-                                </div>
-
-                                <div class="text-muted small">
-
-                                    <i class="ti ti-id me-1"></i>
-
-                                    {{ item.customer_code }}
-
-                                </div>
-
-                            </div>
+                        <div class="card-body">
 
                             <div
                                 v-if="!dashboard.top_customer.length"
-                                class="text-muted text-center py-4">
+                                class="empty-state">
 
-                                No customer data yet.
+                                <i class="ti ti-building"></i>
 
-                            </div>
+                                <h5 class="mt-3">
 
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- =========================
-            CUSTOMER LIST
-        ========================== -->
-
-        <div class="row g-4">
-
-            <div class="col-12">
-
-                <div class="card dashboard-card">
-
-                    <div class="card-header">
-
-                        <div class="d-flex justify-content-between align-items-center">
-
-                            <div>
-
-                                <h5 class="mb-0">
-
-                                    Customer List
+                                    No Customer
 
                                 </h5>
 
-                                <small class="text-muted">
-
-                                    All Registered Customers
-
-                                </small>
-
                             </div>
 
-                            <span class="badge bg-primary">
+                            <template v-else>
 
-                                {{ dashboard.customer_list.length }}
+                                <div class="row g-3">
 
-                                Customer
-
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                    <div class="card-body p-0">
-
-                        <div class="table-responsive">
-
-                            <table class="table table-hover align-middle mb-0 customer-table">
-
-                                <thead>
-
-                                    <tr>
-
-                                        <th>Code</th>
-
-                                        <th>Company</th>
-
-                                        <th>Contact</th>
-
-                                        <th>Phone</th>
-
-                                        <th>Status</th>
-
-                                        <th>Source</th>
-
-                                        <th>Sales</th>
-
-                                        <th>Created At</th>
-
-                                    </tr>
-
-                                </thead>
-
-                                <tbody>
-
-                                    <tr
-                                        v-for="item in dashboard.customer_list"
+                                    <div
+                                        class="col-lg-6"
+                                        v-for="item in dashboard.top_customer"
                                         :key="item.customer_code">
 
-                                        <td class="text-muted">
+                                        <div class="feed-card">
 
-                                            {{ item.customer_code }}
+                                            <div class="feed-header">
 
-                                        </td>
+                                                <div>
 
-                                        <td class="fw-semibold">
+                                                    <h6
+                                                        class="mb-1 fw-bold">
 
-                                            {{ item.company_name }}
+                                                        {{ item.company_name }}
 
-                                        </td>
+                                                    </h6>
 
-                                        <td>
+                                                    <small
+                                                        class="text-muted">
 
-                                            {{ item.contact_name }}
+                                                        {{ item.customer_code }}
 
-                                        </td>
+                                                    </small>
 
-                                        <td>
+                                                </div>
 
-                                            {{ item.phone }}
+                                                <span
+                                                    class="badge bg-success">
 
-                                        </td>
+                                                    {{ item.total_visit }}
 
-                                        <td>
+                                                    Visit
 
-                                            <span
-                                                class="badge"
-                                                :class="statusBadge(item.customer_status)">
+                                                </span>
 
-                                                {{ item.customer_status }}
+                                            </div>
 
-                                            </span>
+                                            <div
+                                                class="progress mt-3">
 
-                                        </td>
+                                                <div
+                                                    class="progress-bar bg-success"
+                                                    :style="{
 
-                                        <td>
+                                                        width:
 
-                                            <span
-                                                class="badge"
-                                                :class="leadSourceBadge(item.lead_source)">
+                                                        (
 
-                                                {{ item.lead_source }}
+                                                            item.total_visit
 
-                                            </span>
+                                                            /
 
-                                        </td>
+                                                            Math.max(
 
-                                        <td class="text-capitalize">
+                                                                ...dashboard.top_customer.map(
 
-                                            {{ item.sales_name }}
+                                                                    c=>c.total_visit
 
-                                        </td>
+                                                                ),
 
-                                        <td class="text-muted">
+                                                                1
 
-                                            {{ formatDateTime(item.created_at) }}
+                                                            )
 
-                                        </td>
+                                                        )*100+'%'
 
-                                    </tr>
+                                                    }">
 
-                                    <tr v-if="!dashboard.customer_list.length">
+                                                </div>
 
-                                        <td
-                                            colspan="8"
-                                            class="text-center text-muted py-4">
+                                            </div>
 
-                                            No customers found.
+                                        </div>
 
-                                        </td>
+                                    </div>
 
-                                    </tr>
+                                </div>
 
-                                </tbody>
-
-                            </table>
+                            </template>
 
                         </div>
 
@@ -736,14 +752,238 @@
 
             </div>
 
-        </div>
+                        <!-- =======================================================
+                CUSTOMER LIST
+            ======================================================== -->
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-header bg-white">
+
+                    <div class="d-flex justify-content-between align-items-center">
+
+                        <div>
+
+                            <h4 class="mb-1">
+
+                                📋 Customer List
+
+                            </h4>
+
+                            <small class="text-muted">
+
+                                Registered Customer Directory
+
+                            </small>
+
+                        </div>
+
+                        <span class="badge bg-primary">
+
+                            {{ dashboard.customer_list.length }}
+
+                            Customer
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <div class="card-body p-0">
+
+                    <div
+                        v-if="!dashboard.customer_list.length"
+                        class="empty-state">
+
+                        <i class="ti ti-users"></i>
+
+                        <h5 class="mt-3">
+
+                            No Customer Found
+
+                        </h5>
+
+                    </div>
+
+                    <div
+                        v-else
+                        class="table-responsive">
+
+                        <table class="table customer-table align-middle mb-0">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>Customer</th>
+
+                                    <th>Contact</th>
+
+                                    <th>Status</th>
+
+                                    <th>Lead Source</th>
+
+                                    <th>Sales</th>
+
+                                    <th>Created</th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                <tr
+                                    v-for="item in dashboard.customer_list"
+                                    :key="item.customer_code">
+
+                                    <!-- CUSTOMER -->
+
+                                    <td>
+
+                                        <div class="d-flex align-items-center">
+
+                                            <div class="avatar">
+
+                                                <i class="ti ti-building"></i>
+
+                                            </div>
+
+                                            <div class="ms-3">
+
+                                                <div class="fw-bold">
+
+                                                    {{ item.company_name }}
+
+                                                </div>
+
+                                                <small class="text-muted">
+
+                                                    {{ item.customer_code }}
+
+                                                </small>
+
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+                                    <!-- CONTACT -->
+
+                                    <td>
+
+                                        <div>
+
+                                            <div class="fw-semibold">
+
+                                                {{ item.contact_name }}
+
+                                            </div>
+
+                                            <small class="text-muted">
+
+                                                {{ item.phone }}
+
+                                            </small>
+
+                                        </div>
+
+                                    </td>
+
+                                    <!-- STATUS -->
+
+                                    <td>
+
+                                        <span
+                                            class="badge"
+                                            :class="statusBadge(item.customer_status)">
+
+                                            {{ item.customer_status }}
+
+                                        </span>
+
+                                    </td>
+
+                                    <!-- LEAD SOURCE -->
+
+                                    <td>
+
+                                        <span
+                                            class="badge"
+                                            :class="leadSourceBadge(item.lead_source)">
+
+                                            {{ item.lead_source }}
+
+                                        </span>
+
+                                    </td>
+
+                                    <!-- SALES -->
+
+                                    <td>
+
+                                        <div class="d-flex align-items-center">
+
+                                            <div
+                                                class="avatar avatar-sm">
+
+                                                <i class="ti ti-user"></i>
+
+                                            </div>
+
+                                            <span
+                                                class="ms-2 text-capitalize">
+
+                                                {{ item.sales_name }}
+
+                                            </span>
+
+                                        </div>
+
+                                    </td>
+
+                                    <!-- CREATED -->
+
+                                    <td>
+
+                                        <small class="text-muted">
+
+                                            {{ formatDateTime(item.created_at) }}
+
+                                        </small>
+
+                                    </td>
+
+                                </tr>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </template>
 
     </div>
+
 </template>
 
-
 <script setup>
-import { ref, computed } from 'vue'
+
+import {
+    computed,
+    onMounted
+} from 'vue'
+
+import {
+    storeToRefs
+} from 'pinia'
 
 import {
     Chart as ChartJS,
@@ -762,6 +1002,9 @@ import {
     Line
 } from 'vue-chartjs'
 
+import { useAuthStore } from '@/stores/authStore'
+import { useCustomersDashboardStore } from '@/stores/customersDashboard'
+
 ChartJS.register(
     ArcElement,
     CategoryScale,
@@ -773,261 +1016,122 @@ ChartJS.register(
     Filler
 )
 
-const loading = ref(false)
+// =====================================================
+// STORE
+// =====================================================
 
-const dashboard = ref({
+const authStore = useAuthStore()
 
-    summary:{
-        total_customer:11,
-        new_customer:11,
-        active_customer:11,
-        dormant_customer:0,
-        inactive_customer:0,
-        lost_customer:0
-    },
+const customerStore = useCustomersDashboardStore()
 
-    customer_status:[
+const {
+
+    dashboard,
+
+    loadingCustomer,
+
+    hasData,
+
+    activeRate,
+
+    newRate,
+
+    inactiveRate,
+
+    dormantRate,
+
+    lostRate,
+
+    bestSales
+
+} = storeToRefs(customerStore)
+
+const {
+
+    fetchCustomers,
+
+    medal,
+
+    formatDate,
+
+    formatDateTime,
+
+    statusBadge,
+
+    leadSourceBadge,
+
+    leadSourceDot
+
+} = customerStore
+
+// =====================================================
+// HEADER
+// =====================================================
+
+const currentMonthLabel = computed(() => {
+
+    return new Date().toLocaleDateString(
+
+        'id-ID',
+
         {
-            customer_status:'Active',
-            total:11
+
+            month: 'long',
+
+            year: 'numeric'
+
         }
-    ],
 
-    lead_source:[
-        {
-            lead_source:'Referral',
-            total:5
-        },
-        {
-            lead_source:'Website',
-            total:3
-        },
-        {
-            lead_source:'Cold Call',
-            total:1
-        },
-        {
-            lead_source:'Other',
-            total:1
-        },
-        {
-            lead_source:'Social Media',
-            total:1
-        }
-    ],
-
-    top_sales:[
-        {
-            id_user:2,
-            fullname:'sputnix norwey',
-            total_customer:4
-        },
-        {
-            id_user:3,
-            fullname:'bortley england',
-            total_customer:3
-        },
-        {
-            id_user:4,
-            fullname:'willson denmark',
-            total_customer:3
-        },
-        {
-            id_user:1,
-            fullname:'apregi pratayuda',
-            total_customer:1
-        }
-    ],
-
-    customer_growth:[
-        {
-            date:'2026-07-08',
-            total:2
-        },
-        {
-            date:'2026-07-09',
-            total:9
-        }
-    ],
-
-    top_customer:[
-        {
-            customer_code:'CUST-20260709-001',
-            company_name:'PT. Paragon Technology And Innovation - Jatake 2',
-            total_visit:1
-        },
-        {
-            customer_code:'CUST-20260709-002',
-            company_name:'PT. KENCANA GEMILANG (MIYAKO)',
-            total_visit:1
-        },
-        {
-            customer_code:'CUST-20260709-004',
-            company_name:'PT. Nipama Mandiri',
-            total_visit:1
-        },
-        {
-            customer_code:'CUST-20260709-005',
-            company_name:'PT. Mayora Indah Tbk / Jayanti',
-            total_visit:1
-        },
-        {
-            customer_code:'CUST-20260709-007',
-            company_name:'PT Perwira Arthabaja Pasifik (Perwira Steel)',
-            total_visit:1
-        },
-        {
-            customer_code:'CUST-20260709-008',
-            company_name:'Asalta Mandiri Agung. PT',
-            total_visit:1
-        },
-        {
-            customer_code:'CUST-20260709-009',
-            company_name:'PT Sugizindo',
-            total_visit:1
-        }
-    ],
-
-    customer_list:[
-        {
-            customer_code:'CUST-20260709-009',
-            company_name:'PT Sugizindo',
-            contact_name:'bembi',
-            phone:'089873795444',
-            customer_status:'Active',
-            lead_source:'Referral',
-            sales_name:'willson denmark',
-            created_at:'2026-07-09 11:13:32'
-        },
-        {
-            customer_code:'CUST-20260709-008',
-            company_name:'Asalta Mandiri Agung. PT',
-            contact_name:'johanes',
-            phone:'089873795643',
-            customer_status:'Active',
-            lead_source:'Referral',
-            sales_name:'willson denmark',
-            created_at:'2026-07-09 11:06:25'
-        },
-        {
-            customer_code:'CUST-20260709-007',
-            company_name:'PT Perwira Arthabaja Pasifik (Perwira Steel)',
-            contact_name:'tono',
-            phone:'089873794532',
-            customer_status:'Active',
-            lead_source:'Cold Call',
-            sales_name:'sputnix norwey',
-            created_at:'2026-07-09 10:58:58'
-        },
-        {
-            customer_code:'CUST-20260709-006',
-            company_name:'PT. Karenu Indah (HELI Forklift Indonesia)',
-            contact_name:'mark',
-            phone:'089873456788',
-            customer_status:'Active',
-            lead_source:'Referral',
-            sales_name:'bortley england',
-            created_at:'2026-07-09 10:45:43'
-        },
-        {
-            customer_code:'CUST-20260709-005',
-            company_name:'PT. Mayora Indah Tbk / Jayanti',
-            contact_name:'yanti',
-            phone:'08987379654',
-            customer_status:'Active',
-            lead_source:'Website',
-            sales_name:'bortley england',
-            created_at:'2026-07-09 10:41:06'
-        },
-        {
-            customer_code:'CUST-20260709-004',
-            company_name:'PT. Nipama Mandiri',
-            contact_name:'joko',
-            phone:'08987379453',
-            customer_status:'Active',
-            lead_source:'Website',
-            sales_name:'bortley england',
-            created_at:'2026-07-09 10:36:14'
-        },
-        {
-            customer_code:'CUST-20260709-003',
-            company_name:'PT. Windu Persada Cargo (WPC)',
-            contact_name:'rizal',
-            phone:'089873795432',
-            customer_status:'Active',
-            lead_source:'Social Media',
-            sales_name:'sputnix norwey',
-            created_at:'2026-07-09 10:33:43'
-        },
-        {
-            customer_code:'CUST-20260709-002',
-            company_name:'PT. KENCANA GEMILANG (MIYAKO)',
-            contact_name:'Brians',
-            phone:'089873795432',
-            customer_status:'Active',
-            lead_source:'Other',
-            sales_name:'sputnix norwey',
-            created_at:'2026-07-09 10:24:10'
-        },
-        {
-            customer_code:'CUST-20260709-001',
-            company_name:'PT. Paragon Technology And Innovation - Jatake 2',
-            contact_name:'tomi',
-            phone:'08987379432',
-            customer_status:'Active',
-            lead_source:'Referral',
-            sales_name:'sputnix norwey',
-            created_at:'2026-07-09 10:17:49'
-        },
-        {
-            customer_code:'CUST-000001',
-            company_name:'PT Maju Jaya',
-            contact_name:'Andi Saputra',
-            phone:'081234567890',
-            customer_status:'Active',
-            lead_source:'Website',
-            sales_name:'apregi pratayuda',
-            created_at:'2026-07-08 17:28:52'
-        },
-        {
-            customer_code:'CUST-000002',
-            company_name:'PT Sukses Makmur',
-            contact_name:'Budi Santoso',
-            phone:'081298765432',
-            customer_status:'Active',
-            lead_source:'Referral',
-            sales_name:'willson denmark',
-            created_at:'2026-07-08 17:28:52'
-        }
-    ]
+    )
 
 })
 
-/*
-|--------------------------------------------------------------------------
-| Doughnut Chart (Lead Source)
-|--------------------------------------------------------------------------
-*/
+// =====================================================
+// LOAD
+// =====================================================
+
+onMounted(() => {
+
+    fetchCustomers(
+
+        authStore.user.id
+
+    )
+
+})
+
+// =====================================================
+// LEAD SOURCE CHART
+// =====================================================
 
 const leadSourceChart = computed(() => ({
 
     labels: dashboard.value.lead_source.map(
+
         item => item.lead_source
+
     ),
 
     datasets:[
+
         {
 
             data: dashboard.value.lead_source.map(
+
                 item => item.total
+
             ),
 
             backgroundColor:[
+
                 '#6366F1',
                 '#06B6D4',
                 '#F59E0B',
-                '#94A3B8',
-                '#8B5CF6'
+                '#8B5CF6',
+                '#10B981',
+                '#EF4444',
+                '#64748B'
+
             ],
 
             borderWidth:0,
@@ -1051,38 +1155,42 @@ const doughnutOptions={
     plugins:{
 
         legend:{
+
             display:false
+
         }
 
     }
 
 }
 
-/*
-|--------------------------------------------------------------------------
-| Line Chart (Customer Growth)
-|--------------------------------------------------------------------------
-*/
+// =====================================================
+// CUSTOMER GROWTH
+// =====================================================
 
 const customerGrowthChart = computed(() => ({
 
     labels: dashboard.value.customer_growth.map(
-        item => item.date
+
+        item=>item.date
+
     ),
 
     datasets:[
 
         {
 
-            label:'New Customer',
+            label:'Customer',
 
             data: dashboard.value.customer_growth.map(
-                item => item.total
+
+                item=>item.total
+
             ),
 
             borderColor:'#4F46E5',
 
-            backgroundColor:'rgba(99,102,241,.12)',
+            backgroundColor:'rgba(99,102,241,.15)',
 
             fill:true,
 
@@ -1107,7 +1215,9 @@ const lineOptions={
     plugins:{
 
         legend:{
+
             display:false
+
         }
 
     },
@@ -1115,182 +1225,43 @@ const lineOptions={
     scales:{
 
         y:{
+
             beginAtZero:true,
+
             ticks:{
+
                 precision:0
+
             }
-        }
-
-    }
-
-}
-
-/*
-|--------------------------------------------------------------------------
-| Formatter
-|--------------------------------------------------------------------------
-*/
-
-const formatDateTime=(date)=>{
-
-    return new Intl.DateTimeFormat(
-        'id-ID',
-        {
-
-            day:'2-digit',
-
-            month:'short',
-
-            year:'numeric',
-
-            hour:'2-digit',
-
-            minute:'2-digit'
 
         }
 
-    ).format(new Date(date))
-
-}
-
-/*
-|--------------------------------------------------------------------------
-| Badge / Dot - Lead Source
-|--------------------------------------------------------------------------
-*/
-
-const leadSourceBadge=(source)=>{
-
-    switch(source){
-
-        case 'Referral':
-            return 'badge-primary'
-
-        case 'Website':
-            return 'badge-info'
-
-        case 'Cold Call':
-            return 'badge-warning'
-
-        case 'Other':
-            return 'badge-secondary'
-
-        case 'Social Media':
-            return 'badge-purple'
-
-        default:
-            return 'badge-dark'
-
     }
 
 }
 
-const leadSourceDot=(source)=>{
-
-    switch(source){
-
-        case 'Referral':
-            return 'dot-primary'
-
-        case 'Website':
-            return 'dot-info'
-
-        case 'Cold Call':
-            return 'dot-warning'
-
-        case 'Other':
-            return 'dot-secondary'
-
-        case 'Social Media':
-            return 'dot-purple'
-
-        default:
-            return 'dot-dark'
-
-    }
-
-}
-
-/*
-|--------------------------------------------------------------------------
-| Badge - Customer Status
-|--------------------------------------------------------------------------
-*/
-
-const statusBadge=(status)=>{
-
-    switch(status){
-
-        case 'Active':
-            return 'badge-success'
-
-        case 'Dormant':
-            return 'badge-secondary'
-
-        case 'Inactive':
-            return 'badge-dark'
-
-        case 'Lost':
-            return 'badge-danger'
-
-        default:
-            return 'badge-dark'
-
-    }
-
-}
-
-/*
-|--------------------------------------------------------------------------
-| Refresh
-|--------------------------------------------------------------------------
-*/
+// =====================================================
+// REFRESH
+// =====================================================
 
 const refresh=()=>{
 
-    loading.value=true
+    fetchCustomers(
 
-    setTimeout(()=>{
+        loginStore.user.id
 
-        loading.value=false
-
-    },800)
+    )
 
 }
-
-/*
-|--------------------------------------------------------------------------
-| Future API
-|--------------------------------------------------------------------------
-*/
-
-// const loadDashboard = async () => {
-//
-//     loading.value = true
-//
-//     try {
-//
-//         const { data } = await axios.get(
-//             '/api/dashboard/manager/customers'
-//         )
-//
-//         dashboard.value = data.data
-//
-//     } finally {
-//
-//         loading.value = false
-//
-//     }
-//
-// }
+// =====================================================
+// END SCRIPT
+// =====================================================
 
 </script>
 
-
 <style scoped>
-
 /* ==========================================================
-    PAGE
+   PAGE
 ========================================================== */
 
 .customer-dashboard{
@@ -1302,39 +1273,47 @@ const refresh=()=>{
 }
 
 /* ==========================================================
-    CARD
+   CARD
 ========================================================== */
 
-.dashboard-card{
+.card{
 
     border:none;
 
     border-radius:18px;
 
+    overflow:hidden;
+
     box-shadow:0 10px 30px rgba(15,23,42,.08);
 
-    overflow:hidden;
+    transition:.35s;
 
 }
 
-.dashboard-card .card-header{
+.card:hover{
+
+    box-shadow:0 18px 45px rgba(15,23,42,.12);
+
+}
+
+.card-header{
 
     background:#fff;
 
     border-bottom:1px solid #edf2f7;
 
-    padding:20px 24px;
+    padding:22px 24px;
 
 }
 
-.dashboard-card .card-body{
+.card-body{
 
     padding:24px;
 
 }
 
 /* ==========================================================
-    KPI
+   KPI CARD
 ========================================================== */
 
 .kpi-card{
@@ -1343,31 +1322,31 @@ const refresh=()=>{
 
     overflow:hidden;
 
-    min-height:145px;
-
-    border-radius:18px;
-
     display:flex;
 
     justify-content:space-between;
 
     align-items:center;
 
-    padding:24px;
+    min-height:150px;
+
+    padding:26px;
+
+    border-radius:18px;
 
     color:#fff;
 
-    transition:.35s;
-
     cursor:pointer;
+
+    transition:.35s;
 
 }
 
 .kpi-card:hover{
 
-    transform:translateY(-6px);
+    transform:translateY(-8px);
 
-    box-shadow:0 20px 35px rgba(0,0,0,.18);
+    box-shadow:0 20px 40px rgba(0,0,0,.18);
 
 }
 
@@ -1377,9 +1356,9 @@ const refresh=()=>{
 
     position:absolute;
 
-    width:180px;
+    width:170px;
 
-    height:180px;
+    height:170px;
 
     border-radius:50%;
 
@@ -1405,9 +1384,9 @@ const refresh=()=>{
 
     background:rgba(255,255,255,.05);
 
-    left:-35px;
+    left:-40px;
 
-    bottom:-35px;
+    bottom:-40px;
 
 }
 
@@ -1421,38 +1400,50 @@ const refresh=()=>{
 
     display:flex;
 
+    justify-content:center;
+
     align-items:center;
 
-    justify-content:center;
+    font-size:32px;
 
     background:rgba(255,255,255,.15);
 
     backdrop-filter:blur(10px);
 
-    font-size:32px;
+}
+
+.kpi-card small{
+
+    font-size:.92rem;
+
+    opacity:.9;
 
 }
 
 .kpi-card h2{
 
-    margin:8px 0 4px;
+    margin-top:10px;
+
+    margin-bottom:4px;
 
     font-size:40px;
 
     font-weight:700;
 
+    line-height:1;
+
 }
 
-.kpi-text{
+.kpi-footer{
 
-    opacity:.9;
+    font-size:.82rem;
 
-    font-size:.85rem;
+    opacity:.95;
 
 }
 
 /* ==========================================================
-    COLOR
+   KPI COLOR
 ========================================================== */
 
 .card-indigo{
@@ -1467,14 +1458,14 @@ const refresh=()=>{
 
 }
 
-.card-cyan{
+.card-info{
 
     background:linear-gradient(135deg,#0891b2,#06b6d4);
 
 }
 
 /* ==========================================================
-    MINI STAT
+   MINI STAT
 ========================================================== */
 
 .mini-stat{
@@ -1485,17 +1476,15 @@ const refresh=()=>{
 
     gap:16px;
 
+    padding:20px;
+
+    border-radius:16px;
+
     background:#fff;
 
     border:1px solid #edf2f7;
 
-    border-radius:16px;
-
-    padding:18px 20px;
-
-    height:100%;
-
-    transition:.25s;
+    transition:.3s;
 
 }
 
@@ -1503,17 +1492,47 @@ const refresh=()=>{
 
     transform:translateY(-4px);
 
-    box-shadow:0 10px 20px rgba(15,23,42,.06);
+    border-color:#6366f1;
+
+    box-shadow:0 12px 25px rgba(99,102,241,.10);
 
 }
 
-.mini-stat small{
+.mini-stat-icon{
 
-    color:#64748b;
+    width:54px;
 
-    display:block;
+    height:54px;
 
-    margin-bottom:2px;
+    border-radius:14px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    color:#fff;
+
+    font-size:24px;
+
+}
+
+.icon-slate{
+
+    background:#94a3b8;
+
+}
+
+.icon-dark{
+
+    background:#334155;
+
+}
+
+.icon-danger{
+
+    background:#ef4444;
 
 }
 
@@ -1523,60 +1542,152 @@ const refresh=()=>{
 
     font-weight:700;
 
-    font-size:22px;
+}
 
-    color:#1e293b;
+.mini-stat small{
+
+    color:#64748b;
 
 }
 
-.mini-stat-icon{
+/* ==========================================================
+   BUTTON
+========================================================== */
 
-    width:48px;
+.btn{
 
-    height:48px;
+    border-radius:12px;
 
-    min-width:48px;
+}
 
-    border-radius:14px;
+.btn-primary{
+
+    border:none;
+
+    background:#4f46e5;
+
+}
+
+.btn-primary:hover{
+
+    background:#4338ca;
+
+}
+
+/* ==========================================================
+   LOADING
+========================================================== */
+
+.sp-loading-wrap{
+
+    min-height:420px;
 
     display:flex;
 
-    align-items:center;
+    flex-direction:column;
 
     justify-content:center;
 
-    font-size:22px;
+    align-items:center;
 
-    color:#fff;
+    color:#64748b;
 
 }
 
-.icon-slate{background:#94A3B8;}
-.icon-dark{background:#334155;}
-.icon-danger{background:#EF4444;}
+.spinner{
+
+    width:55px;
+
+    height:55px;
+
+    border-radius:50%;
+
+    border:4px solid #e2e8f0;
+
+    border-top-color:#4f46e5;
+
+    animation:spin .8s linear infinite;
+
+    margin-bottom:18px;
+
+}
+
+.spin-icon{
+
+    animation:spin 1s linear infinite;
+
+}
+
+@keyframes spin{
+
+    to{
+
+        transform:rotate(360deg);
+
+    }
+
+}
 
 /* ==========================================================
-    CHART
+   EMPTY STATE
 ========================================================== */
 
-.chart-container{
+.empty-state{
 
-    height:280px;
+    min-height:260px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:center;
+
+    align-items:center;
+
+    color:#94a3b8;
+
+}
+
+.empty-state i{
+
+    font-size:68px;
+
+    margin-bottom:18px;
+
+}
+
+.empty-state h5{
+
+    color:#475569;
+
+    font-weight:600;
+
+}
+
+/* ==========================================================
+   CHART
+========================================================== */
+
+.chart-wrapper{
 
     position:relative;
 
-}
-
-.chart-container-lg{
+    width:100%;
 
     height:340px;
 
-    position:relative;
+}
+
+.chart-wrapper canvas{
+
+    width:100%!important;
+
+    height:100%!important;
 
 }
 
 /* ==========================================================
-    STAT LIST
+   LEAD SOURCE LIST
 ========================================================== */
 
 .activity-stat{
@@ -1587,7 +1698,7 @@ const refresh=()=>{
 
     align-items:center;
 
-    padding:10px 0;
+    padding:12px 0;
 
     border-bottom:1px dashed #edf2f7;
 
@@ -1601,9 +1712,9 @@ const refresh=()=>{
 
 .activity-color{
 
-    width:10px;
+    width:11px;
 
-    height:10px;
+    height:11px;
 
     border-radius:50%;
 
@@ -1614,86 +1725,166 @@ const refresh=()=>{
 }
 
 /* ==========================================================
-    TOP SALES
+   LEADERBOARD
 ========================================================== */
 
-.sales-item{
+.ranking-item{
 
     display:flex;
 
     align-items:center;
 
-    gap:16px;
+    gap:18px;
 
-    padding:14px;
+    padding:18px;
 
-    border-radius:14px;
+    border-radius:18px;
 
-    transition:.25s;
+    background:#fff;
 
-    margin-bottom:10px;
+    border:1px solid transparent;
+
+    margin-bottom:14px;
+
+    transition:.35s;
 
 }
 
-.sales-item:hover{
+.ranking-item:last-child{
+
+    margin-bottom:0;
+
+}
+
+.ranking-item:hover{
+
+    transform:translateX(6px);
+
+    border-color:#e2e8f0;
 
     background:#f8fafc;
 
-    transform:translateX(6px);
+    box-shadow:0 14px 28px rgba(15,23,42,.08);
 
 }
 
 .rank{
 
-    width:42px;
+    width:52px;
 
     text-align:center;
 
+    font-size:24px;
+
+    font-weight:700;
+
+}
+
+.avatar{
+
+    width:60px;
+
+    height:60px;
+
+    border-radius:50%;
+
+    background:linear-gradient(135deg,#4f46e5,#818cf8);
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    color:#fff;
+
+    font-size:28px;
+
+    flex-shrink:0;
+
+}
+
+.avatar-sm{
+
+    width:38px;
+
+    height:38px;
+
+    font-size:18px;
+
+}
+
+.score{
+
+    min-width:70px;
+
+    height:50px;
+
+    border-radius:14px;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    background:#eef2ff;
+
+    color:#4f46e5;
+
     font-size:22px;
+
+    font-weight:700;
 
 }
 
 /* ==========================================================
-    TOP CUSTOMER / FEED
+   TOP CUSTOMER CARD
 ========================================================== */
-
-.activity-feed{
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:14px;
-
-}
 
 .feed-card{
 
-    position:relative;
+    background:#fff;
 
     border:1px solid #edf2f7;
 
-    border-radius:16px;
+    border-radius:18px;
 
     padding:18px;
 
-    transition:.3s;
+    transition:.35s;
 
-    background:#fff;
+    position:relative;
+
+    overflow:hidden;
 
 }
 
 .feed-card:hover{
 
-    transform:translateY(-4px);
+    transform:translateY(-5px);
 
-    box-shadow:0 15px 25px rgba(0,0,0,.08);
+    box-shadow:0 18px 35px rgba(15,23,42,.08);
+
+    border-color:#6366f1;
 
 }
 
-.feed-card-sm{
+.feed-card::before{
 
-    padding:14px 18px;
+    content:"";
+
+    position:absolute;
+
+    left:0;
+
+    top:0;
+
+    width:5px;
+
+    height:100%;
+
+    background:#10b981;
 
 }
 
@@ -1703,24 +1894,50 @@ const refresh=()=>{
 
     justify-content:space-between;
 
-    align-items:center;
+    align-items:flex-start;
 
-    gap:10px;
-
-    margin-bottom:6px;
+    gap:12px;
 
 }
 
-.feed-title{
+.feed-header h6{
 
-    font-size:15px;
+    margin:0;
 
-    font-weight:600;
+}
+
+.feed-card small{
+
+    color:#64748b;
 
 }
 
 /* ==========================================================
-    TABLE
+   PROGRESS
+========================================================== */
+
+.progress{
+
+    height:10px;
+
+    border-radius:30px;
+
+    background:#edf2f7;
+
+    overflow:hidden;
+
+}
+
+.progress-bar{
+
+    border-radius:30px;
+
+    transition:width .8s ease;
+
+}
+
+/* ==========================================================
+   CUSTOMER TABLE
 ========================================================== */
 
 .customer-table{
@@ -1735,17 +1952,17 @@ const refresh=()=>{
 
     color:#64748b;
 
-    font-weight:600;
+    font-weight:700;
+
+    font-size:.75rem;
 
     text-transform:uppercase;
 
-    font-size:.72rem;
-
-    letter-spacing:.03em;
+    letter-spacing:.05em;
 
     border-bottom:1px solid #edf2f7;
 
-    padding:14px 24px;
+    padding:16px 22px;
 
     white-space:nowrap;
 
@@ -1753,7 +1970,9 @@ const refresh=()=>{
 
 .customer-table tbody td{
 
-    padding:14px 24px;
+    padding:18px 22px;
+
+    vertical-align:middle;
 
     border-bottom:1px solid #f1f5f9;
 
@@ -1761,9 +1980,9 @@ const refresh=()=>{
 
 }
 
-.customer-table tbody tr:last-child td{
+.customer-table tbody tr{
 
-    border-bottom:none;
+    transition:.25s;
 
 }
 
@@ -1773,31 +1992,41 @@ const refresh=()=>{
 
 }
 
+.customer-table tbody tr:last-child td{
+
+    border-bottom:none;
+
+}
+
 /* ==========================================================
-    BADGE
+   BADGE
 ========================================================== */
 
 .badge{
 
-    padding:7px 14px;
-
     border-radius:30px;
 
+    padding:7px 14px;
+
+    font-size:.78rem;
+
     font-weight:600;
+
+    letter-spacing:.2px;
 
 }
 
 .badge-primary{
 
-    background:#EEF2FF;
+    background:#eef2ff;
 
-    color:#4F46E5;
+    color:#4f46e5;
 
 }
 
 .badge-success{
 
-    background:#ECFDF5;
+    background:#ecfdf5;
 
     color:#059669;
 
@@ -1805,47 +2034,39 @@ const refresh=()=>{
 
 .badge-warning{
 
-    background:#FEF3C7;
+    background:#fef3c7;
 
-    color:#B45309;
+    color:#b45309;
 
 }
 
 .badge-danger{
 
-    background:#FEE2E2;
+    background:#fee2e2;
 
-    color:#DC2626;
+    color:#dc2626;
 
 }
 
 .badge-info{
 
-    background:#ECFEFF;
+    background:#ecfeff;
 
-    color:#0891B2;
+    color:#0891b2;
 
 }
 
 .badge-purple{
 
-    background:#F3E8FF;
+    background:#f3e8ff;
 
-    color:#7C3AED;
-
-}
-
-.badge-orange{
-
-    background:#FFF7ED;
-
-    color:#EA580C;
+    color:#7c3aed;
 
 }
 
 .badge-secondary{
 
-    background:#F1F5F9;
+    background:#f1f5f9;
 
     color:#475569;
 
@@ -1853,43 +2074,73 @@ const refresh=()=>{
 
 .badge-dark{
 
-    background:#E2E8F0;
+    background:#e2e8f0;
 
-    color:#1E293B;
-
-}
-
-/* ==========================================================
-    DOT COLOR
-========================================================== */
-
-.dot-primary{background:#4F46E5;}
-.dot-success{background:#10B981;}
-.dot-warning{background:#F59E0B;}
-.dot-danger{background:#EF4444;}
-.dot-info{background:#06B6D4;}
-.dot-secondary{background:#64748B;}
-.dot-purple{background:#8B5CF6;}
-.dot-orange{background:#F97316;}
-.dot-dark{background:#334155;}
-
-/* ==========================================================
-    BUTTON
-========================================================== */
-
-.btn{
-
-    border-radius:12px;
+    color:#1e293b;
 
 }
 
 /* ==========================================================
-    ANIMATION
+   DOT
 ========================================================== */
 
-.dashboard-card,
+.dot-primary{
+
+    background:#4f46e5;
+
+}
+
+.dot-success{
+
+    background:#10b981;
+
+}
+
+.dot-warning{
+
+    background:#f59e0b;
+
+}
+
+.dot-danger{
+
+    background:#ef4444;
+
+}
+
+.dot-info{
+
+    background:#06b6d4;
+
+}
+
+.dot-secondary{
+
+    background:#64748b;
+
+}
+
+.dot-purple{
+
+    background:#8b5cf6;
+
+}
+
+.dot-dark{
+
+    background:#334155;
+
+}
+
+/* ==========================================================
+   ANIMATION
+========================================================== */
+
+.card,
 .kpi-card,
-.mini-stat{
+.mini-stat,
+.feed-card,
+.ranking-item{
 
     animation:fadeUp .4s ease;
 
@@ -1916,24 +2167,70 @@ const refresh=()=>{
 }
 
 /* ==========================================================
-    RESPONSIVE
+   SCROLLBAR
 ========================================================== */
+
+::-webkit-scrollbar{
+
+    width:8px;
+
+    height:8px;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:#cbd5e1;
+
+    border-radius:20px;
+
+}
+
+::-webkit-scrollbar-track{
+
+    background:#f8fafc;
+
+}
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+
+@media(max-width:1200px){
+
+    .chart-wrapper{
+
+        height:300px;
+
+    }
+
+}
 
 @media(max-width:992px){
 
     .kpi-card{
 
-        min-height:120px;
+        min-height:130px;
 
     }
 
     .kpi-card h2{
 
-        font-size:32px;
+        font-size:34px;
 
     }
 
-    .chart-container-lg{
+    .kpi-icon{
+
+        width:60px;
+
+        height:60px;
+
+        font-size:28px;
+
+    }
+
+    .chart-wrapper{
 
         height:280px;
 
@@ -1943,14 +2240,82 @@ const refresh=()=>{
 
 @media(max-width:768px){
 
-    .chart-container,
-
-    .chart-container-lg{
+    .chart-wrapper{
 
         height:240px;
 
     }
 
+    .ranking-item{
+
+        flex-wrap:wrap;
+
+    }
+
+    .score{
+
+        width:100%;
+
+    }
+
+    .customer-table{
+
+        min-width:900px;
+
+    }
+
 }
+
+@media(max-width:576px){
+
+    .customer-dashboard{
+
+        padding:14px;
+
+    }
+
+    .card-body{
+
+        padding:18px;
+
+    }
+
+    .kpi-card{
+
+        padding:18px;
+
+    }
+
+    .chart-wrapper{
+
+        height:220px;
+
+    }
+
+    .avatar{
+
+        width:48px;
+
+        height:48px;
+
+        font-size:22px;
+
+    }
+
+    .avatar-sm{
+
+        width:34px;
+
+        height:34px;
+
+        font-size:16px;
+
+    }
+
+}
+
+/* ==========================================================
+   END
+========================================================== */
 
 </style>
