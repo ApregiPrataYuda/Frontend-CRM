@@ -4,7 +4,7 @@ import AppModal from '@/components/AppModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useRoleStore } from '@/stores/roleStore'
 import { useAccessMenuStore } from '@/stores/accessMenuStore'   
-import { usePermissionStore } from '@/stores/permissionStore'
+import { usePermissionStore } from '@/stores/PermissionStore'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 

@@ -8,7 +8,7 @@ import AppModal from '@/components/AppModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useUserStore } from '@/stores/userStore'
 import { useAccessSubMenuStore } from '@/stores/accessSubMenuStore'
-import { usePermissionStore } from '@/stores/permissionStore'
+import { usePermissionStore } from '@/stores/PermissionStore'
 
 const route           = useRoute()
 const toast           = useToast()

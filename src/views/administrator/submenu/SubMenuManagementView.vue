@@ -4,7 +4,7 @@ import AppModal       from '@/components/AppModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToast }   from 'vue-toastification'
 import { useSubMenuStore }    from '@/stores/subMenuStore'
-import { usePermissionStore } from '@/stores/permissionStore'
+import { usePermissionStore } from '@/stores/PermissionStore'
 import { useRoute }           from 'vue-router'
 
 const { confirm } = useConfirm()

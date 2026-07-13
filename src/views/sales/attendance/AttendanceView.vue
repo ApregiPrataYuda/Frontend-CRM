@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
-import { usePermissionStore } from '@/stores/permissionStore'
+import { usePermissionStore } from '@/stores/PermissionStore'
 import { useDataAttendanceStore } from '@/stores/AttendanceFreeLocationStore'
 
 const route = useRoute()

@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import AppModal from '@/components/AppModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { leadAssignStore } from '@/stores/leadAssignStore'
-import { usePermissionStore } from '@/stores/permissionStore'
+import { usePermissionStore } from '@/stores/PermissionStore'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 

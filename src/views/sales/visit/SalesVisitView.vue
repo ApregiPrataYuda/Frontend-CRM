@@ -9,7 +9,7 @@ import AppModal        from '@/components/AppModal.vue'
 import { useVisitDataStore }      from '@/stores/VisitSalesStore'
 import { useLeadsVisitStore }     from '@/stores/leadsVisitStore'
 import { useCustomersVisitStore } from '@/stores/customersVisitStore'
-import { usePermissionStore } from '@/stores/permissionStore'
+import { usePermissionStore } from '@/stores/PermissionStore'
 
 const router = useRouter()
 const route  = useRoute()

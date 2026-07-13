@@ -6,7 +6,7 @@ import { useToast } from 'vue-toastification'
 import AppModal from '@/components/AppModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useSettingAppStore } from '@/stores/settingAppStore'
-import { usePermissionStore } from '@/stores/permissionStore'
+import { usePermissionStore } from '@/stores/PermissionStore'
 
 const { confirm } = useConfirm()
 const toast       = useToast()

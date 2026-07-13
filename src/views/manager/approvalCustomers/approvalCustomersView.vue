@@ -7,7 +7,7 @@ import AppModal from '@/components/AppModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 
 import { useApprovalCustomersStore } from '@/stores/approvalCustomersStore'
-import { usePermissionStore } from '@/stores/permissionStore'
+import { usePermissionStore } from '@/stores/PermissionStore'
 
 const { confirm } = useConfirm()
 
