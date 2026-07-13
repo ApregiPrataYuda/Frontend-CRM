@@ -542,7 +542,7 @@ const routes = [
 
       {
         path: 'approval-customers',
-        name: 'Approval Customers',
+        name: 'Approvals Customer',
         component: () =>
           import('@/views/manager/approvalCustomers/approvalCustomersView.vue'),
         meta: {
