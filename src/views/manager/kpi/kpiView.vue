@@ -64,6 +64,7 @@
 
                     <button
                         class="btn btn-primary btn-header"
+                        :disabled="kpiStore.loadingKpi"
                         @click="refresh">
 
                         <i class="fa-solid fa-rotate-right me-2"></i>
@@ -98,7 +99,7 @@
 
                     <h6>
 
-                        10 Jul 2026
+                        {{ lastUpdateText }}
 
                     </h6>
 
@@ -156,9 +157,9 @@
 
                     </small>
 
-                    <h6 class="text-primary">
+                    <h6 :class="kpiStore.crmHealthColor">
 
-                        Excellent
+                        {{ kpiStore.crmHealthText }}
 
                     </h6>
 
@@ -167,6 +168,18 @@
             </div>
 
         </div>
+
+    </div>
+
+    <!-- ==========================================================
+        ERROR STATE
+    =========================================================== -->
+
+    <div
+        v-if="kpiStore.errorKpi"
+        class="alert alert-danger">
+
+        Gagal memuat data KPI dashboard. Silakan coba refresh kembali.
 
     </div>
 
@@ -331,10 +344,6 @@
     </div>
 
     <!-- ==========================================================
-        NEXT
-        KPI ROW 2
-    =========================================================== -->
-        <!-- ==========================================================
         KPI ROW 2
     =========================================================== -->
 
@@ -372,13 +381,7 @@
 
                             class="progress-bar bg-success"
 
-                            :style="{
-
-                                width:
-
-                                dashboard.kpi.conversion_rate+'%'
-
-                            }">
+                            :style="{ width: kpiStore.conversionRateWidth + '%' }">
 
                         </div>
 
@@ -428,13 +431,7 @@
 
                             class="progress-bar bg-danger"
 
-                            :style="{
-
-                                width:
-
-                                dashboard.kpi.complaint_rate+'%'
-
-                            }">
+                            :style="{ width: kpiStore.complaintRateWidth + '%' }">
 
                         </div>
 
@@ -484,13 +481,7 @@
 
                             class="progress-bar bg-info"
 
-                            :style="{
-
-                                width:
-
-                                dashboard.kpi.potential_rate+'%'
-
-                            }">
+                            :style="{ width: kpiStore.potentialRateWidth + '%' }">
 
                         </div>
 
@@ -540,13 +531,7 @@
 
                             class="progress-bar bg-warning"
 
-                            :style="{
-
-                                width:
-
-                                (dashboard.summary.overdue_follow_up*10)+'%'
-
-                            }">
+                            :style="{ width: kpiStore.overdueWidth + '%' }">
 
                         </div>
 
@@ -592,39 +577,67 @@
 
                 <div class="card-body-custom">
 
-                    <div class="top-profile">
+                    <template v-if="kpiStore.hasTopSales">
 
-                        <div class="profile-avatar">
+                        <div class="top-profile">
 
-                            {{ dashboard.top_sales.fullname.charAt(0).toUpperCase() }}
+                            <div
+                                class="profile-avatar"
+                                :style="{ background: kpiStore.getAvatarColor(dashboard.top_sales.fullname) }">
+
+                                {{ kpiStore.getInitials(dashboard.top_sales.fullname) }}
+
+                            </div>
+
+                            <div class="profile-content">
+
+                                <h4 class="text-capitalize">
+
+                                    {{ dashboard.top_sales.fullname }}
+
+                                </h4>
+
+                                <p>
+
+                                    Sales Champion This Month
+
+                                </p>
+
+                                <span class="badge bg-success">
+
+                                    {{ dashboard.top_sales.total_visit }}
+
+                                    Visit
+
+                                </span>
+
+                            </div>
 
                         </div>
 
-                        <div class="profile-content">
+                    </template>
+
+                    <template v-else>
+
+                        <div class="empty-chart">
+
+                            <i class="fa-solid fa-trophy"></i>
 
                             <h4>
 
-                                {{ dashboard.top_sales.fullname }}
+                                No Sales Data
 
                             </h4>
 
                             <p>
 
-                                Sales Champion This Month
+                                No top sales available for this period.
 
                             </p>
 
-                            <span class="badge bg-success">
-
-                                {{ dashboard.top_sales.total_visit }}
-
-                                Visit
-
-                            </span>
-
                         </div>
 
-                    </div>
+                    </template>
 
                 </div>
 
@@ -652,39 +665,65 @@
 
                 <div class="card-body-custom">
 
-                    <div class="top-profile">
+                    <template v-if="kpiStore.hasTopCustomer">
 
-                        <div class="profile-avatar bg-primary">
+                        <div class="top-profile">
 
-                            <i class="fa-solid fa-building"></i>
+                            <div class="profile-avatar bg-primary">
+
+                                <i class="fa-solid fa-building"></i>
+
+                            </div>
+
+                            <div class="profile-content">
+
+                                <h4>
+
+                                    {{ dashboard.top_customer.company_name }}
+
+                                </h4>
+
+                                <p>
+
+                                    {{ dashboard.top_customer.customer_code }}
+
+                                </p>
+
+                                <span class="badge bg-primary">
+
+                                    {{ dashboard.top_customer.total_visit }}
+
+                                    Visit
+
+                                </span>
+
+                            </div>
 
                         </div>
 
-                        <div class="profile-content">
+                    </template>
+
+                    <template v-else>
+
+                        <div class="empty-chart">
+
+                            <i class="fa-solid fa-building"></i>
 
                             <h4>
 
-                                {{ dashboard.top_customer.company_name }}
+                                No Customer Data
 
                             </h4>
 
                             <p>
 
-                                {{ dashboard.top_customer.customer_code }}
+                                No top customer available for this period.
 
                             </p>
 
-                            <span class="badge bg-primary">
-
-                                {{ dashboard.top_customer.total_visit }}
-
-                                Visit
-
-                            </span>
-
                         </div>
 
-                    </div>
+                    </template>
 
                 </div>
 
@@ -695,10 +734,6 @@
     </div>
 
     <!-- ==========================================================
-        NEXT :
-        MANAGER INSIGHT
-    =========================================================== -->
-        <!-- ==========================================================
         MANAGER INSIGHT
     =========================================================== -->
 
@@ -744,7 +779,7 @@
 
                 <div class="card-body-custom">
 
-                    <template v-if="dashboard.insight.length">
+                    <template v-if="kpiStore.hasInsight">
 
                         <div
                             v-for="(item,index) in dashboard.insight"
@@ -766,37 +801,7 @@
 
                             <div class="insight-icon">
 
-                                <i
-
-                                    v-if="item.type==='warning'"
-
-                                    class="fa-solid fa-triangle-exclamation">
-
-                                </i>
-
-                                <i
-
-                                    v-else-if="item.type==='success'"
-
-                                    class="fa-solid fa-circle-check">
-
-                                </i>
-
-                                <i
-
-                                    v-else-if="item.type==='danger'"
-
-                                    class="fa-solid fa-circle-xmark">
-
-                                </i>
-
-                                <i
-
-                                    v-else
-
-                                    class="fa-solid fa-circle-info">
-
-                                </i>
+                                <i :class="kpiStore.insightIcon(item.type)"></i>
 
                             </div>
 
@@ -823,20 +828,8 @@
                             <div>
 
                                 <span
-
                                     class="badge"
-
-                                    :class="{
-
-                                        'bg-warning text-dark':item.type==='warning',
-
-                                        'bg-success':item.type==='success',
-
-                                        'bg-danger':item.type==='danger',
-
-                                        'bg-info':item.type==='info'
-
-                                    }">
+                                    :class="kpiStore.insightBadge(item.type)">
 
                                     {{ item.type.toUpperCase() }}
 
@@ -886,7 +879,6 @@
 
 import {
 
-    ref,
     computed,
     onMounted
 
@@ -910,13 +902,10 @@ import {
 
 } from 'chart.js'
 
-import {
-
-    Doughnut,
-
-    Bar
-
-} from 'vue-chartjs'
+import { useKpiDashboardStore } from '@/stores/kpiDashboardStore'
+// Sesuaikan import ini dengan store auth/user yang sudah ada di project kamu,
+// dipakai untuk mengirim ?user_id= ke API seperti store dashboard lain.
+import { useAuthStore } from '@/stores/authStore'
 
 ChartJS.register(
 
@@ -934,435 +923,39 @@ ChartJS.register(
 
 )
 
+const kpiStore  = useKpiDashboardStore()
+const authStore = useAuthStore()
+
+// Data mentah dari store, dipakai langsung di template
+const dashboard = computed(() => kpiStore.dashboard)
+
 /* ==========================================================
-STATE
+LAST UPDATE
 ========================================================== */
 
-const loading = ref(false)
-
-/* ==========================================================
-DASHBOARD
-========================================================== */
-
-const dashboard = ref({
-
-    summary:{
-
-        lead:2,
-
-        customer:2,
-
-        visit:0,
-
-        visit_today:0,
-
-        follow_up:3,
-
-        overdue_follow_up:2,
-
-        complaint:0,
-
-        potential_order:0
-
-    },
-
-    kpi:{
-
-        conversion_rate:100,
-
-        complaint_rate:0,
-
-        potential_rate:0
-
-    },
-
-    top_sales:{
-
-        id_user:1,
-
-        fullname:'Apregi Pratayuda',
-
-        total_visit:0
-
-    },
-
-    top_customer:{
-
-        customer_code:'CUST-000001',
-
-        company_name:'PT Maju Jaya',
-
-        total_visit:0
-
-    },
-
-    insight:[
-
-        {
-
-            type:'warning',
-
-            title:'Follow Up Overdue',
-
-            message:'2 follow up belum dikerjakan.'
-
-        },
-
-        {
-
-            type:'info',
-
-            title:'Top Sales',
-
-            message:'Apregi Pratayuda menjadi sales paling aktif bulan ini.'
-
-        }
-
-    ]
-
+// API tidak mengirim timestamp "last update" khusus, jadi dipakai
+// waktu load terakhir di sisi client sebagai indikator kesegaran data
+const lastUpdateText = computed(() => {
+    return kpiStore.dashboard
+        ? new Intl.DateTimeFormat('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        }).format(new Date())
+        : '-'
 })
 
 /* ==========================================================
-OVERALL SCORE
+LOAD & REFRESH
 ========================================================== */
 
-const overallScore = computed(()=>{
-
-    let score = 100
-
-    score -= dashboard.value.summary.overdue_follow_up * 5
-
-    score -= dashboard.value.kpi.complaint_rate
-
-    score += dashboard.value.kpi.conversion_rate * .10
-
-    score += dashboard.value.kpi.potential_rate * .05
-
-    if(score>100){
-
-        score=100
-
-    }
-
-    if(score<0){
-
-        score=0
-
-    }
-
-    return Math.round(score)
-
-})
-
-/* ==========================================================
-GRADE
-========================================================== */
-
-const overallGrade = computed(()=>{
-
-    if(overallScore.value>=90){
-
-        return 'A+'
-
-    }
-
-    if(overallScore.value>=80){
-
-        return 'A'
-
-    }
-
-    if(overallScore.value>=70){
-
-        return 'B'
-
-    }
-
-    if(overallScore.value>=60){
-
-        return 'C'
-
-    }
-
-    return 'D'
-
-})
-
-/* ==========================================================
-FORMAT NUMBER
-========================================================== */
-
-const formatNumber=(value)=>{
-
-    return new Intl.NumberFormat(
-
-        'id-ID'
-
-    ).format(value)
-
+const loadDashboard = () => {
+    kpiStore.fetchKpi(authStore.user?.id)
 }
 
-/* ==========================================================
-REFRESH
-========================================================== */
-
-const refresh=()=>{
-
-    loading.value=true
-
-    setTimeout(()=>{
-
-        loading.value=false
-
-    },700)
-
+const refresh = () => {
+    loadDashboard()
 }
-
-/* ==========================================================
-OVERALL KPI SCORE CHART
-========================================================== */
-
-const overallScoreChart = computed(() => ({
-
-    labels: [
-
-        'Score',
-
-        'Remaining'
-
-    ],
-
-    datasets: [
-
-        {
-
-            data: [
-
-                overallScore.value,
-
-                100 - overallScore.value
-
-            ],
-
-            backgroundColor: [
-
-                '#2563EB',
-
-                '#E5E7EB'
-
-            ],
-
-            borderWidth: 0,
-
-            hoverOffset: 6
-
-        }
-
-    ]
-
-}))
-
-/* ==========================================================
-KPI COMPARISON CHART
-========================================================== */
-
-const kpiComparisonChart = computed(() => ({
-
-    labels: [
-
-        'Lead',
-
-        'Customer',
-
-        'Visit',
-
-        'Follow Up',
-
-        'Complaint',
-
-        'Potential'
-
-    ],
-
-    datasets: [
-
-        {
-
-            label:'Total',
-
-            data:[
-
-                dashboard.value.summary.lead,
-
-                dashboard.value.summary.customer,
-
-                dashboard.value.summary.visit,
-
-                dashboard.value.summary.follow_up,
-
-                dashboard.value.summary.complaint,
-
-                dashboard.value.summary.potential_order
-
-            ],
-
-            borderRadius:8,
-
-            backgroundColor:[
-
-                '#2563EB',
-
-                '#10B981',
-
-                '#8B5CF6',
-
-                '#F59E0B',
-
-                '#EF4444',
-
-                '#06B6D4'
-
-            ]
-
-        }
-
-    ]
-
-}))
-
-/* ==========================================================
-DOUGHNUT OPTION
-========================================================== */
-
-const doughnutOptions = {
-
-    responsive:true,
-
-    maintainAspectRatio:false,
-
-    cutout:'78%',
-
-    plugins:{
-
-        legend:{
-
-            display:false
-
-        },
-
-        tooltip:{
-
-            backgroundColor:'#0F172A',
-
-            titleColor:'#fff',
-
-            bodyColor:'#fff'
-
-        }
-
-    }
-
-}
-
-/* ==========================================================
-BAR OPTION
-========================================================== */
-
-const barOptions = {
-
-    responsive:true,
-
-    maintainAspectRatio:false,
-
-    plugins:{
-
-        legend:{
-
-            display:false
-
-        }
-
-    },
-
-    scales:{
-
-        x:{
-
-            grid:{
-
-                display:false
-
-            }
-
-        },
-
-        y:{
-
-            beginAtZero:true,
-
-            ticks:{
-
-                precision:0
-
-            },
-
-            grid:{
-
-                color:'#EEF2F7'
-
-            }
-
-        }
-
-    }
-
-}
-
-/* ==========================================================
-LOAD KPI DASHBOARD
-========================================================== */
-
-const loadDashboard = async()=>{
-
-    loading.value=true
-
-    try{
-
-        /*
-        const { data } = await axios.get(
-
-            '/api/dashboard/manager/kpi'
-
-        )
-
-        dashboard.value=data.data
-        */
-
-        console.log(
-
-            'Executive KPI Dashboard Loaded'
-
-        )
-
-    }
-
-    catch(error){
-
-        console.error(error)
-
-    }
-
-    finally{
-
-        loading.value=false
-
-    }
-
-}
-
-/* ==========================================================
-LIFECYCLE
-========================================================== */
 
 onMounted(()=>{
 
@@ -2019,16 +1612,6 @@ TOP PROFILE
 
     align-items:center;
 
-    background:linear-gradient(
-
-        135deg,
-
-        #2563eb,
-
-        #3b82f6
-
-    );
-
     color:#fff;
 
     font-size:34px;
@@ -2044,6 +1627,16 @@ TOP PROFILE
 .profile-avatar.bg-primary{
 
     border-radius:22px;
+
+    background:linear-gradient(
+
+        135deg,
+
+        #2563eb,
+
+        #3b82f6
+
+    );
 
 }
 
@@ -2070,84 +1663,6 @@ TOP PROFILE
     margin-bottom:14px;
 
     color:#64748b;
-
-}
-
-/* ==========================================================
-OVERALL SCORE
-========================================================== */
-
-.score-card{
-
-    background:linear-gradient(
-
-        135deg,
-
-        #2563eb,
-
-        #3b82f6
-
-    );
-
-    color:#fff;
-
-    border-radius:22px;
-
-    padding:26px;
-
-    text-align:center;
-
-    position:relative;
-
-    overflow:hidden;
-
-}
-
-.score-card::before{
-
-    content:"";
-
-    position:absolute;
-
-    width:180px;
-
-    height:180px;
-
-    border-radius:50%;
-
-    background:rgba(255,255,255,.08);
-
-    right:-70px;
-
-    top:-70px;
-
-}
-
-.score-value{
-
-    font-size:60px;
-
-    font-weight:700;
-
-    line-height:1;
-
-}
-
-.score-grade{
-
-    margin-top:10px;
-
-    font-size:28px;
-
-    font-weight:700;
-
-}
-
-.score-text{
-
-    margin-top:12px;
-
-    opacity:.9;
 
 }
 
@@ -2184,47 +1699,6 @@ BADGE
     font-weight:600;
 
 }
-
-/* ==========================================================
-GLASS EFFECT
-========================================================== */
-
-.glass-card{
-
-    backdrop-filter:blur(12px);
-
-    background:rgba(255,255,255,.85);
-
-    border:1px solid rgba(255,255,255,.4);
-
-}
-
-/* ==========================================================
-SHADOW UTIL
-========================================================== */
-
-.shadow-soft{
-
-    box-shadow:
-
-        0 12px 30px rgba(15,23,42,.08);
-
-}
-
-.shadow-hover{
-
-    transition:.3s;
-
-}
-
-.shadow-hover:hover{
-
-    box-shadow:
-
-        0 20px 45px rgba(15,23,42,.12);
-
-}
-
 
 /* ==========================================================
 MANAGER INSIGHT
@@ -2390,7 +1864,7 @@ EMPTY STATE
 
 .empty-chart{
 
-    min-height:320px;
+    min-height:280px;
 
     display:flex;
 

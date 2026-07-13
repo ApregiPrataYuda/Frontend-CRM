@@ -400,7 +400,11 @@ async function handleSave() {
       showToast('success', 'Customer berhasil diperbarui!')
     } else {
       await store.saveCustomer(formData.value)
-      showToast('success', 'Customer berhasil ditambahkan!')
+      // showToast('success', 'Customer berhasil ditambahkan!')
+      showToast(
+          'success',
+          'Customer berhasil diajukan dan sedang menunggu approval Manager.'
+      )
     }
     closeAddModal()
   } catch {
@@ -576,11 +580,39 @@ async function handleSave() {
       </div>
 
       <!-- EMPTY (shared) -->
-      <div v-else-if="!store.customersData.length" class="state-wrap">
+      <!-- <div v-else-if="!store.customersData.length" class="state-wrap">
         <div class="empty-state">
           <img src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
             alt="No data" class="empty-img" />
           <div class="empty-text">No data found</div>
+        </div>
+      </div> -->
+      <div v-else-if="!store.customersData.length" class="state-wrap">
+        <div class="empty-state">
+
+          <img
+            src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
+            alt="No Customer"
+            class="empty-img"
+          />
+
+          <h5 class="empty-title">
+            Belum Ada Customer
+          </h5>
+
+          <p class="empty-text">
+            Customer akan muncul di halaman ini setelah disetujui oleh Manager.
+          </p>
+
+          <button
+            v-if="canCreate"
+            class="btn-toolbar btn-purple mt-2"
+            @click="openAddModal"
+          >
+            <font-awesome-icon icon="plus" />
+            Tambah Customer
+          </button>
+
         </div>
       </div>
 
@@ -1280,6 +1312,23 @@ async function handleSave() {
 .progress-success { background: #22c55e; }
 .progress-error   { background: #ef4444; }
 .progress-info    { background: #94a3b8; }
+
+
+.empty-title{
+    margin-top:12px;
+    margin-bottom:6px;
+    font-size:20px;
+    font-weight:700;
+    color:var(--text-primary);
+}
+
+.empty-text{
+    max-width:420px;
+    text-align:center;
+    color:var(--text-muted);
+    line-height:1.6;
+}
+
 @keyframes shrink { from { width: 100%; } to { width: 0%; } }
 .toast-enter-active { transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .toast-leave-active { transition: all 0.2s ease-in; }

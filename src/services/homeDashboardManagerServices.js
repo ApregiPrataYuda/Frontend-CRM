@@ -95,6 +95,25 @@ async getDashboardPotentialOrders(userId) {
     },
   })
   return response
+},
+
+async getDashboardKpi(userId) {
+  const response = await api.get('/dashboard/manager/kpi', {
+    params: {
+      user_id: userId,
+    },
+  })
+  return response
+},
+
+
+async getDashboardConversion(userId) {
+  const response = await api.get('/dashboard/manager/conversion', {
+    params: {
+      user_id: userId,
+    },
+  })
+  return response
 }
 
 }

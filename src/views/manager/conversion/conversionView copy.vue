@@ -31,7 +31,6 @@
 
                 <button
                     class="btn btn-primary"
-                    :disabled="conversionStore.loadingConversion"
                     @click="refresh">
 
                     <i class="ti ti-refresh me-2"></i>
@@ -41,18 +40,6 @@
                 </button>
 
             </div>
-
-        </div>
-
-        <!-- =========================
-            ERROR STATE
-        ========================== -->
-
-        <div
-            v-if="conversionStore.errorConversion"
-            class="alert alert-danger">
-
-            Gagal memuat data conversion. Silakan coba refresh kembali.
 
         </div>
 
@@ -263,14 +250,6 @@
 
                             </div>
 
-                            <div
-                                class="sales-avatar"
-                                :style="{ background: conversionStore.getAvatarColor(sale.fullname) }">
-
-                                {{ conversionStore.getInitials(sale.fullname) }}
-
-                            </div>
-
                             <div class="flex-grow-1">
 
                                 <strong class="text-capitalize">
@@ -298,7 +277,7 @@
                         </div>
 
                         <div
-                            v-if="!conversionStore.hasSalesConversion"
+                            v-if="!dashboard.sales_conversion.length"
                             class="text-muted text-center py-4">
 
                             No conversion data yet.
@@ -352,7 +331,7 @@
                         <div class="chart-container-lg">
 
                             <Line
-                                :data="conversionStore.dailyConversionChart"
+                                :data="dailyConversionChart"
                                 :options="lineOptions"
                             />
 
@@ -402,7 +381,7 @@
                                     v-for="item in dashboard.customer_status"
                                     :key="item.customer_status"
                                     class="badge"
-                                    :class="conversionStore.statusBadge(item.customer_status)">
+                                    :class="statusBadge(item.customer_status)">
 
                                     {{ item.customer_status }}: {{ item.total }}
 
@@ -433,7 +412,7 @@
 
                                     <span
                                         class="badge"
-                                        :class="conversionStore.statusBadge(item.customer_status)">
+                                        :class="statusBadge(item.customer_status)">
 
                                         {{ item.customer_status }}
 
@@ -451,15 +430,9 @@
 
                                     </span>
 
-                                    <span class="feed-sales">
+                                    <span>
 
-                                        <span
-                                            class="feed-avatar"
-                                            :style="{ background: conversionStore.getAvatarColor(item.sales_name) }">
-
-                                            {{ conversionStore.getInitials(item.sales_name) }}
-
-                                        </span>
+                                        <i class="ti ti-user me-1"></i>
 
                                         {{ item.sales_name }}
 
@@ -469,7 +442,7 @@
 
                                         <i class="ti ti-clock me-1"></i>
 
-                                        {{ conversionStore.formatDateTime(item.created_at) }}
+                                        {{ formatDateTime(item.created_at) }}
 
                                     </span>
 
@@ -478,7 +451,7 @@
                             </div>
 
                             <div
-                                v-if="!conversionStore.hasLatestConversion"
+                                v-if="!dashboard.latest_conversion.length"
                                 class="text-muted text-center py-4">
 
                                 No conversions yet.
@@ -500,7 +473,7 @@
 
 
 <script setup>
-import { onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 
 import {
     Chart as ChartJS,
@@ -517,11 +490,6 @@ import {
     Line
 } from 'vue-chartjs'
 
-import { useConversionDashboardStore } from '@/stores/conversionDashboardStore'
-// Sesuaikan import ini dengan store auth/user yang sudah ada di project kamu,
-// dipakai untuk mengirim ?user_id= ke API seperti store dashboard lain.
-import { useAuthStore } from '@/stores/authStore'
-
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -532,38 +500,133 @@ ChartJS.register(
     Filler
 )
 
-const conversionStore = useConversionDashboardStore()
-const authStore        = useAuthStore()
+const loading = ref(false)
 
-// Data mentah dari store, dipakai langsung di template
-const dashboard = computed(() => conversionStore.dashboard)
+const dashboard = ref({
+
+    summary:{
+        total_lead:2,
+        converted:2,
+        not_converted:0,
+        conversion_rate:100
+    },
+
+    sales_conversion:[
+        {
+            id_user:1,
+            fullname:'apregi pratayuda',
+            total_conversion:1
+        },
+        {
+            id_user:4,
+            fullname:'willson denmark',
+            total_conversion:1
+        },
+        {
+            id_user:2,
+            fullname:'sputnix norwey',
+            total_conversion:0
+        },
+        {
+            id_user:3,
+            fullname:'bortley england',
+            total_conversion:0
+        }
+    ],
+
+    daily_conversion:[
+        {
+            date:'2026-07-10',
+            total:2
+        }
+    ],
+
+    customer_status:[
+        {
+            customer_status:'Active',
+            total:2
+        }
+    ],
+
+    latest_conversion:[
+        {
+            customer_code:'CUST-000001',
+            company_name:'PT Maju Jaya',
+            sales_name:'apregi pratayuda',
+            customer_status:'Active',
+            created_at:'2026-07-10 15:08:18'
+        },
+        {
+            customer_code:'CUST-000002',
+            company_name:'PT Sukses Makmur',
+            sales_name:'willson denmark',
+            customer_status:'Active',
+            created_at:'2026-07-10 15:08:18'
+        }
+    ]
+
+})
 
 /*
 |--------------------------------------------------------------------------
-| Chart Options (statis, tidak tergantung data)
+| Line Chart (Daily Conversion)
 |--------------------------------------------------------------------------
 */
 
-const lineOptions = {
+const dailyConversionChart = computed(() => ({
 
-    responsive: true,
+    labels: dashboard.value.daily_conversion.map(
+        item => item.date
+    ),
 
-    maintainAspectRatio: false,
+    datasets:[
 
-    plugins: {
+        {
 
-        legend: {
-            display: false
+            label:'Converted',
+
+            data: dashboard.value.daily_conversion.map(
+                item => item.total
+            ),
+
+            borderColor:'#7C3AED',
+
+            backgroundColor:'rgba(139,92,246,.12)',
+
+            fill:true,
+
+            tension:.35,
+
+            pointRadius:5,
+
+            pointHoverRadius:8
+
+        }
+
+    ]
+
+}))
+
+const lineOptions={
+
+    responsive:true,
+
+    maintainAspectRatio:false,
+
+    plugins:{
+
+        legend:{
+            display:false
         }
 
     },
 
-    scales: {
+    scales:{
 
-        y: {
-            beginAtZero: true,
-            ticks: {
-                precision: 0
+        y:{
+            beginAtZero:true,
+            ticks:{
+                precision:0
             }
         }
 
@@ -573,21 +636,104 @@ const lineOptions = {
 
 /*
 |--------------------------------------------------------------------------
-| Load & Refresh
+| Formatter
 |--------------------------------------------------------------------------
 */
 
-const loadDashboard = () => {
-    conversionStore.fetchConversion(authStore.user?.id)
+const formatDateTime=(date)=>{
+
+    return new Intl.DateTimeFormat(
+        'id-ID',
+        {
+
+            day:'2-digit',
+
+            month:'short',
+
+            year:'numeric',
+
+            hour:'2-digit',
+
+            minute:'2-digit'
+
+        }
+
+    ).format(new Date(date))
+
 }
 
-const refresh = () => {
-    loadDashboard()
+/*
+|--------------------------------------------------------------------------
+| Badge - Customer Status
+|--------------------------------------------------------------------------
+*/
+
+const statusBadge=(status)=>{
+
+    switch(status){
+
+        case 'Active':
+            return 'badge-success'
+
+        case 'Dormant':
+            return 'badge-secondary'
+
+        case 'Inactive':
+            return 'badge-dark'
+
+        case 'Lost':
+            return 'badge-danger'
+
+        default:
+            return 'badge-dark'
+
+    }
+
 }
 
-onMounted(() => {
-    loadDashboard()
-})
+/*
+|--------------------------------------------------------------------------
+| Refresh
+|--------------------------------------------------------------------------
+*/
+
+const refresh=()=>{
+
+    loading.value=true
+
+    setTimeout(()=>{
+
+        loading.value=false
+
+    },800)
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Future API
+|--------------------------------------------------------------------------
+*/
+
+// const loadDashboard = async () => {
+//
+//     loading.value = true
+//
+//     try {
+//
+//         const { data } = await axios.get(
+//             '/api/dashboard/manager/conversion'
+//         )
+//
+//         dashboard.value = data.data
+//
+//     } finally {
+//
+//         loading.value = false
+//
+//     }
+//
+// }
 
 </script>
 
@@ -866,32 +1012,6 @@ onMounted(() => {
 
 }
 
-.sales-avatar{
-
-    width:42px;
-
-    height:42px;
-
-    min-width:42px;
-
-    border-radius:50%;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    color:#fff;
-
-    font-weight:700;
-
-    font-size:.85rem;
-
-    letter-spacing:.02em;
-
-}
-
 /* ==========================================================
     ACTIVITY FEED
 ========================================================== */
@@ -965,40 +1085,6 @@ onMounted(() => {
     color:#64748b;
 
     font-size:.88rem;
-
-}
-
-.feed-sales{
-
-    display:inline-flex;
-
-    align-items:center;
-
-    gap:6px;
-
-}
-
-.feed-avatar{
-
-    width:20px;
-
-    height:20px;
-
-    min-width:20px;
-
-    border-radius:50%;
-
-    display:inline-flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    color:#fff;
-
-    font-weight:700;
-
-    font-size:.62rem;
 
 }
 

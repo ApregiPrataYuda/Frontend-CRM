@@ -540,6 +540,16 @@ const routes = [
         }
       },
 
+      {
+        path: 'approval-customers',
+        name: 'Approval Customers',
+        component: () =>
+          import('@/views/manager/approvalCustomers/approvalCustomersView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
       /* ========================================
          SHARED
       ========================================= */
