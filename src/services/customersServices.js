@@ -57,4 +57,11 @@ export const customersServices = {
     const response = await api.get('/leads/select/category', { params })
     return response.data     // store: categorySelectData.value = response.data  ✓
   },
+
+  // ── SUBMISSION: PENDING + REJECTED (punya sales sendiri) ──
+  // customersServices.js
+async getSubmissions(params = {}) {
+  const response = await api.get('/customer-submissions', { params })
+  return response
+},
 }

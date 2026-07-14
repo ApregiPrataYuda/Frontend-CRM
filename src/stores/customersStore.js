@@ -18,6 +18,11 @@ export const useCustomersStore = defineStore('customers', () => {
   const customersDetail   = ref(null)
   const loadingDetail     = ref(false)
 
+
+  const submissionData    = ref([])
+  const loadingSubmission = ref(false)
+  const submissionMeta    = reactive({ total: 0, pending: 0, rejected: 0 })
+
   const pagination = reactive({
     current_page  : 1,
     per_page      : 10,
@@ -216,6 +221,16 @@ export const useCustomersStore = defineStore('customers', () => {
   }
 
 
+  const getApprovalConfig = (status) => {
+    const map = {
+      pending : { bg: 'bg-amber-100 text-amber-600', label: 'bg-warning', icon: 'fa-solid fa-clock',        text: 'Menunggu Approval' },
+      rejected: { bg: 'bg-red-100 text-red-500',     label: 'bg-danger',  icon: 'fa-solid fa-circle-xmark', text: 'Ditolak' },
+      approved: { bg: 'bg-emerald-100 text-emerald-600', label: 'bg-success', icon: 'fa-solid fa-circle-check', text: 'Disetujui' },
+    }
+    return map[status] ?? { bg: 'bg-slate-100 text-slate-500', label: 'bg-secondary', icon: 'fa-solid fa-tag', text: status }
+  }
+
+
   // ── STATIC OPTIONS ────────────────────────────────
   const leadSourceOptions = [
     { value: 'Website',      label: 'Website'      },
@@ -264,6 +279,31 @@ export const useCustomersStore = defineStore('customers', () => {
   }
 
 
+  // ── FETCH SUBMISSION (pending + rejected milik sales) ──
+  const fetchSubmissions = async () => {
+    loadingSubmission.value = true
+    try {
+      const response = await customersServices.getSubmissions({
+  per_page: 50,
+  sort_by : 'created_at',   // ← tanpa prefix "c."
+  sort_dir: 'desc',
+})
+      const result    = response.data
+      const dataArray = result.data?.data ?? []
+
+      submissionData.value.splice(0, submissionData.value.length, ...dataArray)
+
+      submissionMeta.total    = dataArray.length
+      submissionMeta.pending  = dataArray.filter(d => d.approval_status === 'pending').length
+      submissionMeta.rejected = dataArray.filter(d => d.approval_status === 'rejected').length
+    } catch (error) {
+      console.error('Gagal fetch submissions:', error)
+    } finally {
+      loadingSubmission.value = false
+    }
+  }
+
+
   // ── RETURN ────────────────────────────────────────
   return {
     // state
@@ -292,5 +332,9 @@ export const useCustomersStore = defineStore('customers', () => {
     // helpers
     formatDate,
     getStatusConfig,
+
+    submissionData, loadingSubmission, submissionMeta,
+    fetchSubmissions,
+    getApprovalConfig,
   }
 })

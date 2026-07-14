@@ -180,7 +180,8 @@ import {
   faCalendarCheck,
   faRotateRight,
   faTableCells,
-  faIndustry
+  faIndustry,
+  faHourglassHalf
 
 
 
@@ -355,7 +356,8 @@ library.add(
   faCalendarCheck,
   faRotateRight,
   faTableCells,
-  faIndustry
+  faIndustry,
+  faHourglassHalf
 
 )
 

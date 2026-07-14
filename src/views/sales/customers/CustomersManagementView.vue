@@ -98,6 +98,7 @@ onMounted(async () => {
   await store.fetchCustomers()
   await store.fetchIndustrySelect()
   await store.fetchCategorySelect()
+  await store.fetchSubmissions()  
   document.addEventListener('click', handleIndustryClickOutside)
   document.addEventListener('click', handleCategoryClickOutside)
   document.addEventListener('click', handleStatusStatisClickOutside)
@@ -413,6 +414,18 @@ async function handleSave() {
     formLoading.value = false
   }
 }
+
+
+// ── MODAL: SUBMISSION STATUS (pending + rejected milik sales) ──
+const isSubmissionModalVisible = ref(false)
+
+async function openSubmissionModal() {
+  isSubmissionModalVisible.value = true
+  await store.fetchSubmissions()
+}
+function closeSubmissionModal() {
+  isSubmissionModalVisible.value = false
+}
 </script>
 
 <template>
@@ -522,6 +535,14 @@ async function handleSave() {
           <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openAddModal">
             <font-awesome-icon icon="plus" /> Add Data
           </button>
+
+          <button class="btn-toolbar btn-submission" @click="openSubmissionModal">
+            <font-awesome-icon icon="hourglass-half" /> Status Pengajuan
+            <span v-if="store.submissionMeta.total" class="submission-count">
+              {{ store.submissionMeta.total }}
+            </span>
+          </button>
+
         </div>
         <div class="controls-right">
           <div class="search-wrap">
@@ -1065,6 +1086,73 @@ async function handleSave() {
     </Teleport>
 
   </div>
+
+
+
+
+  <!-- ═══ MODAL SUBMISSION STATUS ═══ -->
+<AppModal
+  :show="isSubmissionModalVisible"
+  title="Status Pengajuan Customer Saya"
+  icon="hourglass-half"
+  size="lg"
+  @close="closeSubmissionModal"
+>
+  <div v-if="store.loadingSubmission" class="state-wrap">
+    <div class="spinner-custom"></div>
+  </div>
+
+  <div v-else-if="!store.submissionData.length" class="state-wrap">
+    <div class="empty-state">
+      <h5 class="empty-title">Tidak Ada Pengajuan</h5>
+      <p class="empty-text">Semua customer yang kamu ajukan sudah disetujui, atau kamu belum pernah mengajukan customer baru.</p>
+    </div>
+  </div>
+
+  <div v-else class="submission-list">
+    <div v-for="item in store.submissionData" :key="item.id" class="submission-item">
+      <div class="si-top">
+        <div class="si-headinfo">
+          <div class="si-name">{{ item.company_name }}</div>
+          <div class="si-code">{{ item.customer_code }}</div>
+        </div>
+        <span class="status-badge" :class="store.getApprovalConfig(item.approval_status).label">
+          <font-awesome-icon :icon="item.approval_status === 'pending' ? 'clock' : 'circle-xmark'" />
+          {{ store.getApprovalConfig(item.approval_status).text }}
+        </span>
+      </div>
+
+      <div class="si-body">
+        <div class="si-row">
+          <font-awesome-icon icon="user" class="cc-icon" />
+          <span>{{ item.contact_name ?? '-' }}</span>
+        </div>
+        <div class="si-row">
+          <font-awesome-icon icon="calendar" class="cc-icon" />
+          <span>Diajukan {{ store.formatDate(item.created_at) }}</span>
+        </div>
+      </div>
+
+      <!-- CATATAN REVISI/PENOLAKAN DARI MANAGER -->
+      <div v-if="item.approval_status === 'rejected' && item.approval_note" class="si-reject-note">
+        <font-awesome-icon icon="circle-exclamation" />
+        <div>
+          <div class="si-reject-label">Alasan Ditolak Manager:</div>
+          <div class="si-reject-text">{{ item.approval_note }}</div>
+        </div>
+      </div>
+
+      <div v-if="item.approval_status === 'pending'" class="si-pending-note">
+        <font-awesome-icon icon="hourglass-half" />
+        Masih menunggu review dari Manager.
+      </div>
+    </div>
+  </div>
+
+  <template #footer>
+    <button class="btn-cancel" @click="closeSubmissionModal">Close</button>
+  </template>
+</AppModal>
 </template>
 
 <style scoped>
@@ -1312,6 +1400,24 @@ async function handleSave() {
 .progress-success { background: #22c55e; }
 .progress-error   { background: #ef4444; }
 .progress-info    { background: #94a3b8; }
+
+
+
+.btn-submission { background: #f59e0b; color: #fff; position: relative; }
+.btn-submission:hover { background: #d97706; }
+.submission-count { background: #fff; color: #d97706; border-radius: 999px; padding: 1px 7px; font-size: 0.72rem; font-weight: 800; margin-left: 2px; }
+
+.submission-list { display: flex; flex-direction: column; gap: 12px; max-height: 60vh; overflow-y: auto; }
+.submission-item { border: 1px solid var(--border-main); border-radius: 10px; padding: 12px 14px; }
+.si-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.si-name { font-weight: 700; font-size: 0.92rem; color: var(--text-primary); }
+.si-code { font-family: monospace; font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+.si-body { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.si-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); }
+.si-reject-note { display: flex; gap: 8px; margin-top: 10px; padding: 10px 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; font-size: 0.82rem; }
+.si-reject-label { font-weight: 700; margin-bottom: 2px; }
+.si-reject-text { line-height: 1.5; }
+.si-pending-note { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; color: #b45309; font-size: 0.8rem; }
 
 
 .empty-title{
