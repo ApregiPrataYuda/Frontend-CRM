@@ -18,6 +18,8 @@ const {
   savingCustomers, updatingCustomers, deletingCustomers,
   customersDetail, loadingDetail,
   industrySelectData, categorySelectData,
+  branchesData, loadingBranches,
+  companySuggestions, searchingCompany, matchedCompany,
 } = storeToRefs(store)
 
 // ── PERMISSIONS ───────────────────────────────────────
@@ -98,7 +100,7 @@ onMounted(async () => {
   await store.fetchCustomers()
   await store.fetchIndustrySelect()
   await store.fetchCategorySelect()
-  await store.fetchSubmissions()  
+  await store.fetchSubmissions()
   document.addEventListener('click', handleIndustryClickOutside)
   document.addEventListener('click', handleCategoryClickOutside)
   document.addEventListener('click', handleStatusStatisClickOutside)
@@ -278,10 +280,13 @@ const isDetailModalVisible = ref(false)
 async function openDetailModal(id) {
   isDetailModalVisible.value = true
   await store.detailCustomer(id)
+  await store.fetchBranches(id)
 }
+
 function closeDetailModal() {
   isDetailModalVisible.value = false
   customersDetail.value      = null
+  store.branchesData         = []
 }
 
 // ── DELETE ────────────────────────────────────────────
@@ -307,7 +312,7 @@ async function openDeleteModal(item) {
 // ── FORM ADD / EDIT ───────────────────────────────────
 const isAddModalVisible = ref(false)
 const isEdit            = ref(false)
-const editId            = ref(null)
+const editId             = ref(null)
 const formLoading       = ref(false)
 const assignVisibility  = ref('PUBLIC')
 
@@ -327,6 +332,19 @@ const defaultForm = {
 
 const formData = ref({ ...defaultForm })
 
+// ── FORM TAMBAH CABANG (aktif saat store.matchedCompany terisi) ──
+const branchFormData = ref({ branch_name: '', address: '', city: '' })
+
+function pickExistingCompany(company) {
+  store.selectExistingCompany(company)
+}
+
+function unlockCompany() {
+  store.clearMatchedCompany()
+  formData.value.company_name = ''
+  branchFormData.value = { branch_name: '', address: '', city: '' }
+}
+
 function resetSelectState() {
   selectedIndustry.value     = null
   selectedCategory.value     = null
@@ -342,8 +360,10 @@ function resetSelectState() {
 
 function resetForm() {
   formData.value       = { ...defaultForm }
+  branchFormData.value = { branch_name: '', address: '', city: '' }
   errorCustomers.value = null
   phoneTouched.value   = false
+  store.clearMatchedCompany()
   resetSelectState()
 }
 
@@ -386,6 +406,27 @@ function closeAddModal() {
 }
 
 async function handleSave() {
+  // ── MODE: TAMBAH CABANG (company sudah dipilih dari suggestion) ──
+  if (store.matchedCompany) {
+    formLoading.value    = true
+    errorCustomers.value = null
+    try {
+      await store.saveBranch(store.matchedCompany.id, {
+        branch_name: branchFormData.value.branch_name,
+        address    : branchFormData.value.address,
+        city       : branchFormData.value.city,
+      })
+      showToast('success', 'Cabang berhasil diajukan dan sedang menunggu approval Manager.')
+      closeAddModal()
+    } catch {
+      // error per-field tampil via getError()
+    } finally {
+      formLoading.value = false
+    }
+    return
+  }
+
+  // ── MODE: CUSTOMER BARU / EDIT (alur lama, tidak berubah) ──
   phoneTouched.value = true
   if (!isPhoneValid.value) {
     showToast('error', 'Nomor telepon tidak valid.')
@@ -401,7 +442,6 @@ async function handleSave() {
       showToast('success', 'Customer berhasil diperbarui!')
     } else {
       await store.saveCustomer(formData.value)
-      // showToast('success', 'Customer berhasil ditambahkan!')
       showToast(
           'success',
           'Customer berhasil diajukan dan sedang menunggu approval Manager.'
@@ -601,13 +641,6 @@ function closeSubmissionModal() {
       </div>
 
       <!-- EMPTY (shared) -->
-      <!-- <div v-else-if="!store.customersData.length" class="state-wrap">
-        <div class="empty-state">
-          <img src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
-            alt="No data" class="empty-img" />
-          <div class="empty-text">No data found</div>
-        </div>
-      </div> -->
       <div v-else-if="!store.customersData.length" class="state-wrap">
         <div class="empty-state">
 
@@ -676,6 +709,9 @@ function closeSubmissionModal() {
           <div class="cc-tags">
             <span class="badge-lead-source">{{ item.lead_source ?? '-' }}</span>
             <span v-if="item.lead_category_name" class="detail-badge">{{ item.lead_category_name }}</span>
+            <span v-if="item.branch_count > 0" class="detail-badge">
+              <font-awesome-icon icon="code-branch" /> {{ item.branch_count }} Cabang
+            </span>
           </div>
 
           <div class="cc-footer">
@@ -736,7 +772,7 @@ function closeSubmissionModal() {
                 {{ item.customer_status ?? '-' }}
               </span>
             </td>
-           
+
             <td class="td-actions">
               <button v-if="canUpdate" class="act-btn act-edit"   title="Edit"   @click="openEditModal(item)">
                 <font-awesome-icon icon="pen-to-square" />
@@ -775,22 +811,91 @@ function closeSubmissionModal() {
     <!-- ═══ MODAL ADD / EDIT ═══ -->
     <AppModal
       :show="isAddModalVisible"
-      :title="isEdit ? 'Edit Customer' : 'Add New Customer'"
-      :icon="isEdit ? 'pen-to-square' : 'plus'"
+      :title="store.matchedCompany ? 'Tambah Cabang Baru' : (isEdit ? 'Edit Customer' : 'Add New Customer')"
+      :icon="store.matchedCompany ? 'code-branch' : (isEdit ? 'pen-to-square' : 'plus')"
       size="md"
       @close="closeAddModal"
     >
       <div class="form-container-gap">
 
+        <!-- ═══ COMPANY NAME (dengan autocomplete deteksi duplikat) ═══ -->
         <div class="form-group">
           <label>Company Name <span class="required">*</span></label>
-          <input v-model="formData.company_name" class="form-input"
-            :class="{ 'input-error': getError('company_name') }"
-            placeholder="PT. Example" />
+
+          <div v-if="!store.matchedCompany" class="cs-wrap">
+            <input
+              v-model="formData.company_name"
+              class="form-input"
+              :class="{ 'input-error': getError('company_name') }"
+              placeholder="PT. Example"
+              @input="store.searchCompanyName(formData.company_name)"
+            />
+            <div v-if="store.companySuggestions.length" class="cs-dropdown">
+              <div class="cs-list">
+                <div
+                  v-for="c in store.companySuggestions" :key="c.id"
+                  class="cs-item"
+                  style="justify-content: space-between"
+                  @click="pickExistingCompany(c)"
+                >
+                  <div>
+                    <div style="font-weight:600">{{ c.company_name }}</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted)">{{ c.customer_code }}</div>
+                  </div>
+                  <span class="detail-badge">Sudah terdaftar</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="branch-locked-notice">
+            <div>
+              <div style="font-weight:700">{{ store.matchedCompany.company_name }}</div>
+              <div style="font-size:0.72rem;color:var(--text-muted)">
+                {{ store.matchedCompany.customer_code }} — akan ditambahkan sebagai cabang baru
+              </div>
+            </div>
+            <button type="button" class="btn-cancel" style="padding:4px 10px" @click="unlockCompany">
+              Ganti
+            </button>
+          </div>
+
           <span v-if="getError('company_name')" class="form-error">{{ getError('company_name') }}</span>
         </div>
 
-        <div class="form-row-2">
+        <!-- ═══ FORM CABANG (muncul HANYA kalau company existing dipilih) ═══ -->
+        <template v-if="store.matchedCompany">
+          <div class="form-group">
+            <label>Nama Cabang <span class="required">*</span></label>
+            <input
+              v-model="branchFormData.branch_name"
+              class="form-input"
+              placeholder="Contoh: Cabang Bandung"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Kota</label>
+            <input
+              v-model="branchFormData.city"
+              class="form-input"
+              placeholder="Contoh: Bandung"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Alamat Cabang</label>
+            <textarea
+              v-model="branchFormData.address"
+              class="form-input form-textarea"
+              rows="2"
+              placeholder="Alamat lengkap cabang..."
+            />
+          </div>
+        </template>
+
+        <!-- ═══ FIELD CUSTOMER BARU / EDIT (disembunyikan saat mode tambah cabang) ═══ -->
+        <div v-if="!store.matchedCompany" class="form-row-2">
           <div class="form-group">
             <label>Contact Name <span class="required">*</span></label>
             <input v-model="formData.contact_name" class="form-input"
@@ -814,7 +919,7 @@ function closeSubmissionModal() {
           </div>
         </div>
 
-        <div class="form-group">
+        <div v-if="!store.matchedCompany" class="form-group">
           <label>Email <span class="required">*</span></label>
           <input v-model="formData.email" type="email" class="form-input"
             :class="{ 'input-error': getError('email') }"
@@ -823,7 +928,7 @@ function closeSubmissionModal() {
         </div>
 
         <!-- Industry + Category -->
-        <div class="form-row-2">
+        <div v-if="!store.matchedCompany" class="form-row-2">
 
           <!-- FIX: ref="industryRef" dipindah ke cs-wrap (wrapper trigger+dropdown), bukan di form-group -->
           <div class="form-group">
@@ -895,7 +1000,7 @@ function closeSubmissionModal() {
 
         </div>
 
-        <div class="form-group">
+        <div v-if="!store.matchedCompany" class="form-group">
           <label>Lead Source <span class="required">*</span></label>
           <div class="pill-btn-group">
             <button
@@ -909,7 +1014,7 @@ function closeSubmissionModal() {
           <span v-if="getError('lead_source')" class="form-error">{{ getError('lead_source') }}</span>
         </div>
 
-        <div class="form-row-2">
+        <div v-if="!store.matchedCompany" class="form-row-2">
           <div class="form-group">
             <label>Visibility</label>
             <div class="segment-group">
@@ -958,13 +1063,13 @@ function closeSubmissionModal() {
           </div>
         </div>
 
-        <div class="form-group">
+        <div v-if="!store.matchedCompany" class="form-group">
           <label>Address</label>
           <textarea v-model="formData.address" class="form-input form-textarea" rows="2"
             placeholder="Alamat lengkap..." />
         </div>
 
-        <div class="form-group">
+        <div v-if="!store.matchedCompany" class="form-group">
           <label>Notes</label>
           <textarea v-model="formData.notes" class="form-input form-textarea" rows="2"
             placeholder="Catatan tambahan..." />
@@ -976,15 +1081,17 @@ function closeSubmissionModal() {
         <button class="btn-cancel" @click="closeAddModal">Cancel</button>
         <button
           class="btn-save"
-          :class="{ 'btn-save-edit': isEdit }"
-          :disabled="formLoading || savingCustomers || updatingCustomers || !isPhoneValid"
+          :class="{ 'btn-save-edit': isEdit && !store.matchedCompany }"
+          :disabled="formLoading || savingCustomers || updatingCustomers || (!store.matchedCompany && !isPhoneValid)"
           @click="handleSave"
         >
           <font-awesome-icon v-if="formLoading || savingCustomers || updatingCustomers" icon="spinner" spin />
-          <font-awesome-icon v-else :icon="isEdit ? 'pen-to-square' : 'check'" />
-          {{ (formLoading || savingCustomers || updatingCustomers)
-              ? (isEdit ? 'Menyimpan...' : 'Menambahkan...')
-              : (isEdit ? 'Simpan Perubahan' : 'Save Data') }}
+          <font-awesome-icon v-else :icon="store.matchedCompany ? 'code-branch' : (isEdit ? 'pen-to-square' : 'check')" />
+          {{
+            (formLoading || savingCustomers || updatingCustomers)
+              ? (store.matchedCompany ? 'Mengajukan Cabang...' : (isEdit ? 'Menyimpan...' : 'Menambahkan...'))
+              : (store.matchedCompany ? 'Ajukan Cabang' : (isEdit ? 'Simpan Perubahan' : 'Save Data'))
+          }}
         </button>
       </template>
     </AppModal>
@@ -1044,10 +1151,51 @@ function closeSubmissionModal() {
               {{ store.customersDetail.customer_status }}
             </span>
           </div>
+
           <div class="detail-row">
             <span class="detail-label">Lead Status</span>
             <span class="detail-badge">{{ store.customersDetail.lead_status ?? '-' }}</span>
           </div>
+
+          <div class="detail-section-label">
+            Cabang <span v-if="store.branchesData.length">({{ store.branchesData.length }})</span>
+          </div>
+
+          <div v-if="store.loadingBranches" style="display:flex;justify-content:center;padding:12px 0;">
+            <div class="spinner-custom" style="width:1.4rem;height:1.4rem;"></div>
+          </div>
+
+          <div v-else-if="!store.branchesData.length" class="detail-row">
+            <span class="detail-value" style="color:var(--text-muted);">Belum ada cabang</span>
+          </div>
+
+          <div v-else class="branch-list">
+            <div v-for="branch in store.branchesData" :key="branch.id" class="branch-item">
+              <div class="branch-item-top">
+                <span class="branch-name">
+                  {{ branch.branch_name }}
+                  <span v-if="branch.is_main_branch" class="detail-badge">Utama</span>
+                </span>
+                <span class="status-badge" :class="store.getStatusConfig(branch.status).label">
+                  {{ branch.status }}
+                </span>
+              </div>
+              <div v-if="branch.approval_status && branch.approval_status !== 'approved'" class="branch-item-row">
+                <span class="status-badge" :class="store.getApprovalConfig(branch.approval_status).label">
+                  <font-awesome-icon :icon="branch.approval_status === 'pending' ? 'clock' : 'circle-xmark'" />
+                  {{ store.getApprovalConfig(branch.approval_status).text }}
+                </span>
+              </div>
+              <div class="branch-item-row" v-if="branch.address">
+                <font-awesome-icon icon="location-dot" class="cc-icon" /> {{ branch.address }}
+              </div>
+              <div class="branch-item-row">
+                <font-awesome-icon icon="user" class="cc-icon" />
+                Sales: {{ branch.assigned_name ?? 'Belum ditentukan' }}
+              </div>
+            </div>
+          </div>
+
           <div class="detail-row">
             <span class="detail-label">Converted At</span>
             <span class="detail-value">{{ store.formatDate(store.customersDetail.converted_at) }}</span>
@@ -1303,6 +1451,19 @@ function closeSubmissionModal() {
 .btn-save.btn-save-edit { background: #f59e0b; }
 .btn-save.btn-save-edit:hover:not(:disabled) { background: #d97706; }
 .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── BRANCH ── */
+.branch-locked-notice {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border: 1px solid #6366f1;
+  background: rgba(99,102,241,0.06); border-radius: 8px;
+}
+
+.branch-list { display: flex; flex-direction: column; gap: 8px; padding: 4px 0 12px; }
+.branch-item { border: 1px solid var(--border-main); border-radius: 8px; padding: 10px 12px; }
+.branch-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.branch-name { font-weight: 700; font-size: 0.86rem; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
+.branch-item-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); margin-top: 3px; }
 
 /* ════════════════════════════════════════════════
    CUSTOM SELECT — FIX DROPDOWN TEMBUS MODAL

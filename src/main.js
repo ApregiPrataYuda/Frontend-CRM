@@ -181,13 +181,8 @@ import {
   faRotateRight,
   faTableCells,
   faIndustry,
-  faHourglassHalf
-
-
-
-
-
-
+  faHourglassHalf,
+  faCodeBranch
 
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -357,7 +352,8 @@ library.add(
   faRotateRight,
   faTableCells,
   faIndustry,
-  faHourglassHalf
+  faHourglassHalf,
+  faCodeBranch
 
 )
 

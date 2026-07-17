@@ -43,7 +43,7 @@ export const customersServices = {
   // Kita return response.data agar store tidak perlu .data lagi
   async getIndustry(params = {}) {
     const response = await api.get('/leads/select/industry', { params })
-    return response.data     // store: industrySelectData.value = response.data  ✓
+    return response.data     // store: industrySelectData.value = response.data  
   },
 
   // ── SELECT: SALES ──
@@ -55,7 +55,7 @@ export const customersServices = {
   // ── SELECT: CATEGORY ──
   async getCategory(params = {}) {
     const response = await api.get('/leads/select/category', { params })
-    return response.data     // store: categorySelectData.value = response.data  ✓
+    return response.data     // store: categorySelectData.value = response.data  
   },
 
   // ── SUBMISSION: PENDING + REJECTED (punya sales sendiri) ──
@@ -64,4 +64,42 @@ async getSubmissions(params = {}) {
   const response = await api.get('/customer-submissions', { params })
   return response
 },
+
+// ── BRANCHES ──
+//   async getBranches(customerId) {
+//     const response = await api.get(`/customers/${customerId}/branches`)
+//     return response          // store expects: response.data.data
+//   },
+
+
+
+//   async searchCompany(search) {
+//   const response = await api.get('/customers/search-company', {
+//     params: {
+//       search
+//     }
+//   })
+//   return response
+// }
+
+// ── BRANCHES ──
+  async getBranches(customerId) {
+    const response = await api.get(`/customers/${customerId}/branches`)
+    return response          // store expects: response.data.data
+  },
+
+  // ── CREATE BRANCH UNTUK CUSTOMER YANG SUDAH ADA ──
+  async createBranch(customerId, payload) {
+    const response = await api.post(`/customers/${customerId}/branches`, payload)
+    return response
+  },
+
+  async searchCompany(search) {
+    const response = await api.get('/customers/search-company', {
+      params: { search }
+    })
+    return response
+  }
+
+  
 }

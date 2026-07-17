@@ -23,6 +23,10 @@ export const useCustomersStore = defineStore('customers', () => {
   const loadingSubmission = ref(false)
   const submissionMeta    = reactive({ total: 0, pending: 0, rejected: 0 })
 
+
+  const branchesData    = ref([])
+  const loadingBranches = ref(false)
+
   const pagination = reactive({
     current_page  : 1,
     per_page      : 10,
@@ -284,10 +288,10 @@ export const useCustomersStore = defineStore('customers', () => {
     loadingSubmission.value = true
     try {
       const response = await customersServices.getSubmissions({
-        per_page: 50,
-        sort_by : 'created_at',   // ← tanpa prefix "c."
-        sort_dir: 'desc',
-      })
+      per_page: 50,
+      sort_by : 'created_at',   // ← tanpa prefix "c."
+      sort_dir: 'desc',
+    })
       const result    = response.data
       const dataArray = result.data?.data ?? []
 
@@ -304,79 +308,19 @@ export const useCustomersStore = defineStore('customers', () => {
   }
 
 
-  // ── BRANCHES: LIST CABANG MILIK 1 CUSTOMER ───────
-  const branchesData    = ref([])
-  const loadingBranches = ref(false)
-
-  const fetchBranches = async (customerId) => {
-    loadingBranches.value = true
-    try {
-      const res = await customersServices.getBranches(customerId)
-      // endpoint dibungkus { data: { data: [...] } } → tembus 2 layer
-      branchesData.value = res.data.data?.data ?? res.data.data ?? []
-    } catch (err) {
-      console.error('Gagal fetch branches:', err)
-      branchesData.value = []
-    } finally {
-      loadingBranches.value = false
-    }
+  // ── BRANCHES ──────────────────────────────────────
+const fetchBranches = async (customerId) => {
+  loadingBranches.value = true
+  try {
+    const res = await customersServices.getBranches(customerId)
+    branchesData.value = res.data.data?.data ?? []
+  } catch (err) {
+    console.error('Gagal fetch branches:', err)
+    branchesData.value = []
+  } finally {
+    loadingBranches.value = false
   }
-
-
-  // ── COMPANY SEARCH (deteksi duplikat saat input) ──
-  const companySuggestions   = ref([])
-  const searchingCompany     = ref(false)
-  const matchedCompany       = ref(null)   // { id, company_name, customer_code } kalau sales pilih existing
-  let   companySearchTimeout = null
-
-  const searchCompanyName = (val) => {
-    clearTimeout(companySearchTimeout)
-    if (!val || val.length < 2) {
-      companySuggestions.value = []
-      return
-    }
-    companySearchTimeout = setTimeout(async () => {
-      searchingCompany.value = true
-      try {
-        const res = await customersServices.searchCompany(val)
-        companySuggestions.value = res.data.data ?? []
-      } catch (err) {
-        console.error('Gagal search company:', err)
-        companySuggestions.value = []
-      } finally {
-        searchingCompany.value = false
-      }
-    }, 400)
-  }
-
-  const selectExistingCompany = (company) => {
-    matchedCompany.value     = company
-    companySuggestions.value = []
-  }
-
-  const clearMatchedCompany = () => {
-    matchedCompany.value     = null
-    companySuggestions.value = []
-  }
-
-
-  // ── CREATE BRANCH (dipanggil kalau matchedCompany terisi) ──
-  const saveBranch = async (customerId, payload) => {
-    savingCustomers.value = true
-    errorCustomers.value  = null
-    try {
-      const res = await customersServices.createBranch(customerId, payload)
-      await fetchCustomers(buildUrl())
-      return res
-    } catch (err) {
-      if (err.response?.status === 422) {
-        errorCustomers.value = err.response.data.errors
-      }
-      throw err
-    } finally {
-      savingCustomers.value = false
-    }
-  }
+}
 
 
   // ── RETURN ────────────────────────────────────────
@@ -412,13 +356,8 @@ export const useCustomersStore = defineStore('customers', () => {
     fetchSubmissions,
     getApprovalConfig,
 
-    // branches
     branchesData, loadingBranches,
-    fetchBranches,
-
-    // company search + create branch
-    companySuggestions, searchingCompany, matchedCompany,
-    searchCompanyName, selectExistingCompany, clearMatchedCompany,
-    saveBranch,
+    detailCustomer,
+    fetchBranches,   
   }
 })
