@@ -550,6 +550,16 @@ const routes = [
         }
       },
 
+      {
+        path: 'approval-branch-customers',
+        name: 'Approvals Branch Customer',
+        component: () =>
+          import('@/views/manager/approvalCustomers/approvalBranchCustomersView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
       /* ========================================
          SHARED
       ========================================= */

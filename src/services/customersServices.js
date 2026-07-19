@@ -65,22 +65,6 @@ async getSubmissions(params = {}) {
   return response
 },
 
-// ── BRANCHES ──
-//   async getBranches(customerId) {
-//     const response = await api.get(`/customers/${customerId}/branches`)
-//     return response          // store expects: response.data.data
-//   },
-
-
-
-//   async searchCompany(search) {
-//   const response = await api.get('/customers/search-company', {
-//     params: {
-//       search
-//     }
-//   })
-//   return response
-// }
 
 // ── BRANCHES ──
   async getBranches(customerId) {
@@ -99,7 +83,20 @@ async getSubmissions(params = {}) {
       params: { search }
     })
     return response
-  }
+  },
+
+
+  // ── UPDATE BRANCH ──
+async updateBranch(id, payload) {
+  const response = await api.put(`/customer-branches/${id}`, payload)
+  return response
+},
+
+// ── DELETE BRANCH ──
+async deleteBranch(id) {
+  const response = await api.delete(`/customer-branches/${id}`)
+  return response
+},
 
   
 }

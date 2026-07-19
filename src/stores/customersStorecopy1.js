@@ -54,102 +54,37 @@ export const useCustomersStore = defineStore('customers', () => {
   }
 
 
-
-  const normalizeCustomerRow = (item) => {
-  // Data customer biasa sudah langsung kompatibel dengan tabel
-  if (item.display_type !== 'branch') {
-    return item
-  }
-
-  const customer = item.customer ?? {}
-  const branch = item.branch ?? {}
-
-  return {
-    // id tetap ID customer agar aksi detail/edit tidak salah target
-    id: customer.id,
-    customer_id: customer.id,
-
-    // key unik khusus untuk kebutuhan v-for di Vue
-    row_key: `branch-${branch.id}`,
-
-    display_type: 'branch',
-
-    // informasi customer induk
-    customer_code: customer.customer_code ?? '-',
-    company_name: customer.company_name ?? '-',
-
-    // informasi cabang
-    branch_id: branch.id,
-    branch_code: branch.branch_code ?? '-',
-    branch_name: branch.branch_name ?? '-',
-    city: branch.city ?? '-',
-
-    // samakan field agar tetap bisa dipakai tabel customer
-    contact_name: branch.contact_name ?? '-',
-    email: branch.email ?? '-',
-    phone: branch.phone ?? '-',
-    address: branch.address ?? '-',
-    customer_status: branch.status ?? '-',
-    approval_status: branch.approval_status ?? '-',
-    assigned_to: branch.assigned_to,
-
-    // ── PIC (sales) UNTUK BRANCH ──
-    // Prioritas: sales yang di-assign (assigned_name) → kalau belum
-    // pernah di-assign, jatuh ke sales yang membuat/mengajukan branch
-    // (creator_name). Jangan warisi dari head company (customer.*).
-    assigned_name: branch.assigned_name ?? null,
-    creator_name : branch.creator_name  ?? null,
-    sales_name   : branch.assigned_name ?? branch.creator_name ?? '-',
-
-    // ── PIC HEAD COMPANY (untuk perbandingan/tampilan referensi) ──
-    owner_name: customer.owner_name ?? null,
-
-    created_at: item.created_at,
-    updated_at: item.updated_at,
-
-    // simpan data asli jika suatu saat diperlukan
-    customer,
-    branch,
-  }
-}
-
-
   // ── FETCH LIST ────────────────────────────────────
   const fetchCustomers = async (url = null) => {
-  loadingCustomers.value = true
+    loadingCustomers.value = true
+    try {
+      const finalUrl  = url || buildUrl()
+      const response  = await customersServices.getByUrl(finalUrl)
+      const result    = response.data
 
-  try {
-    const finalUrl = url || buildUrl()
-    const response = await customersServices.getByUrl(finalUrl)
-    const result = response.data
+      // Support dua struktur: result.data (array) atau result.data.data (nested)
+      const dataArray = Array.isArray(result.data)
+        ? result.data
+        : result.data?.data ?? []
 
-    const dataArray = Array.isArray(result.data)
-      ? result.data
-      : result.data?.data ?? []
+      customersData.value.splice(0, customersData.value.length, ...dataArray)
 
-    customersData.value.splice(
-      0,
-      customersData.value.length,
-      ...dataArray.map(normalizeCustomerRow)
-    )
-
-    const pag = result.pagination ?? result.data?.pagination
-
-    if (pag) {
-      pagination.current_page = pag.current_page
-      pagination.per_page = pag.per_page
-      pagination.prev_page_url = pag.prev_page_url
-      pagination.next_page_url = pag.next_page_url
-      pagination.last_page = pag.last_page
-      pagination.total = pag.total
+      // Support dua posisi pagination: result.pagination atau result.data.pagination
+      const pag = result.pagination ?? result.data?.pagination
+      if (pag) {
+        pagination.current_page  = pag.current_page
+        pagination.per_page      = pag.per_page
+        pagination.prev_page_url = pag.prev_page_url
+        pagination.next_page_url = pag.next_page_url
+        pagination.last_page     = pag.last_page
+        pagination.total         = pag.total
+      }
+    } catch (error) {
+      console.error('Gagal fetch customers:', error)
+    } finally {
+      loadingCustomers.value = false
     }
-  } catch (error) {
-    console.error('Gagal fetch customers:', error)
-    customersData.value = []
-  } finally {
-    loadingCustomers.value = false
   }
-}
 
 
   // ── DETAIL ────────────────────────────────────────
@@ -272,6 +207,7 @@ export const useCustomersStore = defineStore('customers', () => {
 
 
   // ── STATUS CONFIG ─────────────────────────────────
+  // Gabungan: versi view (untuk CoreUI/Bootstrap) + class Tailwind disimpan di bg
   const getStatusConfig = (status) => {
     const map = {
       Active    : { bg: 'bg-emerald-100 text-emerald-600', label: 'bg-success', icon: 'fa-solid fa-circle-check'  },
@@ -320,6 +256,7 @@ export const useCustomersStore = defineStore('customers', () => {
 
   const fetchIndustrySelect = async () => {
     try {
+      // service sudah return response.data langsung
       const data = await customersServices.getIndustry()
       industrySelectData.value = data
     } catch (error) {
@@ -333,6 +270,7 @@ export const useCustomersStore = defineStore('customers', () => {
 
   const fetchCategorySelect = async () => {
     try {
+      // service sudah return response.data langsung
       const data = await customersServices.getCategory()
       categorySelectData.value = data
     } catch (error) {
@@ -347,7 +285,7 @@ export const useCustomersStore = defineStore('customers', () => {
     try {
       const response = await customersServices.getSubmissions({
         per_page: 50,
-        sort_by : 'created_at',
+        sort_by : 'created_at',   // ← tanpa prefix "c."
         sort_dir: 'desc',
       })
       const result    = response.data
@@ -374,6 +312,7 @@ export const useCustomersStore = defineStore('customers', () => {
     loadingBranches.value = true
     try {
       const res = await customersServices.getBranches(customerId)
+      // endpoint dibungkus { data: { data: [...] } } → tembus 2 layer
       branchesData.value = res.data.data?.data ?? res.data.data ?? []
     } catch (err) {
       console.error('Gagal fetch branches:', err)
@@ -387,7 +326,7 @@ export const useCustomersStore = defineStore('customers', () => {
   // ── COMPANY SEARCH (deteksi duplikat saat input) ──
   const companySuggestions   = ref([])
   const searchingCompany     = ref(false)
-  const matchedCompany       = ref(null)
+  const matchedCompany       = ref(null)   // { id, company_name, customer_code } kalau sales pilih existing
   let   companySearchTimeout = null
 
   const searchCompanyName = (val) => {
@@ -440,41 +379,6 @@ export const useCustomersStore = defineStore('customers', () => {
   }
 
 
-
-  const updateBranch = async (id, payload) => {
-  updatingCustomers.value = true
-  errorCustomers.value = null
-
-  try {
-    const res = await customersServices.updateBranch(id, payload)
-
-    await fetchCustomers(buildUrl())
-
-    return res
-  } catch (err) {
-    if (err.response?.status === 422) {
-      errorCustomers.value = err.response.data.errors
-    }
-
-    throw err
-  } finally {
-    updatingCustomers.value = false
-  }
-}
-
-const deleteBranch = async (id) => {
-  deletingCustomers.value = true
-
-  try {
-    await customersServices.deleteBranch(id)
-
-    await fetchCustomers(buildUrl())
-  } finally {
-    deletingCustomers.value = false
-  }
-}
-
-
   // ── RETURN ────────────────────────────────────────
   return {
     // state
@@ -515,6 +419,6 @@ const deleteBranch = async (id) => {
     // company search + create branch
     companySuggestions, searchingCompany, matchedCompany,
     searchCompanyName, selectExistingCompany, clearMatchedCompany,
-    saveBranch, updateBranch, deleteBranch,
+    saveBranch,
   }
 })

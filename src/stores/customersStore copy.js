@@ -23,10 +23,6 @@ export const useCustomersStore = defineStore('customers', () => {
   const loadingSubmission = ref(false)
   const submissionMeta    = reactive({ total: 0, pending: 0, rejected: 0 })
 
-
-  const branchesData    = ref([])
-  const loadingBranches = ref(false)
-
   const pagination = reactive({
     current_page  : 1,
     per_page      : 10,
@@ -58,37 +54,126 @@ export const useCustomersStore = defineStore('customers', () => {
   }
 
 
-  // ── FETCH LIST ────────────────────────────────────
-  const fetchCustomers = async (url = null) => {
-    loadingCustomers.value = true
-    try {
-      const finalUrl  = url || buildUrl()
-      const response  = await customersServices.getByUrl(finalUrl)
-      const result    = response.data
 
-      // Support dua struktur: result.data (array) atau result.data.data (nested)
-      const dataArray = Array.isArray(result.data)
-        ? result.data
-        : result.data?.data ?? []
-
-      customersData.value.splice(0, customersData.value.length, ...dataArray)
-
-      // Support dua posisi pagination: result.pagination atau result.data.pagination
-      const pag = result.pagination ?? result.data?.pagination
-      if (pag) {
-        pagination.current_page  = pag.current_page
-        pagination.per_page      = pag.per_page
-        pagination.prev_page_url = pag.prev_page_url
-        pagination.next_page_url = pag.next_page_url
-        pagination.last_page     = pag.last_page
-        pagination.total         = pag.total
-      }
-    } catch (error) {
-      console.error('Gagal fetch customers:', error)
-    } finally {
-      loadingCustomers.value = false
-    }
+  const normalizeCustomerRow = (item) => {
+  // Data customer biasa sudah langsung kompatibel dengan tabel
+  if (item.display_type !== 'branch') {
+    return item
   }
+
+  const customer = item.customer ?? {}
+  const branch = item.branch ?? {}
+
+  return {
+    // id tetap ID customer agar aksi detail/edit tidak salah target
+    id: customer.id,
+    customer_id: customer.id,
+
+    // key unik khusus untuk kebutuhan v-for di Vue
+    row_key: `branch-${branch.id}`,
+
+    display_type: 'branch',
+
+    // informasi customer induk
+    customer_code: customer.customer_code ?? '-',
+    company_name: customer.company_name ?? '-',
+
+    // informasi cabang
+    branch_id: branch.id,
+    branch_code: branch.branch_code ?? '-',
+    branch_name: branch.branch_name ?? '-',
+    city: branch.city ?? '-',
+
+    // samakan field agar tetap bisa dipakai tabel customer
+    contact_name: branch.contact_name ?? '-',
+    email: branch.email ?? '-',
+    phone: branch.phone ?? '-',
+    address: branch.address ?? '-',
+    customer_status: branch.status ?? '-',
+    approval_status: branch.approval_status ?? '-',
+    assigned_to: branch.assigned_to,
+    sales_name: branch.assigned_name ?? '-',
+
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+
+    // simpan data asli jika suatu saat diperlukan
+    customer,
+    branch,
+  }
+}
+
+
+  // ── FETCH LIST ────────────────────────────────────
+  // const fetchCustomers = async (url = null) => {
+  //   loadingCustomers.value = true
+  //   try {
+  //     const finalUrl  = url || buildUrl()
+  //     const response  = await customersServices.getByUrl(finalUrl)
+  //     const result    = response.data
+
+  //     // Support dua struktur: result.data (array) atau result.data.data (nested)
+  //     const dataArray = Array.isArray(result.data)
+  //       ? result.data
+  //       : result.data?.data ?? []
+
+  //     customersData.value.splice(0, customersData.value.length, ...dataArray)
+
+  //     // Support dua posisi pagination: result.pagination atau result.data.pagination
+  //     const pag = result.pagination ?? result.data?.pagination
+  //     if (pag) {
+  //       pagination.current_page  = pag.current_page
+  //       pagination.per_page      = pag.per_page
+  //       pagination.prev_page_url = pag.prev_page_url
+  //       pagination.next_page_url = pag.next_page_url
+  //       pagination.last_page     = pag.last_page
+  //       pagination.total         = pag.total
+  //     }
+  //   } catch (error) {
+  //     console.error('Gagal fetch customers:', error)
+  //   } finally {
+  //     loadingCustomers.value = false
+  //   }
+  // }
+
+
+  const fetchCustomers = async (url = null) => {
+  loadingCustomers.value = true
+
+  try {
+    const finalUrl = url || buildUrl()
+    const response = await customersServices.getByUrl(finalUrl)
+    const result = response.data
+
+    // Untuk respons:
+    // { success, message, data: { data: [], pagination: {} } }
+    const dataArray = Array.isArray(result.data)
+      ? result.data
+      : result.data?.data ?? []
+
+    customersData.value.splice(
+      0,
+      customersData.value.length,
+      ...dataArray.map(normalizeCustomerRow)
+    )
+
+    const pag = result.pagination ?? result.data?.pagination
+
+    if (pag) {
+      pagination.current_page = pag.current_page
+      pagination.per_page = pag.per_page
+      pagination.prev_page_url = pag.prev_page_url
+      pagination.next_page_url = pag.next_page_url
+      pagination.last_page = pag.last_page
+      pagination.total = pag.total
+    }
+  } catch (error) {
+    console.error('Gagal fetch customers:', error)
+    customersData.value = []
+  } finally {
+    loadingCustomers.value = false
+  }
+}
 
 
   // ── DETAIL ────────────────────────────────────────
@@ -288,10 +373,10 @@ export const useCustomersStore = defineStore('customers', () => {
     loadingSubmission.value = true
     try {
       const response = await customersServices.getSubmissions({
-      per_page: 50,
-      sort_by : 'created_at',   // ← tanpa prefix "c."
-      sort_dir: 'desc',
-    })
+        per_page: 50,
+        sort_by : 'created_at',   // ← tanpa prefix "c."
+        sort_dir: 'desc',
+      })
       const result    = response.data
       const dataArray = result.data?.data ?? []
 
@@ -308,19 +393,79 @@ export const useCustomersStore = defineStore('customers', () => {
   }
 
 
-  // ── BRANCHES ──────────────────────────────────────
-const fetchBranches = async (customerId) => {
-  loadingBranches.value = true
-  try {
-    const res = await customersServices.getBranches(customerId)
-    branchesData.value = res.data.data?.data ?? []
-  } catch (err) {
-    console.error('Gagal fetch branches:', err)
-    branchesData.value = []
-  } finally {
-    loadingBranches.value = false
+  // ── BRANCHES: LIST CABANG MILIK 1 CUSTOMER ───────
+  const branchesData    = ref([])
+  const loadingBranches = ref(false)
+
+  const fetchBranches = async (customerId) => {
+    loadingBranches.value = true
+    try {
+      const res = await customersServices.getBranches(customerId)
+      // endpoint dibungkus { data: { data: [...] } } → tembus 2 layer
+      branchesData.value = res.data.data?.data ?? res.data.data ?? []
+    } catch (err) {
+      console.error('Gagal fetch branches:', err)
+      branchesData.value = []
+    } finally {
+      loadingBranches.value = false
+    }
   }
-}
+
+
+  // ── COMPANY SEARCH (deteksi duplikat saat input) ──
+  const companySuggestions   = ref([])
+  const searchingCompany     = ref(false)
+  const matchedCompany       = ref(null)   // { id, company_name, customer_code } kalau sales pilih existing
+  let   companySearchTimeout = null
+
+  const searchCompanyName = (val) => {
+    clearTimeout(companySearchTimeout)
+    if (!val || val.length < 2) {
+      companySuggestions.value = []
+      return
+    }
+    companySearchTimeout = setTimeout(async () => {
+      searchingCompany.value = true
+      try {
+        const res = await customersServices.searchCompany(val)
+        companySuggestions.value = res.data.data ?? []
+      } catch (err) {
+        console.error('Gagal search company:', err)
+        companySuggestions.value = []
+      } finally {
+        searchingCompany.value = false
+      }
+    }, 400)
+  }
+
+  const selectExistingCompany = (company) => {
+    matchedCompany.value     = company
+    companySuggestions.value = []
+  }
+
+  const clearMatchedCompany = () => {
+    matchedCompany.value     = null
+    companySuggestions.value = []
+  }
+
+
+  // ── CREATE BRANCH (dipanggil kalau matchedCompany terisi) ──
+  const saveBranch = async (customerId, payload) => {
+    savingCustomers.value = true
+    errorCustomers.value  = null
+    try {
+      const res = await customersServices.createBranch(customerId, payload)
+      await fetchCustomers(buildUrl())
+      return res
+    } catch (err) {
+      if (err.response?.status === 422) {
+        errorCustomers.value = err.response.data.errors
+      }
+      throw err
+    } finally {
+      savingCustomers.value = false
+    }
+  }
 
 
   // ── RETURN ────────────────────────────────────────
@@ -356,8 +501,13 @@ const fetchBranches = async (customerId) => {
     fetchSubmissions,
     getApprovalConfig,
 
+    // branches
     branchesData, loadingBranches,
-    detailCustomer,
-    fetchBranches,   
+    fetchBranches,
+
+    // company search + create branch
+    companySuggestions, searchingCompany, matchedCompany,
+    searchCompanyName, selectExistingCompany, clearMatchedCompany,
+    saveBranch,
   }
 })
