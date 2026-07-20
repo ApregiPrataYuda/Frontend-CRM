@@ -414,23 +414,20 @@ async function handleSave() {
     formLoading.value    = true
     errorCustomers.value = null
     try {
-      const payload = {
-        branch_name : branchFormData.value.branch_name,
-        address     : branchFormData.value.address,
-        city        : branchFormData.value.city,
-        contact_name: branchFormData.value.contact_name,
-        email       : branchFormData.value.email,
-        phone       : branchFormData.value.phone,
-      }
-
-      if (isBranchEdit.value) {
-        await store.updateBranch(branchEditId.value, payload)
-        await store.fetchSubmissions()
-        showToast('success', 'Cabang customer berhasil diperbarui!')
-      } else {
-        await store.saveBranch(store.matchedCompany.id, payload)
-        showToast('success', 'Cabang berhasil diajukan dan sedang menunggu approval Manager.')
-      }
+      // await store.saveBranch(store.matchedCompany.id, {
+      //   branch_name: branchFormData.value.branch_name,
+      //   address    : branchFormData.value.address,
+      //   city       : branchFormData.value.city,
+      // })
+      await store.saveBranch(store.matchedCompany.id, {
+  branch_name : branchFormData.value.branch_name,
+  address     : branchFormData.value.address,
+  city        : branchFormData.value.city,
+  contact_name: branchFormData.value.contact_name,
+  email       : branchFormData.value.email,
+  phone       : branchFormData.value.phone,
+})
+      showToast('success', 'Cabang berhasil diajukan dan sedang menunggu approval Manager.')
       closeAddModal()
     } catch {
       // error per-field tampil via getError()
@@ -508,28 +505,6 @@ function openEditBranch(item) {
   }
 
   isAddModalVisible.value = true
-}
-
-async function openDeleteBranchModal(item) {
-  const branch = item.branch ?? item
-  const isConfirmed = await confirm({
-    type       : 'danger',
-    title      : 'Hapus Cabang Customer',
-    message    : `Yakin ingin menghapus cabang "${branch.branch_name}"?`,
-    detail     : 'Tindakan ini tidak bisa dibatalkan dan akan menghapus cabang secara permanen.',
-    confirmText: 'Yes, Delete',
-    cancelText : 'Cancel',
-  })
-
-  if (!isConfirmed) return
-
-  try {
-    await store.deleteBranch(branch.id)
-    await store.fetchSubmissions()
-    showToast('success', 'Cabang customer berhasil dihapus!')
-  } catch {
-    showToast('error', 'Gagal menghapus cabang, coba lagi.')
-  }
 }
 
 
@@ -808,14 +783,6 @@ async function openDeleteBranchModal(item) {
               <font-awesome-icon icon="calendar" /> {{ store.formatDate(item.created_at) }}
             </span>
             <div class="cc-actions">
-              <template v-if="item.display_type === 'branch'">
-                <button v-if="canUpdate" class="act-btn act-edit" title="Edit cabang" @click="openEditBranch(item)">
-                  <font-awesome-icon icon="pen-to-square" />
-                </button>
-                <button v-if="canDelete" class="act-btn act-delete" title="Hapus cabang" @click="openDeleteBranchModal(item)">
-                  <font-awesome-icon icon="trash-can" />
-                </button>
-              </template>
               <button v-if="canUpdate && item.display_type !== 'branch'" class="act-btn act-edit"   title="Edit"   @click="openEditModal(item)">
                 <font-awesome-icon icon="pen-to-square" />
               </button>
@@ -892,14 +859,6 @@ async function openDeleteBranchModal(item) {
             </td>
 
             <td class="td-actions">
-              <template v-if="item.display_type === 'branch'">
-                <button v-if="canUpdate" class="act-btn act-edit" title="Edit cabang" @click="openEditBranch(item)">
-                  <font-awesome-icon icon="pen-to-square" />
-                </button>
-                <button v-if="canDelete" class="act-btn act-delete" title="Hapus cabang" @click="openDeleteBranchModal(item)">
-                  <font-awesome-icon icon="trash-can" />
-                </button>
-              </template>
               <button v-if="canUpdate && item.display_type !== 'branch'" class="act-btn act-edit"   title="Edit"   @click="openEditModal(item)">
                 <font-awesome-icon icon="pen-to-square" />
               </button>
@@ -937,8 +896,8 @@ async function openDeleteBranchModal(item) {
     <!-- ═══ MODAL ADD / EDIT ═══ -->
     <AppModal
       :show="isAddModalVisible"
-      :title="isBranchEdit ? 'Edit Cabang Customer' : (store.matchedCompany ? 'Tambah Cabang Baru' : (isEdit ? 'Edit Customer' : 'Add New Customer'))"
-      :icon="isBranchEdit ? 'pen-to-square' : (store.matchedCompany ? 'code-branch' : (isEdit ? 'pen-to-square' : 'plus'))"
+      :title="store.matchedCompany ? 'Tambah Cabang Baru' : (isEdit ? 'Edit Customer' : 'Add New Customer')"
+      :icon="store.matchedCompany ? 'code-branch' : (isEdit ? 'pen-to-square' : 'plus')"
       size="md"
       @close="closeAddModal"
     >
@@ -1211,16 +1170,16 @@ async function openDeleteBranchModal(item) {
         <button class="btn-cancel" @click="closeAddModal">Cancel</button>
         <button
           class="btn-save"
-          :class="{ 'btn-save-edit': isEdit || isBranchEdit }"
+          :class="{ 'btn-save-edit': isEdit && !store.matchedCompany }"
           :disabled="formLoading || savingCustomers || updatingCustomers || (!store.matchedCompany && !isPhoneValid)"
           @click="handleSave"
         >
           <font-awesome-icon v-if="formLoading || savingCustomers || updatingCustomers" icon="spinner" spin />
-          <font-awesome-icon v-else :icon="isBranchEdit ? 'pen-to-square' : (store.matchedCompany ? 'code-branch' : (isEdit ? 'pen-to-square' : 'check'))" />
+          <font-awesome-icon v-else :icon="store.matchedCompany ? 'code-branch' : (isEdit ? 'pen-to-square' : 'check')" />
           {{
             (formLoading || savingCustomers || updatingCustomers)
-              ? (isBranchEdit ? 'Menyimpan Cabang...' : (store.matchedCompany ? 'Mengajukan Cabang...' : (isEdit ? 'Menyimpan...' : 'Menambahkan...')))
-              : (isBranchEdit ? 'Simpan Perubahan Cabang' : (store.matchedCompany ? 'Ajukan Cabang' : (isEdit ? 'Simpan Perubahan' : 'Save Data')))
+              ? (store.matchedCompany ? 'Mengajukan Cabang...' : (isEdit ? 'Menyimpan...' : 'Menambahkan...'))
+              : (store.matchedCompany ? 'Ajukan Cabang' : (isEdit ? 'Simpan Perubahan' : 'Save Data'))
           }}
         </button>
       </template>
