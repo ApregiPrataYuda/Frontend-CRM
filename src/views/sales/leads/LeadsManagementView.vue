@@ -15,7 +15,7 @@ const {
   pagination, sort, mode,
   savingLeads, updatingLeads, deletingLeads, errorLeads,
   leadsDetail, loadingDetail,
-  industrySelectData, categorySelectData,
+  industrySelectData, categorySelectData, companyNameSelectData
 } = storeToRefs(leadsStore)
 
 // ── CONFIRM COMPOSABLE ──
@@ -91,10 +91,10 @@ function getPhoneError(raw) {
   const { main, ext } = parsePhoneParts(raw)
   const digitsOnly = main.replace(/[^0-9]/g, '')
   if (digitsOnly.length < 7 || digitsOnly.length > 15) {
-    return 'Nomor telepon harus 7–15 digit angka (boleh pakai -, spasi, kurung, +).'
+    return 'Phone number must be 7-15 digits (may include -, spaces, parentheses, +).).'
   }
   if (ext !== null && (ext.length < 1 || ext.length > 6)) {
-    return 'Nomor extension tidak valid, maksimal 6 digit.'
+    return 'Invalid extension number, maximum 6 digits.'
   }
   return null
 }
@@ -102,16 +102,55 @@ function isPhoneValid(raw) {
   return !!raw && !getPhoneError(raw)
 }
 
-const addPhoneTouched  = ref(false)
-const editPhoneTouched = ref(false)
+// ── VALIDASI GENERIK PER FIELD (dipakai untuk semua field wajib) ──
+const fieldValidators = {
+  company_name : (v) => (!v || !v.trim()) ? 'Company name wajib diisi.' : null,
+  contact_name : (v) => (!v || !v.trim()) ? 'Contact name wajib diisi.' : null,
+  email        : (v) => {
+    if (!v || !v.trim()) return 'Email wajib diisi.'
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return re.test(v) ? null : 'Format email tidak valid.'
+  },
+  phone        : (v) => (!v ? 'Nomor telepon wajib diisi.' : getPhoneError(v)),
+  lead_source  : (v) => (!v ? 'Lead source wajib dipilih.' : null),
+}
+
+const requiredFields = ['company_name', 'contact_name', 'email', 'phone', 'lead_source']
+
+// Ambil pesan error: prioritaskan error dari backend, baru client-side (jika sudah touched)
+function getFieldError(data, touched, field) {
+  const serverErr = getError(field)
+  if (serverErr) return serverErr
+  if (!touched[field]) return null
+  const validator = fieldValidators[field]
+  return validator ? validator(data[field]) : null
+}
+
+function isFieldValid(data, field) {
+  const validator = fieldValidators[field]
+  return validator ? !validator(data[field]) : true
+}
+
+function isFormValidGeneric(data, fields) {
+  return fields.every(f => isFieldValid(data, f))
+}
+
+function touchAll(touched, fields) {
+  fields.forEach(f => { touched[f] = true })
+}
+
+function makeTouchedState() {
+  return { company_name: false, contact_name: false, email: false, phone: false, lead_source: false }
+}
+
+const addTouched  = ref(makeTouchedState())
+const editTouched = ref(makeTouchedState())
 
 function onAddPhoneInput(e) {
   formData.value.phone = sanitizePhoneValue(e.target.value)
-  addPhoneTouched.value = true
 }
 function onEditPhoneInput(e) {
   editData.value.phone = sanitizePhoneValue(e.target.value)
-  editPhoneTouched.value = true
 }
 function onBulkPhoneInput(row, e) {
   row.phone = sanitizePhoneValue(e.target.value)
@@ -161,6 +200,41 @@ function getError(field) {
   return errorLeads.value[field]?.[0] ?? null
 }
 
+// ── MODAL COMPANY NAME DITEMUKAN ──
+const openAddModal  = () => { 
+  resetForm(); 
+  leadsStore.clearCompanySuggestions(); 
+  isAddModalVisible.value = true 
+}
+const closeAddModal = () => { 
+  isAddModalVisible.value = false; 
+  resetForm(); 
+  leadsStore.clearCompanySuggestions() 
+}
+
+// ── CEK COMPANY NAME (autocomplete) ──
+const showCompanySuggestions  = ref(false)
+const isCompanyModalVisible   = ref(false)
+const existingCompany         = ref(null)
+
+function onCompanyNameInput(e) {
+  formData.value.company_name = e.target.value
+  showCompanySuggestions.value = true
+  leadsStore.fetchCompanyNameSelect(e.target.value)
+}
+
+function selectExistingCompany(company) {
+  existingCompany.value = company
+  showCompanySuggestions.value = false
+  leadsStore.clearCompanySuggestions()
+  isCompanyModalVisible.value = true
+}
+
+function closeCompanyModal() {
+  isCompanyModalVisible.value = false
+  formData.value.company_name = ''
+}
+
 // ═══════════════════════════════════════════
 // FORM ADD
 // ═══════════════════════════════════════════
@@ -183,16 +257,13 @@ const formData = ref({ ...defaultForm })
 const resetForm = () => {
   formData.value       = { ...defaultForm }
   errorLeads.value     = null
-  addPhoneTouched.value = false
+  addTouched.value  = makeTouchedState()
 }
 
-const openAddModal  = () => { resetForm(); isAddModalVisible.value = true }
-const closeAddModal = () => { isAddModalVisible.value = false; resetForm() }
-
 const handleStore = async () => {
-  addPhoneTouched.value = true
-  if (!isPhoneValid(formData.value.phone)) {
-    showToast('error', 'Nomor telepon tidak valid.')
+  touchAll(addTouched.value, requiredFields)
+  if (!isFormValidGeneric(formData.value, requiredFields)) {
+    showToast('error', 'Mohon periksa kembali data yang diisi.')
     return
   }
 
@@ -223,7 +294,7 @@ const editData           = ref({ ...defaultForm })
 const openEditModal = (lead) => {
   editId.value            = lead.id
   errorLeads.value        = null
-  editPhoneTouched.value  = false
+  editTouched.value  = makeTouchedState()
   editData.value   = {
     company_name     : lead.company_name,
     contact_name     : lead.contact_name,
@@ -242,13 +313,13 @@ const closeEditModal = () => {
   isEditModalVisible.value = false
   editId.value             = null
   errorLeads.value         = null
-  editPhoneTouched.value   = false
+  editTouched.value  = makeTouchedState()
 }
 
 const handleUpdate = async () => {
-  editPhoneTouched.value = true
-  if (!isPhoneValid(editData.value.phone)) {
-    showToast('error', 'Nomor telepon tidak valid.')
+  touchAll(editTouched.value, requiredFields)
+  if (!isFormValidGeneric(editData.value, requiredFields)) {
+    showToast('error', 'Mohon periksa kembali data yang diisi.')
     return
   }
 
@@ -765,20 +836,60 @@ const handleStoreBulk = async () => {
       @close="closeAddModal"
     >
       <div class="form-container-gap">
-
-        <div class="form-group">
-          <label>Company Name <span style="color:#ef4444">*</span></label>
-          <input v-model="formData.company_name" class="form-input" placeholder="PT. Example"
-            :class="{ 'is-invalid': getError('company_name') }" />
-          <small v-if="getError('company_name')" class="text-danger">{{ getError('company_name') }}</small>
+        <div class="form-group company-search-wrap">
+          <label>Company Name <span class="text-required">*</span></label>
+          <input
+            :value="formData.company_name"
+            class="form-input"
+            placeholder="PT. Example"
+            :class="{ 'is-invalid': getFieldError(formData, addTouched, 'company_name') }"
+            @input="onCompanyNameInput"
+            @focus="showCompanySuggestions = true"
+            @blur="addTouched.company_name = true"
+          />
+          <small v-if="getFieldError(formData, addTouched, 'company_name')" class="text-danger">
+            {{ getFieldError(formData, addTouched, 'company_name') }}
+          </small>
+          <div v-if="showCompanySuggestions && companyNameSelectData.length" class="company-suggest-list">
+            <button
+              v-for="item in companyNameSelectData"
+              :key="`${item.source}-${item.id}`"
+              type="button"
+              class="company-suggest-item"
+              @click="selectExistingCompany(item)"
+            >
+              <span>
+                <span class="company-suggest-name">
+                  {{ item.source === 'customer_branch' ? item.parent_company : item.name }}
+                </span>
+                <span class="company-suggest-code">
+                  <template v-if="item.source === 'customer'">
+                    {{ item.customer_code }}
+                  </template>
+                  <template v-else-if="item.source === 'customer_branch'">
+                    {{ item.name }}
+                  </template>
+                  <template v-else-if="item.source === 'leads'">
+                    {{ item.contact_name ?? '-' }}
+                  </template>
+                </span>
+              </span>
+              <span class="badge-registered">
+                {{ item.source === 'customer' ? 'Customer' : item.source === 'customer_branch' ? 'Cabang' : 'Leads' }}
+              </span>
+            </button>
+          </div>
         </div>
-
         <div class="row g-2">
           <div class="col-6 form-group">
             <label>Contact Name <span style="color:#ef4444">*</span></label>
             <input v-model="formData.contact_name" class="form-input" placeholder="John Doe"
-              :class="{ 'is-invalid': getError('contact_name') }" />
-            <small v-if="getError('contact_name')" class="text-danger">{{ getError('contact_name') }}</small>
+              :class="{ 'is-invalid': getFieldError(formData, addTouched, 'contact_name') }"
+              @blur="addTouched.contact_name = true"
+            />
+            <small v-if="getFieldError(formData, addTouched, 'contact_name')" class="text-danger">
+              {{ getFieldError(formData, addTouched, 'contact_name') }}
+            </small>
           </div>
           <div class="col-6 form-group">
             <label>Phone <span style="color:#ef4444">*</span></label>
@@ -787,20 +898,25 @@ const handleStoreBulk = async () => {
               type="tel"
               class="form-input"
               placeholder="08xxx / 021-xxx ext 123"
-              :class="{ 'is-invalid': getError('phone') || (addPhoneTouched && getPhoneError(formData.phone)) }"
+              :class="{ 'is-invalid': getFieldError(formData, addTouched, 'phone') }"
               @input="onAddPhoneInput"
-              @blur="addPhoneTouched = true"
+              @blur="addTouched.phone = true"
             />
-            <small v-if="getError('phone')" class="text-danger">{{ getError('phone') }}</small>
-            <small v-else-if="addPhoneTouched && getPhoneError(formData.phone)" class="text-danger">{{ getPhoneError(formData.phone) }}</small>
+            <small v-if="getFieldError(formData, addTouched, 'phone')" class="text-danger">
+              {{ getFieldError(formData, addTouched, 'phone') }}
+            </small>
           </div>
         </div>
 
         <div class="form-group">
           <label>Email <span style="color:#ef4444">*</span></label>
           <input v-model="formData.email" type="email" class="form-input" placeholder="email@example.com"
-            :class="{ 'is-invalid': getError('email') }" />
-          <small v-if="getError('email')" class="text-danger">{{ getError('email') }}</small>
+            :class="{ 'is-invalid': getFieldError(formData, addTouched, 'email') }"
+            @blur="addTouched.email = true"
+          />
+          <small v-if="getFieldError(formData, addTouched, 'email')" class="text-danger">
+            {{ getFieldError(formData, addTouched, 'email') }}
+          </small>
         </div>
 
         <div class="row g-2">
@@ -832,10 +948,12 @@ const handleStoreBulk = async () => {
               type="button"
               class="segment-btn"
               :class="{ active: formData.lead_source === src.value }"
-              @click="formData.lead_source = src.value"
+              @click="formData.lead_source = src.value; addTouched.lead_source = true"
             >{{ src.label }}</button>
           </div>
-          <small v-if="getError('lead_source')" class="text-danger">{{ getError('lead_source') }}</small>
+          <small v-if="getFieldError(formData, addTouched, 'lead_source')" class="text-danger">
+            {{ getFieldError(formData, addTouched, 'lead_source') }}
+          </small>
         </div>
 
         <div class="form-group">
@@ -852,7 +970,7 @@ const handleStoreBulk = async () => {
 
       <template #footer>
         <button class="btn-cancel" @click="closeAddModal">Cancel</button>
-        <button class="btn-save" :disabled="formLoading || !isPhoneValid(formData.phone)" @click="handleStore">
+        <button class="btn-save" :disabled="formLoading || !isFormValidGeneric(formData, requiredFields)" @click="handleStore">
           <span v-if="formLoading" class="spinner-border spinner-border-sm me-1"></span>
           <font-awesome-icon v-else icon="check" />
           {{ formLoading ? 'Saving...' : 'Save Data' }}
@@ -874,16 +992,24 @@ const handleStoreBulk = async () => {
         <div class="form-group">
           <label>Company Name <span style="color:#ef4444">*</span></label>
           <input v-model="editData.company_name" class="form-input" placeholder="PT. Example"
-            :class="{ 'is-invalid': getError('company_name') }" />
-          <small v-if="getError('company_name')" class="text-danger">{{ getError('company_name') }}</small>
+            :class="{ 'is-invalid': getFieldError(editData, editTouched, 'company_name') }"
+            @blur="editTouched.company_name = true" 
+          />
+          <small v-if="getFieldError(editData, editTouched, 'company_name')" class="text-danger">
+            {{ getFieldError(editData, editTouched, 'company_name') }}
+          </small>
         </div>
 
         <div class="row g-2">
           <div class="col-6 form-group">
             <label>Contact Name <span style="color:#ef4444">*</span></label>
             <input v-model="editData.contact_name" class="form-input" placeholder="John Doe"
-              :class="{ 'is-invalid': getError('contact_name') }" />
-            <small v-if="getError('contact_name')" class="text-danger">{{ getError('contact_name') }}</small>
+              :class="{ 'is-invalid': getFieldError(editData, editTouched, 'contact_name') }"
+              @blur="editTouched.contact_name = true" 
+            />
+            <small v-if="getFieldError(editData, editTouched, 'contact_name')" class="text-danger">
+              {{ getFieldError(editData, editTouched, 'contact_name') }}
+            </small>
           </div>
           <div class="col-6 form-group">
             <label>Phone <span style="color:#ef4444">*</span></label>
@@ -892,20 +1018,25 @@ const handleStoreBulk = async () => {
               type="tel"
               class="form-input"
               placeholder="08xxx / 021-xxx ext 123"
-              :class="{ 'is-invalid': getError('phone') || (editPhoneTouched && getPhoneError(editData.phone)) }"
+              :class="{ 'is-invalid': getFieldError(editData, editTouched, 'phone') }"
               @input="onEditPhoneInput"
-              @blur="editPhoneTouched = true"
+              @blur="editTouched.phone = true"
             />
-            <small v-if="getError('phone')" class="text-danger">{{ getError('phone') }}</small>
-            <small v-else-if="editPhoneTouched && getPhoneError(editData.phone)" class="text-danger">{{ getPhoneError(editData.phone) }}</small>
+            <small v-if="getFieldError(editData, editTouched, 'phone')" class="text-danger">
+              {{ getFieldError(editData, editTouched, 'phone') }}
+            </small>
           </div>
         </div>
 
         <div class="form-group">
           <label>Email <span style="color:#ef4444">*</span></label>
           <input v-model="editData.email" type="email" class="form-input" placeholder="email@example.com"
-            :class="{ 'is-invalid': getError('email') }" />
-          <small v-if="getError('email')" class="text-danger">{{ getError('email') }}</small>
+            :class="{ 'is-invalid': getFieldError(editData, editTouched, 'email') }"
+            @blur="editTouched.email = true" 
+          />
+          <small v-if="getFieldError(editData, editTouched, 'email')" class="text-danger">
+            {{ getFieldError(editData, editTouched, 'email') }}
+          </small>
         </div>
 
         <div class="row g-2">
@@ -937,10 +1068,12 @@ const handleStoreBulk = async () => {
               type="button"
               class="segment-btn"
               :class="{ active: editData.lead_source === src.value }"
-              @click="editData.lead_source = src.value"
+              @click="editData.lead_source = src.value; editTouched.lead_source = true"
             >{{ src.label }}</button>
           </div>
-          <small v-if="getError('lead_source')" class="text-danger">{{ getError('lead_source') }}</small>
+          <small v-if="getFieldError(editData, editTouched, 'lead_source')" class="text-danger">
+            {{ getFieldError(editData, editTouched, 'lead_source') }}
+          </small>
         </div>
 
         <div class="form-group">
@@ -957,7 +1090,7 @@ const handleStoreBulk = async () => {
 
       <template #footer>
         <button class="btn-cancel" @click="closeEditModal">Cancel</button>
-        <button class="btn-save" style="background:#f59e0b" :disabled="editLoading || !isPhoneValid(editData.phone)" @click="handleUpdate">
+        <button class="btn-save" style="background:#f59e0b" :disabled="editLoading || !isFormValidGeneric(editData, requiredFields)" @click="handleUpdate">
           <span v-if="editLoading" class="spinner-border spinner-border-sm me-1"></span>
           <font-awesome-icon v-else icon="floppy-disk" />
           {{ editLoading ? 'Saving...' : 'Update' }}
@@ -1035,6 +1168,39 @@ const handleStoreBulk = async () => {
       </template>
     </AppModal>
 
+    <!-- ═══ MODAL NOTIF COMPANY SUDAH TERDAFTAR ═══ -->
+    <AppModal
+      :show="isCompanyModalVisible"
+      title=""
+      size="sm"
+      hide-close
+      @close="closeCompanyModal"
+    >
+      <div v-if="existingCompany" class="company-alert-body">
+        <div class="company-alert-icon">
+          <font-awesome-icon icon="xmark" />
+        </div>
+        <h5 class="company-alert-title">Company Sudah Terdaftar</h5>
+        <p class="company-alert-desc">
+          <strong>
+            {{ existingCompany.source === 'customer_branch' ? existingCompany.parent_company : existingCompany.name }}
+          </strong>
+          <span v-if="existingCompany.customer_code"> ({{ existingCompany.customer_code }})</span>
+          <span v-else-if="existingCompany.source === 'leads' && existingCompany.contact_name">
+            ({{ existingCompany.contact_name }})
+          </span>
+          <template v-if="existingCompany.source === 'customer_branch'">
+            — cabang <strong>{{ existingCompany.name }}</strong>
+          </template>
+            already registered as
+            {{ existingCompany.source === 'customer' ? 'customer' : existingCompany.source === 'customer_branch' ? 'cabang customer' : 'leads' }}
+            in the system. Please use a different company name.
+        </p>
+      </div>
+      <template #footer>
+        <button class="btn-alert-ok" @click="closeCompanyModal">Mengerti</button>
+      </template>
+    </AppModal>
 
     <!-- ═══ MODAL BULK ADD ═══ -->
     <AppModal
@@ -1526,4 +1692,102 @@ const handleStoreBulk = async () => {
 
   .btn-cancel, .btn-save { width: 100%; justify-content: center; }
 }
+
+/* ===== COMPANY NAME AUTOCOMPLETE ===== */
+.text-required { color: #ef4444; }
+.company-search-wrap { position: relative; }
+.company-suggest-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 210;
+}
+.company-suggest-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border-main);
+  background: none;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.company-suggest-item:last-child { border-bottom: none; }
+.company-suggest-item:hover { background: var(--bg-nav-hover); }
+.company-suggest-name { display: block; font-size: 0.85rem; font-weight: 600; }
+.company-suggest-code { display: block; font-size: 0.72rem; color: var(--text-muted); }
+.badge-registered {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgba(99,102,241,0.1);
+  color: #6366f1;
+  border: 1px solid rgba(99,102,241,0.2);
+}
+
+/* MODAL NOTIF - CENTERED ALERT STYLE */
+.company-alert-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 4px 4px;
+}
+.company-alert-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  margin-bottom: 16px;
+}
+.company-alert-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+.company-alert-desc {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+.btn-alert-ok {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 4px solid var(--border-main);
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.btn-alert-ok:hover {
+  background: var(--border-main);
+}
+
+/* MODAL NOTIF */
+.company-modal-body p { font-size: 0.85rem; }
 </style>

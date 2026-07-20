@@ -7,6 +7,7 @@ const props = defineProps({
   icon:    { type: String,  default: '' },
   size:    { type: String,  default: 'md' }, // sm | md | lg | xl
   persistent: { type: Boolean, default: false }, // true = klik luar tidak tutup
+  hideClose: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['close'])
@@ -37,7 +38,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
               </span>
               {{ title }}
             </div>
-            <button class="modal-close" @click="emit('close')">
+            <button v-if="!hideClose" class="modal-close" @click="emit('close')">
               <font-awesome-icon icon="xmark" />
             </button>
           </div>
