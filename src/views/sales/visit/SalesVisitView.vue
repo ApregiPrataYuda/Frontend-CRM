@@ -400,15 +400,49 @@ function closeVisitCustNowModal() {
   if (loadingVisitNow.value) return
   showVisitCustNowModal.value = false; selectedCust.value = null
 }
+
+// ── branchId: null = visit ke head office, terisi = visit ke branch tertentu ──
+// async function confirmVisitCustNow() {
+//   if (!selectedCust.value) return
+//   const branchId = selectedCust.value.target_type === 'branch'
+//     ? selectedCust.value.branch_id
+//     : null
+//      console.log('branchId:', branchId)
+//   const { success, message } = await visitDataStore.startVisitCustomers(selectedCust.value.id, branchId)
+//   if (success) {
+//     toast.success(message)
+//     activeCustomerPhase.value = 'visiting'
+//     closeVisitCustNowModal()
+//     visitDataStore.fetchVisits(visitDataStore.buildUrl())
+//   } else { toast.error(message) }
+// }
+
 async function confirmVisitCustNow() {
   if (!selectedCust.value) return
-  const { success, message } = await visitDataStore.startVisitCustomers(selectedCust.value.id)
+
+  const branchId = selectedCust.value.target_type === 'branch'
+    ? Number(selectedCust.value.branch_id)
+    : null
+
+  console.log('Start visit payload:', {
+    customer_id: selectedCust.value.id,
+    target_type: selectedCust.value.target_type,
+    branch_id: branchId,
+  })
+
+  const { success, message } = await visitDataStore.startVisitCustomers(
+    selectedCust.value.id,
+    branchId
+  )
+
   if (success) {
     toast.success(message)
     activeCustomerPhase.value = 'visiting'
     closeVisitCustNowModal()
     visitDataStore.fetchVisits(visitDataStore.buildUrl())
-  } else { toast.error(message) }
+  } else {
+    toast.error(message)
+  }
 }
 
 // ════════════════════════════════════════════
@@ -781,7 +815,15 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             </td>
 
             <td class="td-name">{{ visit.visit_code }}</td>
-            <td class="td-name" style="text-transform:capitalize">{{ visit.company_name }}</td>
+
+            <!-- COMPANY + BRANCH INFO -->
+            <td class="td-name" style="text-transform:capitalize">
+              {{ visit.company_name }}
+              <div v-if="visit.target_type === 'BRANCH'" class="td-sub text-primary" style="text-transform:none">
+                <font-awesome-icon icon="code-branch" />
+                {{ visit.branch_name }}<span v-if="visit.branch_city"> — {{ visit.branch_city }}</span>
+              </div>
+            </td>
 
             <!-- VISIT TIME -->
             <td>
@@ -864,6 +906,10 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           </div>
 
           <p class="visit-card-company">{{ visit.company_name }}</p>
+          <p v-if="visit.target_type === 'BRANCH'" class="td-sub text-primary" style="margin:0">
+            <font-awesome-icon icon="code-branch" />
+            {{ visit.branch_name }}<span v-if="visit.branch_city"> — {{ visit.branch_city }}</span>
+          </p>
           <p class="visit-card-code">{{ visit.visit_code }}</p>
 
           <div class="visit-card-info">
@@ -972,6 +1018,20 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <span class="detail-label">Type</span>
             <span class="detail-value">{{ visitsDetail.visit_type }}</span>
           </div>
+
+          <!-- ═══ TARGET: HEAD OFFICE / BRANCH ═══ -->
+          <div v-if="visitsDetail.target_type" class="detail-row">
+            <span class="detail-label">Target</span>
+            <span class="target-type-badge" :class="visitsDetail.target_type === 'BRANCH' ? 'target-branch' : 'target-hq'">
+              <font-awesome-icon :icon="visitsDetail.target_type === 'BRANCH' ? 'code-branch' : 'building'" />
+              {{ visitsDetail.target_type === 'BRANCH' ? 'Branch' : 'Head Office' }}
+            </span>
+          </div>
+          <div v-if="visitsDetail.target_type === 'BRANCH'" class="detail-row">
+            <span class="detail-label">Nama Cabang</span>
+            <span class="detail-value">{{ visitsDetail.branch_name }} — {{ visitsDetail.branch_city ?? '-' }}</span>
+          </div>
+
           <div class="detail-row">
             <span class="detail-label">Status</span>
             <span class="detail-value">{{ visitsDetail.visit_status }}</span>
@@ -1364,7 +1424,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       icon="handshake"
       size="xl"
       @close="closeCustomerModal"
-    >
+     >
       <div class="modal-toolbar">
         <div class="showing-wrap">
           <span class="showing-label">Showing:</span>
@@ -1393,8 +1453,11 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
         <table class="data-table">
           <thead>
             <tr>
-              <th>No</th><th>Company</th><th>Contact</th>
-              <th>Address</th><th>Phone</th><th>Status</th>
+              <th>No</th>
+              <th>Target</th>
+              <th>Company</th>
+              <th>Kontak</th>
+              <th>Address</th>
               <th style="text-align:center">Action</th>
             </tr>
           </thead>
@@ -1410,23 +1473,53 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <tr
               v-else
               v-for="(item, index) in customersData"
-              :key="item.id"
+              :key="item.target_type === 'branch' ? `branch-${item.branch_id}` : item.id"
               class="data-row"
               :class="activeVisitCustomersId === item.id ? 'row-active-customer' : ''"
             >
               <td class="td-no">{{ index + 1 + customersPagination.per_page * (customersPagination.current_page - 1) }}.</td>
+
+              <!-- ═══ TARGET TYPE BADGE ═══ -->
+              <td>
+                <span
+                  class="target-type-badge"
+                  :class="item.target_type === 'branch' ? 'target-branch' : 'target-hq'"
+                >
+                  <font-awesome-icon :icon="item.target_type === 'branch' ? 'code-branch' : 'building'" />
+                  {{ item.target_type === 'branch' ? 'Branch' : 'Head Office' }}
+                </span>
+              </td>
+
+              <!-- ═══ COMPANY (+ nama branch & kota kalau target branch) ═══ -->
               <td>
                 <p class="td-name">{{ item.company_name ?? '-' }}</p>
                 <p class="td-muted" style="font-family:monospace">{{ item.customer_code ?? '-' }}</p>
+                <p v-if="item.target_type === 'branch'" class="td-sub text-primary" style="margin:2px 0 0">
+                  <font-awesome-icon icon="code-branch" />
+                  {{ item.branch_name ?? '-' }}<span v-if="item.city"> — {{ item.city }}</span>
+                </p>
               </td>
-              <td>{{ item.contact_name ?? '-' }}</td>
+
+              <!-- ═══ KONTAK (bisa banyak) ═══ -->
+              <td style="max-width:220px">
+                <div v-if="item.contacts?.length">
+                  <div v-for="ct in item.contacts" :key="ct.id" class="contact-mini-row">
+                    <span class="fw-semibold">{{ ct.name }}</span> <br>
+                    <span v-if="ct.is_primary" class="contact-primary-tag">Kontak Utama</span>
+                    <span v-if="ct.position" class="td-muted"> · {{ ct.position }}</span>
+                    <div v-if="ct.phone" class="td-muted" style="font-size:0.76rem">{{ ct.phone }}</div>
+                  </div>
+                </div>
+                <span v-else class="td-muted">{{ item.contact_name ?? '-' }}</span>
+              </td>
+
+              <!-- ═══ ADDRESS ═══ -->
               <td style="max-width:180px">
                 <p class="td-muted" style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis" :title="item.address">
                   {{ item.address || '—' }}
                 </p>
               </td>
-              <td>{{ item.phone ?? '-' }}</td>
-              <td><span class="badge-source">{{ item.status ?? 'Active' }}</span></td>
+
               <td class="td-actions">
                 <template v-if="activeVisitCustomersId !== item.id">
                   <button
@@ -1496,6 +1589,16 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
         <div class="detail-info-box">
           <p class="detail-box-label">Customer yang akan dikunjungi</p>
           <p style="font-weight:700; font-size:0.95rem">{{ selectedCust.company_name }}</p>
+
+          <!-- ═══ TARGET: BRANCH atau HEAD OFFICE ═══ -->
+          <p v-if="selectedCust.target_type === 'branch'" class="td-muted text-primary" style="font-weight:600">
+            <font-awesome-icon icon="code-branch" />
+            {{ selectedCust.branch_name }}<span v-if="selectedCust.city"> — {{ selectedCust.city }}</span>
+          </p>
+          <p v-else class="td-muted text-primary" style="font-weight:600">
+            <font-awesome-icon icon="building" /> Head Office
+          </p>
+
           <p class="td-muted">{{ selectedCust.contact_name }}</p>
           <p class="td-muted">{{ selectedCust.address ?? '-' }}</p>
         </div>
@@ -2060,6 +2163,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .td-no { color: var(--text-muted); font-weight: 600; }
 .td-name { font-weight: 500; }
 .td-muted { color: var(--text-muted); font-size: 0.84rem; }
+.td-sub { color: var(--text-muted); font-size: 0.78rem; margin-top: 2px; }
 .td-center { text-align: center; padding: 40px; color: var(--text-muted); }
 .td-actions { text-align: center; white-space: nowrap; }
 
@@ -2198,6 +2302,37 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 }
 .segment-btn:hover:not(.active) { background: rgba(99, 102, 241, 0.08); color: #6366f1; }
 .segment-btn.active { background: #6366f1; color: #fff; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25); }
+
+/* ── TARGET TYPE BADGE ── */
+.target-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.target-hq     { background: #e0e7ff; color: #3730a3; }
+.target-branch { background: #fef3c7; color: #92400e; }
+
+/* ── KONTAK MINI (list dalam tabel) ── */
+.contact-mini-row {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border-main);
+  font-size: 0.8rem;
+}
+.contact-mini-row:last-child { border-bottom: none; }
+.contact-primary-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: rgba(99,102,241,0.12);
+  color: #6366f1;
+  margin-left: 4px;
+}
 
 /* Tablet (≤ 768px) */
 @media (max-width: 768px) {

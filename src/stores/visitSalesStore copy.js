@@ -135,56 +135,24 @@ export const useVisitDataStore = defineStore('visitData', () => {
 
   // ════════════════════════════════════════════
   // START VISIT — CUSTOMER
-  // branchId: null = visit ke head office, terisi = visit ke branch tertentu
   // ════════════════════════════════════════════
 
-  // const startVisitCustomers = async (customersId, branchId = null) => {
-  //   loadingVisitNow.value = true
-  //   visitNowError.value   = null
-  //   try {
-  //     const res = await visitsSalesServices.visitStartCustomers(customersId, { branch_id: branchId })
-  //     activeVisitCustomersId.value = customersId
-  //     activeVisitCustId.value      = res.data?.data?.id ?? res.data?.id ?? null
-  //     return { success: true, message: 'Kunjungan customer berhasil dimulai', data: res.data ?? res }
-  //   } catch (error) {
-  //     const message = error?.response?.data?.message ?? 'Gagal memulai kunjungan customer. Coba lagi.'
-  //     visitNowError.value = message
-  //     return { success: false, message }
-  //   } finally {
-  //     loadingVisitNow.value = false
-  //   }
-  // }
-
-  const startVisitCustomers = async (customerId, branchId = null) => {
-  loadingVisitNow.value = true
-  visitNowError.value = null
-
-  try {
-    const res = await visitsSalesServices.visitStartCustomers(
-      customerId,
-      branchId
-    )
-
-    const visit = res.data.data
-    activeVisitCustomersId.value = visit.customer_id
-    activeVisitCustId.value = visit.id
-
-    return {
-      success: true,
-      message: 'Kunjungan customer berhasil dimulai',
-      data: visit,
+  const startVisitCustomers = async (customersId) => {
+    loadingVisitNow.value = true
+    visitNowError.value   = null
+    try {
+      const res = await visitsSalesServices.visitStartCustomers(customersId)
+      activeVisitCustomersId.value = customersId
+      activeVisitCustId.value      = res.data?.data?.id ?? res.data?.id ?? null
+      return { success: true, message: 'Kunjungan customer berhasil dimulai', data: res.data ?? res }
+    } catch (error) {
+      const message = error?.response?.data?.message ?? 'Gagal memulai kunjungan customer. Coba lagi.'
+      visitNowError.value = message
+      return { success: false, message }
+    } finally {
+      loadingVisitNow.value = false
     }
-  } catch (error) {
-    const message =
-      error?.response?.data?.message ??
-      'Gagal memulai kunjungan customer.'
-
-    visitNowError.value = message
-    return { success: false, message }
-  } finally {
-    loadingVisitNow.value = false
   }
-}
 
 
   // ════════════════════════════════════════════

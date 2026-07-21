@@ -9,7 +9,7 @@ import AppModal        from '@/components/AppModal.vue'
 import { useVisitDataStore }      from '@/stores/VisitSalesStore'
 import { useLeadsVisitStore }     from '@/stores/leadsVisitStore'
 import { useCustomersVisitStore } from '@/stores/customersVisitStore'
-import { usePermissionStore } from '@/stores/PermissionStore'
+import { usePermissionStore } from '@/stores/permissionStore'
 
 const router = useRouter()
 const route  = useRoute()
@@ -51,9 +51,6 @@ const {
 const showPerPageMenu = ref(false)
 const showSortByMenu  = ref(false)
 const showSortDirMenu = ref(false)
-
-// ── View mode (card / table) ──
-const viewMode = ref('card') // default tampilan: card
 
 const sortByOptions = [
   { label: 'Created Date', value: 'created_at'   },
@@ -592,36 +589,60 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 
     <!-- TOOLBAR — 3 Action Buttons -->
     <div class="toolbar-top">
+      <!-- <div class="toolbar-center">
+
+        <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openLeadForm">
+          <font-awesome-icon icon="people-arrows" />
+          <span class="btn-label">Visit Leads</span>
+          <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+        </button>
+
+        <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openCustomerForm">
+          <font-awesome-icon icon="handshake" />
+          <span class="btn-label">Visit Customers</span>
+          <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+        </button>
+
+        <button v-if="canCreate" class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'SalesFollowUp' })">
+          <font-awesome-icon icon="phone-volume" />
+          <span class="btn-label">Follow Up</span>
+          <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+        </button>
+
+      </div> -->
       <div class="toolbar-center">
 
-        <template v-if="canCreate">
-          <button class="btn-toolbar btn-purple" @click="openLeadForm">
-            <font-awesome-icon icon="people-arrows" />
-            <span class="btn-label">Visit Leads</span>
-            <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
-          </button>
+  <template v-if="canCreate">
+    <button class="btn-toolbar btn-purple" @click="openLeadForm">
+      <font-awesome-icon icon="people-arrows" />
+      <span class="btn-label">Visit Leads</span>
+      <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+    </button>
 
-          <button class="btn-toolbar btn-purple" @click="openCustomerForm">
-            <font-awesome-icon icon="handshake" />
-            <span class="btn-label">Visit Customers</span>
-            <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
-          </button>
+    <button class="btn-toolbar btn-purple" @click="openCustomerForm">
+      <font-awesome-icon icon="handshake" />
+      <span class="btn-label">Visit Customers</span>
+      <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+    </button>
 
-          <button class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'SalesFollowUp' })">
-            <font-awesome-icon icon="phone-volume" />
-            <span class="btn-label">Follow Up</span>
-            <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
-          </button>
-        </template>
+    <button class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'SalesFollowUp' })">
+      <font-awesome-icon icon="phone-volume" />
+      <span class="btn-label">Follow Up</span>
+      <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+    </button>
+  </template>
 
-        <div v-else class="no-access-info">
-          <div class="alert alert-danger" role="alert">
-            <font-awesome-icon icon="circle-info" />
-            Anda tidak memiliki akses untuk membuat data visit!
-          </div>
-        </div>
+  <div v-else class="no-access-info">
+  
+    <div class="alert alert-danger" role="alert">
+        <font-awesome-icon icon="circle-info" />
+      Anda tidak memiliki akses untuk membuat data visit!
+    </div>
+  </div>
 
-      </div>
+  
+
+</div>
     </div>
 
     <!-- CONTROLS -->
@@ -647,27 +668,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               </div>
             </div>
           </div>
-
-          <!-- TOGGLE VIEW: CARD / TABLE -->
-          <div class="view-toggle">
-            <button
-              class="view-toggle-btn"
-              :class="{ active: viewMode === 'card' }"
-              @click="viewMode = 'card'"
-              title="Tampilan Card"
-            >
-              <font-awesome-icon icon="table-cells" /> Card
-            </button>
-            <button
-              class="view-toggle-btn"
-              :class="{ active: viewMode === 'table' }"
-              @click="viewMode = 'table'"
-              title="Tampilan Table"
-            >
-              <font-awesome-icon icon="list" /> Table
-            </button>
-          </div>
-
           <button class="btn-toolbar btn-orange" @click="visitDataStore.resetFilters()">
             <font-awesome-icon icon="rotate-left" /> Reset
           </button>
@@ -711,10 +711,8 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════
-         TABLE VIEW
-         ══════════════════════════════════════════ -->
-    <div v-if="viewMode === 'table'" class="table-card flex-grow-1 overflow-auto mb-3">
+    <!-- TABLE -->
+    <div class="table-card flex-grow-1 overflow-auto mb-3">
       <table class="data-table">
         <thead>
           <tr>
@@ -826,94 +824,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 
         </tbody>
       </table>
-    </div>
-
-    <!-- ══════════════════════════════════════════
-         CARD VIEW
-         ══════════════════════════════════════════ -->
-    <div v-else class="card-grid-wrap flex-grow-1 overflow-auto mb-3">
-
-      <!-- LOADING -->
-      <div v-if="loadingVisits" class="td-center" style="padding:40px 0">
-        <div class="spinner-custom" style="margin:0 auto"></div>
-      </div>
-
-      <!-- EMPTY -->
-      <div v-else-if="visitsData.length === 0" class="empty-state">
-        <img src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif" alt="No data" class="empty-img" />
-        <div class="empty-text">No data found</div>
-      </div>
-
-      <!-- CARDS -->
-      <div v-else class="visit-card-grid">
-        <div
-          v-for="(visit, index) in visitsData"
-          :key="visit.id"
-          class="visit-card"
-        >
-          <div class="visit-card-header">
-            <span class="visit-type-badge" :class="visit.visit_type === 'LEAD' ? 'type-lead' : 'type-customer'">
-              <font-awesome-icon :icon="visit.visit_type === 'LEAD' ? 'user-clock' : 'building-user'" />
-              {{ visit.visit_type }}
-            </span>
-            <span v-if="visit.visit_result" class="result-badge" :class="getResultClass(visit.visit_result)">
-              <font-awesome-icon :icon="getResultIcon(visit.visit_result)" />
-              {{ visit.visit_result?.replaceAll('_', ' ')?.replace(/\b\w/g, l => l.toUpperCase()) }}
-            </span>
-            <span v-else class="badge-empty">—</span>
-          </div>
-
-          <p class="visit-card-company">{{ visit.company_name }}</p>
-          <p class="visit-card-code">{{ visit.visit_code }}</p>
-
-          <div class="visit-card-info">
-            <div class="visit-card-row">
-              <font-awesome-icon icon="calendar" class="visit-card-icon" />
-              <div>
-                <p class="td-name" style="margin:0">{{ visitDataStore.formatDateTime(visit.visit_at) }}</p>
-                <p class="td-muted" style="margin:0">Scheduled Visit</p>
-              </div>
-            </div>
-
-            <div class="visit-card-row">
-              <div v-if="visit.check_in_at" class="checkin-badge">
-                <font-awesome-icon icon="right-to-bracket" />
-                {{ visitDataStore.formatDateTime(visit.check_in_at) }}
-              </div>
-              <span v-else class="badge-empty">Not Checked In Yet</span>
-            </div>
-
-            <div class="visit-card-row">
-              <div v-if="visit.check_out_at" class="checkout-badge">
-                <font-awesome-icon icon="right-from-bracket" />
-                {{ visitDataStore.formatDateTime(visit.check_out_at) }}
-              </div>
-              <span v-else class="badge-empty">Not Checked Out Yet</span>
-            </div>
-          </div>
-
-          <div class="visit-card-durations">
-            <div class="dur-item">
-              <span class="dur-label">To Check In</span>
-              <span class="dur-value">{{ visitDataStore.formatDuration(visit.time_from_visit_to_check_in) }}</span>
-            </div>
-            <div class="dur-item">
-              <span class="dur-label">To Check Out</span>
-              <span class="dur-value">{{ visitDataStore.formatDuration(visit.time_from_check_in_to_check_out) }}</span>
-            </div>
-            <div class="dur-item">
-              <span class="dur-label">Duration</span>
-              <span class="dur-value">{{ visitDataStore.formatDuration(visit.total_time_result) }}</span>
-            </div>
-          </div>
-
-          <div class="visit-card-footer">
-            <button class="act-btn act-info" title="Detail" @click="openDetail(visit.id)">
-              <font-awesome-icon icon="eye" /> Detail
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- PAGINATION -->
@@ -1358,13 +1268,13 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     <!-- ══════════════════════════════════════════
          CUSTOMERS LIST MODAL
          ══════════════════════════════════════════ -->
-    <!-- <AppModal
+    <AppModal
       :show="showCustomerForm"
       title="Data Customers Ready To Visit"
       icon="handshake"
       size="xl"
       @close="closeCustomerModal"
-     >
+    >
       <div class="modal-toolbar">
         <div class="showing-wrap">
           <span class="showing-label">Showing:</span>
@@ -1479,166 +1389,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       <template #footer>
         <button class="btn-cancel" @click="closeCustomerModal">Close</button>
       </template>
-    </AppModal> -->
-
-    <AppModal
-  :show="showCustomerForm"
-  title="Data Customers Ready To Visit"
-  icon="handshake"
-  size="xl"
-  @close="closeCustomerModal"
- >
-  <div class="modal-toolbar">
-    <div class="showing-wrap">
-      <span class="showing-label">Showing:</span>
-      <select
-        v-model="customersPagination.per_page"
-        @change="customersVisitStore.changePageSize()"
-        class="form-input" style="width:auto; padding:6px 10px"
-      >
-        <option :value="10">10</option>
-        <option :value="25">25</option>
-        <option :value="50">50</option>
-      </select>
-    </div>
-    <div class="search-wrap">
-      <input
-        v-model="searchCustomers"
-        @input="customersVisitStore.searchCustomersWithDelay(searchCustomers)"
-        placeholder="Search customer..."
-        class="search-input"
-      />
-      <button class="search-btn"><font-awesome-icon icon="magnifying-glass" /></button>
-    </div>
-  </div>
-
-  <div style="overflow-x:auto; margin-top:12px">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>No</th>
-          <th>Target</th>
-          <th>Company</th>
-          <th>Kontak</th>
-          <th>Address</th>
-          <!-- <th>Status</th> -->
-          <th style="text-align:center">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-if="loadingCustomers">
-          <td colspan="7" class="td-center">
-            <div class="spinner-wrap"><div class="spinner"></div><span>Loading customers...</span></div>
-          </td>
-        </tr>
-        <tr v-else-if="customersData.length === 0">
-          <td colspan="7" class="td-center">📭 Tidak ada customers yang siap dikunjungi</td>
-        </tr>
-        <tr
-          v-else
-          v-for="(item, index) in customersData"
-          :key="item.target_type === 'branch' ? `branch-${item.branch_id}` : item.id"
-          class="data-row"
-          :class="activeVisitCustomersId === item.id ? 'row-active-customer' : ''"
-        >
-          <td class="td-no">{{ index + 1 + customersPagination.per_page * (customersPagination.current_page - 1) }}.</td>
-
-          <!-- ═══ TARGET TYPE BADGE ═══ -->
-          <td>
-            <span
-              class="target-type-badge"
-              :class="item.target_type === 'branch' ? 'target-branch' : 'target-hq'"
-            >
-              <font-awesome-icon :icon="item.target_type === 'branch' ? 'code-branch' : 'building'" />
-              {{ item.target_type === 'branch' ? 'Branch' : 'Head Office' }}
-            </span>
-          </td>
-
-          <!-- ═══ COMPANY (+ nama branch & kota kalau target branch) ═══ -->
-          <td>
-            <p class="td-name">{{ item.company_name ?? '-' }}</p>
-            <p class="td-muted" style="font-family:monospace">{{ item.customer_code ?? '-' }}</p>
-            <p v-if="item.target_type === 'branch'" class="td-sub text-primary" style="margin:2px 0 0">
-              <font-awesome-icon icon="code-branch" />
-              {{ item.branch_name ?? '-' }}<span v-if="item.city"> — {{ item.city }}</span>
-            </p>
-          </td>
-
-          <!-- ═══ KONTAK (bisa banyak) ═══ -->
-          <td style="max-width:220px">
-            <div v-if="item.contacts?.length">
-              <div v-for="ct in item.contacts" :key="ct.id" class="contact-mini-row">
-                <span class="fw-semibold">{{ ct.name }}</span> <br></br>
-                <span v-if="ct.is_primary" class="contact-primary-tag">Kontak Utama</span>
-                <span v-if="ct.position" class="td-muted"> · {{ ct.position }}</span>
-                <div v-if="ct.phone" class="td-muted" style="font-size:0.76rem">{{ ct.phone }}</div>
-              </div>
-            </div>
-            <span v-else class="td-muted">{{ item.contact_name ?? '-' }}</span>
-          </td>
-
-          <!-- ═══ ADDRESS ═══ -->
-          <td style="max-width:180px">
-            <p class="td-muted" style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis" :title="item.address">
-              {{ item.address || '—' }}
-            </p>
-          </td>
-
-          <!-- <td><span class="badge-source">{{ item.customer_status ?? 'Active' }}</span></td> -->
-
-          <td class="td-actions">
-            <template v-if="activeVisitCustomersId !== item.id">
-              <button
-                v-if="canVisitNow(item)"
-                @click="visitNowCust(item)"
-                :disabled="loadingVisitNow || activeVisitCustomersId !== null"
-                class="act-visit-btn"
-                :class="activeVisitCustomersId !== null ? 'disabled' : 'slate'"
-              >
-                <font-awesome-icon icon="location-dot" /> Visit Now
-              </button>
-            </template>
-            <template v-else>
-              <span class="badge-active-ping emerald">
-                <span class="ping-dot emerald-dot"></span> ACTIVE
-              </span>
-              <button
-                v-if="activeCustomerPhase === 'visiting'"
-                @click="checkInCustomers(item)"
-                class="act-visit-btn emerald"
-              >
-                <font-awesome-icon icon="right-to-bracket" /> Check In
-              </button>
-              <button
-                v-if="activeCustomerPhase === 'checked_in'"
-                @click="openCustomerCheckOut(item)"
-                class="act-visit-btn rose"
-              >
-                <font-awesome-icon icon="right-from-bracket" /> Check Out
-              </button>
-            </template>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="modal-pagination">
-    <span class="td-muted" style="font-size:0.82rem">Total: {{ customersPagination.total }}</span>
-    <div class="pagination-nav">
-      <button class="btn-prev-next" :disabled="!customersPagination.prev_page_url" @click="customersVisitStore.fetchCustomersVisit(customersPagination.prev_page_url)">
-        <font-awesome-icon icon="circle-left" /> Prev
-      </button>
-      <button class="btn-prev-next" :disabled="!customersPagination.next_page_url" @click="customersVisitStore.fetchCustomersVisit(customersPagination.next_page_url)">
-        Next <font-awesome-icon icon="circle-right" />
-      </button>
-    </div>
-  </div>
-
-  <template #footer>
-    <button class="btn-cancel" @click="closeCustomerModal">Close</button>
-  </template>
-</AppModal>
+    </AppModal>
 
 
     <!-- ══════════════════════════════════════════
@@ -1978,6 +1729,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 
 /* Sistem Warna & Wrapper Global */
 .h-100 {
+  /* --border-main: #e2e8f0;
+  --bg-input: #f8fafc;
+  --text-primary: #334155; */
   --text-muted: #64748b;
   --primary-color: #6366f1;
 }
@@ -2006,44 +1760,32 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 /* ===== TOOLBAR TOP ===== */
 .toolbar-top {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: space-between;
   background: var(--bg-card);
   border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 12px;
   box-shadow: 0 1px 3px var(--shadow-color);
-}
-
-.toolbar-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
   flex-wrap: wrap;
-  width: 100%;
+  gap: 8px;
 }
-
+.toolbar-left { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn-toolbar {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 20px;
+  gap: 6px;
+  padding: 7px 14px;
   border: none;
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: 0.83rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
   white-space: nowrap;
-  flex: 0 1 auto;
 }
-
 .btn-purple { background: #6366f1; color: #fff; }
-.btn-purple:hover { background: #4f46e5; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
-.btn-purple:active { transform: translateY(0); }
-
-.btn-arrow-icon { font-size: 0.75rem; opacity: 0.8; }
+.btn-purple:hover { background: #4f46e5; }
 .btn-orange { background: #f59e0b; color: #fff; }
 .btn-orange:hover { background: #d97706; }
 .btn-arrow { font-size: 0.6rem; opacity: 0.7; }
@@ -2067,100 +1809,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .search-btn { padding: 7px 12px; background: #6366f1; color: #fff; border: none; cursor: pointer; }
 .search-btn:hover { background: #4f46e5; }
 .sort-wrap { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-
-/* ===== VIEW TOGGLE (Card/Table) ===== */
-.view-toggle {
-  display: flex;
-  gap: 4px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-main);
-  border-radius: 8px;
-  padding: 3px;
-}
-.view-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-.view-toggle-btn:hover { color: #6366f1; }
-.view-toggle-btn.active { background: #6366f1; color: #fff; }
-
-/* ===== CARD GRID ===== */
-.card-grid-wrap { background: transparent; }
-.visit-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
-}
-.visit-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-main);
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 1px 3px var(--shadow-color);
-  transition: box-shadow 0.18s ease, transform 0.18s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.visit-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
-
-.visit-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.visit-card-company {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--text-primary);
-  margin: 0;
-  text-transform: capitalize;
-}
-.visit-card-code {
-  font-family: monospace;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin: 0;
-}
-.visit-card-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-top: 1px solid var(--border-main);
-  border-bottom: 1px solid var(--border-main);
-  padding: 10px 0;
-}
-.visit-card-row { display: flex; align-items: center; gap: 8px; }
-.visit-card-icon { color: #3b82f6; width: 16px; }
-
-.visit-card-durations {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-.dur-item { display: flex; flex-direction: column; gap: 2px; text-align: center; }
-.dur-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }
-.dur-value { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); }
-
-.visit-card-footer { display: flex; justify-content: flex-end; }
-.visit-card-footer .act-btn {
-  width: auto;
-  padding: 6px 14px;
-  gap: 6px;
-  border-radius: 8px;
-}
 
 /* ===== DROPDOWN CORE ===== */
 .drop-wrap { position: relative; }
@@ -2223,7 +1871,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .td-actions { text-align: center; white-space: nowrap; }
 
 /* ACTION BUTTONS */
-.act-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; border: 1.5px solid; cursor: pointer; font-size: 0.8rem; transition: all 0.18s ease; margin: 0 2px; background: transparent; }
+.act-btn { width: 30px; height: 30px; border-radius: 6px; border: 1.5px solid; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; transition: all 0.18s ease; margin: 0 2px; background: transparent; }
 .act-edit         { color: #f59e0b; border-color: #f59e0b; }
 .act-edit:hover   { background: #f59e0b; color: #fff; }
 .act-delete       { color: #ef4444; border-color: #ef4444; }
@@ -2281,7 +1929,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   .btn-prev-next { flex: 1; max-width: 48%; padding: 10px 14px; }
   .page-badges { width: 100%; justify-content: center; flex-wrap: wrap; }
   .page-badge { flex: 1; text-align: center; font-size: 0.7rem; }
-  .visit-card-grid { grid-template-columns: 1fr; }
 }
 
 /* ── SPINNER & EMPTY ── */
@@ -2299,9 +1946,10 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .form-textarea { resize: none; min-height: 90px; line-height: 1.5; }
 
 /* MODAL FOOTER BUTTONS */
+/* Cari class .btn-cancel di bagian <style scoped> file tabel kamu, lalu ganti menjadi ini: */
 .btn-cancel {
   padding: 8px 18px;
-  background: var(--bg-main, #f1f5f9);
+  background: var(--bg-main, #f1f5f9); /* Menggunakan background dinamis, jika tidak ada fallback ke light mode */
   color: var(--text-muted);
   border: 1px solid var(--border-main);
   border-radius: 8px;
@@ -2310,10 +1958,14 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
+/* Berikan efek hover agar lebih interaktif */
 .btn-cancel:hover {
   background: var(--border-main);
   color: var(--text-primary);
 }
+.btn-save { display: inline-flex; align-items: center; gap: 7px; padding: 8px 18px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+.btn-save:hover { background: #4f46e5; }
 
 /* DETAIL MODAL CONTENT */
 .detail-list { display: flex; flex-direction: column; }
@@ -2325,16 +1977,16 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .detail-badge { font-size: 0.82rem; font-weight: 600; padding: 3px 12px; border-radius: 6px; background: rgba(99,102,241,0.1); color: #6366f1; border: 1px solid rgba(99,102,241,0.2); }
 .badge-active { font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: rgba(34,197,94,0.1); color: #16a34a; }
 
-/* ===== SEGMENTED PILL ===== */
+/* ===== NEW RESPONSIVE SEGMENTED PILL ===== */
 .segment-group {
-  display: flex;
+  display: flex; 
   align-items: center;
   border: 1px solid var(--border-main);
-  border-radius: 50px;
-  padding: 4px;
+  border-radius: 50px; 
+  padding: 4px; 
   background: var(--bg-input);
   width: 100%;
-  max-width: 500px;
+  max-width: 500px; 
   overflow-x: auto;
   white-space: nowrap;
   -webkit-overflow-scrolling: touch;
@@ -2342,70 +1994,200 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 }
 .segment-group::-webkit-scrollbar { display: none; }
 .segment-btn {
-  flex: 1;
+  flex: 1; 
   text-align: center;
   border: none;
   background: transparent;
-  padding: 10px 16px;
+  padding: 10px 16px; 
   color: var(--text-primary);
   font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
-  border-radius: 50px;
+  border-radius: 50px; 
   transition: all 0.2s ease;
-  white-space: nowrap;
+  white-space: nowrap; 
 }
 .segment-btn:hover:not(.active) { background: rgba(99, 102, 241, 0.08); color: #6366f1; }
 .segment-btn.active { background: #6366f1; color: #fff; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25); }
 
-
-/* ── TARGET TYPE BADGE ── */
-.target-type-badge {
+/* ===== NEW CUSTOM PILL FILE INPUT + PREVIEW ===== */
+.pill-input-container {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-main);
+  border-radius: 50px;
+  background: var(--bg-input);
+  padding: 4px;
+  width: 100%;
+  max-width: 500px;
+  box-sizing: border-box;
+}
+.hidden-input { display: none; }
+.pill-upload-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 0.74rem;
-  font-weight: 700;
+  gap: 8px;
+  background: var(--primary-color);
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+  flex-shrink: 0;
+}
+.pill-upload-btn:hover { background: #4f46e5; transform: translateY(-1px); }
+.pill-upload-btn:active { transform: translateY(0); }
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: #94a3b8;
+  padding: 0 16px;
+  overflow: hidden;
+  flex: 1;
+}
+.file-text-name {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
 }
-.target-hq     { background: #e0e7ff; color: #3730a3; }
-.target-branch { background: #fef3c7; color: #92400e; }
+.file-info.has-file { color: var(--text-primary); font-weight: 500; }
 
-/* ── KONTAK MINI (list dalam tabel) ── */
-.contact-mini-row {
-  padding: 4px 0;
-  border-bottom: 1px dashed var(--border-main);
-  font-size: 0.8rem;
+.mini-preview {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid var(--border-main);
+  background: #fff;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.contact-mini-row:last-child { border-bottom: none; }
-.contact-primary-tag {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 99px;
-  background: rgba(99,102,241,0.12);
-  color: #6366f1;
-  margin-left: 4px;
+.mini-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Perbaikan Potongan Kode CSS yang Terputus sebelumnya */
+.form-select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 1.25rem;
+  padding-right: 40px;
 }
 
 
-/* Tablet (≤ 768px) */
+.toolbar-top {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px var(--shadow-color);
+}
+
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* Desktop */
+.btn-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex: 0 1 auto;
+}
+
+.btn-purple { background: #6366f1; color: #fff; }
+.btn-purple:hover { background: #4f46e5; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+.btn-purple:active { transform: translateY(0); }
+
+.btn-arrow-icon { font-size: 0.75rem; opacity: 0.8; }
+
+/* Tablet (≤ 768px) — tombol melebar rata */
 @media (max-width: 768px) {
-  .toolbar-center { gap: 8px; }
-  .btn-toolbar { flex: 1 1 calc(33.33% - 8px); justify-content: center; padding: 10px 12px; font-size: 0.82rem; min-width: 100px; }
+  .toolbar-center {
+    gap: 8px;
+  }
+
+  .btn-toolbar {
+    flex: 1 1 calc(33.33% - 8px);
+    justify-content: center;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+    min-width: 100px;
+  }
 }
 
-/* Mobile (≤ 480px) */
+/* Mobile (≤ 480px) — tombol full width, teks tetap tampil */
+/* Mobile (≤ 480px) — full width, teks tetap tampil */
 @media (max-width: 480px) {
-  .toolbar-center { flex-direction: column; gap: 8px; }
-  .btn-toolbar { flex: 1 1 100%; width: 100%; padding: 11px 16px; font-size: 0.85rem; justify-content: center; }
+  .toolbar-center {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-toolbar {
+    flex: 1 1 100%;
+    width: 100%;
+    padding: 11px 16px;
+    font-size: 0.85rem;
+    justify-content: center;
+  }
+
+  .btn-label {
+    display: inline; /* teks selalu tampil */
+  }
+
+  .btn-arrow-icon {
+    display: inline; /* icon arrow tetap tampil */
+  }
 }
 
-/* Layar sangat kecil (≤ 360px) */
+/* Layar sangat kecil (≤ 360px) — TIDAK sembunyikan teks */
 @media (max-width: 360px) {
-  .btn-toolbar { flex: 1 1 100%; width: 100%; padding: 10px 14px; font-size: 0.8rem; gap: 6px; justify-content: center; }
+  .btn-toolbar {
+    flex: 1 1 100%;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .btn-label {
+    display: inline; /* tetap tampil */
+  }
+
+  .btn-arrow-icon {
+    display: inline; /* tetap tampil */
+  }
 }
 
 .result-emerald { background:#d1fae5; color:#065f46; }

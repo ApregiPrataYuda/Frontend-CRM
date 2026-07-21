@@ -33,36 +33,21 @@ export const visitsSalesServices = {
   },
 
   // ── START VISIT — LEAD ──
+  // BUG LAMA: nama fungsi duplikat dengan visitStartCustomers
   async visitStart(leadId) {
     const response = await api.post(`/leads/${leadId}/start`)
     return response
   },
 
   // ── START VISIT — CUSTOMER ──
-  // branch_id: null = visit ke head office, terisi = visit ke branch tertentu
-  // async visitStartCustomers(customerId, payload = {}) {
-  //   const response = await api.post(`/customers/${customerId}/start`, payload)
-  //   return response
-  // },
-
-//   async visitStartCustomers(customerId, branchId = null) {
-//   return api.post(`/customers/${customerId}/start`, {
-//     branch_id: branchId,
-//   })
-// },
-
-
-async visitStartCustomers(customerId, branchId = null) {
-  console.log('SERVICE kirim:', customerId, branchId)
-
-  return api.post(`/customers/${customerId}/start`, {
-    branch_id: branchId,
-  })
-},
-
-
+  // BUG LAMA: pakai single quote di template literal → tidak interpolasi
+  async visitStartCustomers(customerId) {
+    const response = await api.post(`/customers/${customerId}/start`)
+    return response
+  },
 
   // ── CHECK IN — LEAD ──
+  // BUG LAMA: koma setelah payload hilang, slash awal URL hilang
   async checkIn(visitId, payload) {
     const response = await api.post(
       `/visits/${visitId}/check-in`,
@@ -77,6 +62,7 @@ async visitStartCustomers(customerId, branchId = null) {
   },
 
   // ── CHECK IN — CUSTOMER ──
+  // BUG LAMA: sama seperti checkIn
   async checkInCustomers(visitId, payload) {
     const response = await api.post(
       `/visits/customers/${visitId}/check-in`,
@@ -91,6 +77,7 @@ async visitStartCustomers(customerId, branchId = null) {
   },
 
   // ── CHECK OUT — LEAD ──
+  // BUG LAMA: slash awal URL hilang
   async checkOut(visitId, payload) {
     const response = await api.post(
       `/visits/${visitId}/check-out`,
