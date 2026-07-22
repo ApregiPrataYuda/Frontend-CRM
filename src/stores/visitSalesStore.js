@@ -137,24 +137,6 @@ export const useVisitDataStore = defineStore('visitData', () => {
   // START VISIT — CUSTOMER
   // branchId: null = visit ke head office, terisi = visit ke branch tertentu
   // ════════════════════════════════════════════
-
-  // const startVisitCustomers = async (customersId, branchId = null) => {
-  //   loadingVisitNow.value = true
-  //   visitNowError.value   = null
-  //   try {
-  //     const res = await visitsSalesServices.visitStartCustomers(customersId, { branch_id: branchId })
-  //     activeVisitCustomersId.value = customersId
-  //     activeVisitCustId.value      = res.data?.data?.id ?? res.data?.id ?? null
-  //     return { success: true, message: 'Kunjungan customer berhasil dimulai', data: res.data ?? res }
-  //   } catch (error) {
-  //     const message = error?.response?.data?.message ?? 'Gagal memulai kunjungan customer. Coba lagi.'
-  //     visitNowError.value = message
-  //     return { success: false, message }
-  //   } finally {
-  //     loadingVisitNow.value = false
-  //   }
-  // }
-
   const startVisitCustomers = async (customerId, branchId = null) => {
   loadingVisitNow.value = true
   visitNowError.value = null
@@ -258,29 +240,54 @@ export const useVisitDataStore = defineStore('visitData', () => {
 
 
   // ════════════════════════════════════════════
-  // SUBMIT CHECK OUT — CUSTOMER
+  // SUBMIT CHECK OUT — CUSTOMER (code lama)
   // ════════════════════════════════════════════
 
+  // const submitCheckOutCustomers = async (visitId, payload) => {
+  //   loadingCheckOutCustomers.value = true
+  //   checkOutErrorCustomers.value   = null
+  //   try {
+  //     const res = await visitsSalesServices.checkOutCustomers(visitId, payload)
+  //     activeVisitCustId.value      = null
+  //     activeVisitCustomersId.value = null
+  //     return {
+  //       success : true,
+  //       message : res.data?.message ?? 'Check out customer berhasil disimpan',
+  //       data    : res.data?.data ?? res.data,
+  //     }
+  //   } catch (error) {
+  //     const message = error?.response?.data?.message ?? 'Gagal check out customer'
+  //     checkOutErrorCustomers.value = message
+  //     return { success: false, message }
+  //   } finally {
+  //     loadingCheckOutCustomers.value = false
+  //   }
+  // }
+
   const submitCheckOutCustomers = async (visitId, payload) => {
-    loadingCheckOutCustomers.value = true
-    checkOutErrorCustomers.value   = null
-    try {
-      const res = await visitsSalesServices.checkOutCustomers(visitId, payload)
-      activeVisitCustId.value      = null
-      activeVisitCustomersId.value = null
-      return {
-        success : true,
-        message : res.data?.message ?? 'Check out customer berhasil disimpan',
-        data    : res.data?.data ?? res.data,
-      }
-    } catch (error) {
-      const message = error?.response?.data?.message ?? 'Gagal check out customer'
-      checkOutErrorCustomers.value = message
-      return { success: false, message }
-    } finally {
-      loadingCheckOutCustomers.value = false
+  loadingCheckOutCustomers.value = true
+  checkOutErrorCustomers.value   = null
+
+  try {
+    const res = await visitsSalesServices.checkOutCustomers(visitId, payload)
+
+    activeVisitCustId.value      = null
+    activeVisitCustomersId.value = null
+
+    return {
+      success : true,
+      message : res.data?.message ?? 'Check out customer berhasil disimpan',
+      data    : res.data?.data ?? res.data,
     }
+  } catch (error) {
+    const message = error?.response?.data?.message ?? 'Gagal check out customer'
+    checkOutErrorCustomers.value = message
+
+    return { success: false, message }
+  } finally {
+    loadingCheckOutCustomers.value = false
   }
+}
 
 
   // ════════════════════════════════════════════

@@ -262,88 +262,6 @@ function closeDetail() {
 }
 
 // ════════════════════════════════════════════
-// FILE TYPE HELPER (untuk preview check_out_file)
-// ════════════════════════════════════════════
-const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-
-function getFileExtension(filename = '') {
-  return filename.split('.').pop()?.toLowerCase() ?? ''
-}
-
-function isImageFile(filename = '') {
-  return imageExtensions.includes(getFileExtension(filename))
-}
-
-function getFileIconMeta(filename = '') {
-  const ext = getFileExtension(filename)
-  const map = {
-    pdf : { icon: 'file-pdf',   color: '#ef4444', label: 'PDF Document'   },
-    doc : { icon: 'file-word',  color: '#2563eb', label: 'Word Document'  },
-    docx: { icon: 'file-word',  color: '#2563eb', label: 'Word Document'  },
-    xls : { icon: 'file-excel', color: '#16a34a', label: 'Excel Document' },
-    xlsx: { icon: 'file-excel', color: '#16a34a', label: 'Excel Document' },
-  }
-  return map[ext] ?? { icon: 'file', color: '#64748b', label: 'File' }
-}
-
-function getFileNameOnly(path = '') {
-  return path.split('/').pop() ?? path
-}
-
-// ════════════════════════════════════════════
-// IMAGE ZOOM / LIGHTBOX
-// ════════════════════════════════════════════
-const showImageZoom = ref(false)
-const zoomImageSrc  = ref('')
-const zoomLevel     = ref(1)
-const zoomPos       = ref({ x: 0, y: 0 })
-const isDragging    = ref(false)
-const dragStart     = ref({ x: 0, y: 0 })
-
-function openImageZoom(src) {
-  zoomImageSrc.value   = src
-  zoomLevel.value      = 1
-  zoomPos.value        = { x: 0, y: 0 }
-  showImageZoom.value  = true
-}
-
-function closeImageZoom() {
-  showImageZoom.value = false
-  zoomImageSrc.value  = ''
-  zoomLevel.value     = 1
-  zoomPos.value       = { x: 0, y: 0 }
-}
-
-function zoomIn()  { zoomLevel.value = Math.min(zoomLevel.value + 0.5, 5) }
-function zoomOut() {
-  zoomLevel.value = Math.max(zoomLevel.value - 0.5, 1)
-  if (zoomLevel.value === 1) zoomPos.value = { x: 0, y: 0 }
-}
-function resetZoom() { zoomLevel.value = 1; zoomPos.value = { x: 0, y: 0 } }
-
-function onWheelZoom(e) {
-  e.preventDefault()
-  if (e.deltaY < 0) zoomIn()
-  else zoomOut()
-}
-
-function startDrag(e) {
-  if (zoomLevel.value === 1) return
-  isDragging.value = true
-  const point = e.touches ? e.touches[0] : e
-  dragStart.value = { x: point.clientX - zoomPos.value.x, y: point.clientY - zoomPos.value.y }
-}
-function onDrag(e) {
-  if (!isDragging.value) return
-  const point = e.touches ? e.touches[0] : e
-  zoomPos.value = {
-    x: point.clientX - dragStart.value.x,
-    y: point.clientY - dragStart.value.y,
-  }
-}
-function stopDrag() { isDragging.value = false }
-
-// ════════════════════════════════════════════
 // LEADS LIST MODAL
 // ════════════════════════════════════════════
 const showLeadForm = ref(false)
@@ -483,13 +401,19 @@ function closeVisitCustNowModal() {
   showVisitCustNowModal.value = false; selectedCust.value = null
 }
 
-
+// ── branchId: null = visit ke head office, terisi = visit ke branch tertentu ──
 async function confirmVisitCustNow() {
   if (!selectedCust.value) return
 
   const branchId = selectedCust.value.target_type === 'branch'
     ? Number(selectedCust.value.branch_id)
     : null
+
+  console.log('Start visit payload:', {
+    customer_id: selectedCust.value.id,
+    target_type: selectedCust.value.target_type,
+    branch_id: branchId,
+  })
 
   const { success, message } = await visitDataStore.startVisitCustomers(
     selectedCust.value.id,
@@ -500,33 +424,22 @@ async function confirmVisitCustNow() {
     toast.success(message)
     activeCustomerPhase.value = 'visiting'
     closeVisitCustNowModal()
-    // ── refresh keduanya biar list "Ready to Visit" langsung sinkron ──
-    await Promise.all([
-      visitDataStore.fetchVisits(visitDataStore.buildUrl()),
-      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()),
-    ])
+    visitDataStore.fetchVisits(visitDataStore.buildUrl())
   } else {
     toast.error(message)
   }
 }
 
-
-// ── row dianggap aktif kalau backend sudah kasih active_visit_id untuk baris ini ──
-const isRowActive = (item) => !!item.active_visit_id
 // ════════════════════════════════════════════
 // CUSTOMER — CHECK IN
 // ════════════════════════════════════════════
 const showCheckInModalCustomers = ref(false)
 
 async function checkInCustomers(item) {
-  selectedVisit.value = item
-  capturedPhoto.value = null
-  visitDataStore.activeVisitCustId      = item.active_visit_id
-  visitDataStore.activeVisitCustomersId = item.id
+  selectedVisit.value = item; capturedPhoto.value = null
   showCheckInModalCustomers.value = true
   await nextTick(); await startCamera(); await getCurrentLocation()
 }
-
 function closeCheckInModalCustomers() {
   showCheckInModalCustomers.value = false; capturedPhoto.value = null; stopCamera()
 }
@@ -548,11 +461,10 @@ async function submitCheckInCustomers() {
       toast.success(result.message)
       closeCheckInModalCustomers()
       visitDataStore.fetchVisits(visitDataStore.buildUrl())
-      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // ← tambahkan ini
     } else { toast.error(result.message) }
-      } catch (err) { console.error(err); toast.error('Failed check in customer')
-      } finally { loadingCheckIn.value = false }
-    }
+  } catch (err) { console.error(err); toast.error('Failed check in customer')
+  } finally { loadingCheckIn.value = false }
+}
 
 // ════════════════════════════════════════════
 // CUSTOMER — CHECK OUT
@@ -560,7 +472,6 @@ async function submitCheckInCustomers() {
 const showCheckOutCustomerModal = ref(false)
 const selectedCustomerCheckOut  = ref(null)
 const loadingCustomerCheckOut   = ref(false)
-const selectedCheckOutFile      = ref(null)
 
 const customerResponses = [
   { value: 'maintained',        label: 'Relationship Maintained', desc: 'Routine visit / engagement',       icon: 'fa-solid fa-handshake'           },
@@ -574,7 +485,7 @@ const customerResponses = [
 const followUpTypes = ['CALL', 'VISIT', 'WHATSAPP', 'EMAIL', 'MEETING']
 
 const customerCheckOutForm = ref({
-  no_reference: '', notes: '', customer_response: '',
+  notes: '', customer_response: '',
   has_complaint: false, complaint_detail: '',
   has_potential_order: false, potential_order_detail: '',
   follow_up_at: '', follow_up_notes: '', follow_up_type: '',
@@ -588,15 +499,11 @@ const showCustomerComplaintSection      = computed(() => ['complaint_handled', '
 const showCustomerPotentialOrderSection = computed(() => ['upsell_identified', 'improved'].includes(customerCheckOutForm.value.customer_response))
 const isCustomerCheckOutValid           = computed(() => {
   const f = customerCheckOutForm.value
-  if (!f.no_reference.trim() || !f.notes.trim() || !f.customer_response || !f.follow_up_at || !f.follow_up_type) return false
+  if (!f.notes.trim() || !f.customer_response || !f.follow_up_at || !f.follow_up_type) return false
   if (f.has_complaint       && !f.complaint_detail.trim())       return false
   if (f.has_potential_order && !f.potential_order_detail.trim()) return false
   return true
 })
-
-function onCheckOutFileChange(event) {
-  selectedCheckOutFile.value = event.target.files?.[0] ?? null
-}
 
 watch(() => customerCheckOutForm.value.customer_response, (val) => {
   customerCheckOutForm.value.has_complaint       = ['complaint_handled', 'at_risk'].includes(val)
@@ -605,26 +512,19 @@ watch(() => customerCheckOutForm.value.customer_response, (val) => {
   if (!customerCheckOutForm.value.has_potential_order) customerCheckOutForm.value.potential_order_detail = ''
 })
 
-
 function openCustomerCheckOut(item) {
   selectedCustomerCheckOut.value = item
-  selectedCheckOutFile.value = null
-  visitDataStore.activeVisitCustId      = item.active_visit_id
-  visitDataStore.activeVisitCustomersId = item.id
   customerCheckOutForm.value = {
-    no_reference: '', notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
+    notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
     has_potential_order: false, potential_order_detail: '',
     follow_up_at: '', follow_up_notes: '', follow_up_type: '',
   }
   showCheckOutCustomerModal.value = true
 }
-
-
 function closeCustomerCheckOutModal() {
   showCheckOutCustomerModal.value = false; selectedCustomerCheckOut.value = null
-  selectedCheckOutFile.value = null
   customerCheckOutForm.value = {
-    no_reference: '', notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
+    notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
     has_potential_order: false, potential_order_detail: '',
     follow_up_at: '', follow_up_notes: '', follow_up_type: '',
   }
@@ -635,34 +535,21 @@ async function submitCustomerCheckOut() {
   const f = customerCheckOutForm.value
   loadingCustomerCheckOut.value = true
   try {
-    const formData = new FormData()
-    formData.append('no_reference', f.no_reference)
-    formData.append('notes', f.notes)
-    formData.append('customer_response', f.customer_response)
-    formData.append('has_complaint', f.has_complaint ? '1' : '0')
-    formData.append('complaint_detail', f.complaint_detail || '')
-    formData.append('has_potential_order', f.has_potential_order ? '1' : '0')
-    formData.append('potential_order_detail', f.potential_order_detail || '')
-    formData.append('follow_up_at', f.follow_up_at)
-    formData.append('follow_up_notes', f.follow_up_notes || '')
-    formData.append('follow_up_type', f.follow_up_type)
-
-    if (selectedCheckOutFile.value) {
-      formData.append('check_out_file', selectedCheckOutFile.value)
-    }
-
-    const result = await visitDataStore.submitCheckOutCustomers(visitId, formData)
-    
+    const result = await visitDataStore.submitCheckOutCustomers(visitId, {
+      notes: f.notes, customer_response: f.customer_response,
+      has_complaint: f.has_complaint, complaint_detail: f.complaint_detail,
+      has_potential_order: f.has_potential_order, potential_order_detail: f.potential_order_detail,
+      follow_up_at: f.follow_up_at, follow_up_notes: f.follow_up_notes, follow_up_type: f.follow_up_type,
+    })
     if (result.success) {
       activeCustomerPhase.value = null
       toast.success(result.message || 'Check out customer berhasil')
       closeCustomerCheckOutModal()
       visitDataStore.fetchVisits(visitDataStore.buildUrl())
-      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // ← tambahkan ini
     } else { toast.error(result.message || 'Gagal check out customer') }
-      } catch (err) { console.error(err); toast.error('Terjadi kesalahan saat check out customer')
-      } finally { loadingCustomerCheckOut.value = false }
-    }
+  } catch (err) { console.error(err); toast.error('Terjadi kesalahan saat check out customer')
+  } finally { loadingCustomerCheckOut.value = false }
+}
 
 
 function getResultClass(result) {
@@ -691,7 +578,7 @@ function getResultIcon(result) {
     failed               : 'circle-xmark',
     convert_to_customer  : 'rocket',
     maintained           : 'handshake',
-    improved              : 'arrow-trend-up',
+    improved             : 'arrow-trend-up',
     upsell_identified    : 'sack-dollar',
     renewal_discussed    : 'file-signature',
     complaint_handled    : 'triangle-exclamation',
@@ -854,7 +741,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <th>Type</th>
             <th>Result Visit</th>
             <th>Visit Code</th>
-            <th>No Reference</th>
             <th>Company</th>
             <th>Visit Time</th>
             <th>Check In</th>
@@ -914,7 +800,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             </td>
 
             <td class="td-name">{{ visit.visit_code }}</td>
-            <td class="td-name">{{ visit.no_reference }}</td>
 
             <!-- COMPANY + BRANCH INFO -->
             <td class="td-name" style="text-transform:capitalize">
@@ -1011,7 +896,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             {{ visit.branch_name }}<span v-if="visit.branch_city"> — {{ visit.branch_city }}</span>
           </p>
           <p class="visit-card-code">{{ visit.visit_code }}</p>
-          <p class="visit-card-code"> No Reference: {{ visit.no_reference }}</p>
 
           <div class="visit-card-info">
             <div class="visit-card-row">
@@ -1108,10 +992,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <span class="detail-value mono">{{ visitsDetail.visit_code }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">No Reference</span>
-            <span class="detail-value mono">{{ visitsDetail.no_reference }}</span>
-          </div>
-          <div class="detail-row">
             <span class="detail-label">Company</span>
             <span class="detail-badge">{{ visitsDetail.company_name }}</span>
           </div>
@@ -1169,47 +1049,10 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <span class="detail-label">Notes</span>
             <p style="font-size:0.85rem; color:var(--text-primary); margin:0">{{ visitsDetail.notes || '-' }}</p>
           </div>
-
-          <!-- ═══ CHECK OUT FILE: image → zoomable, non-image → file preview card ═══ -->
-          <div v-if="visitsDetail.check_out_file" style="margin-top:8px">
-            <span class="detail-label" style="display:block; margin-bottom:8px">Photo / File Check Out</span>
-
-            <img
-              v-if="isImageFile(visitsDetail.check_out_file)"
-              :src="photoBase + visitsDetail.check_out_file"
-              style="width:100%; border-radius:10px; object-fit:contain; max-height:280px; cursor: zoom-in;"
-              @click="openImageZoom(photoBase + visitsDetail.check_out_file)"
-            />
-
-            <a
-              v-else
-              :href="photoBase + visitsDetail.check_out_file"
-              target="_blank"
-              class="file-preview-card"
-            >
-              <font-awesome-icon
-                :icon="getFileIconMeta(visitsDetail.check_out_file).icon"
-                :style="{ color: getFileIconMeta(visitsDetail.check_out_file).color }"
-                style="font-size: 1.8rem;"
-              />
-              <div class="file-preview-info">
-                <p class="file-preview-name">{{ getFileNameOnly(visitsDetail.check_out_file) }}</p>
-                <p class="file-preview-type">{{ getFileIconMeta(visitsDetail.check_out_file).label }} · Klik untuk membuka</p>
-              </div>
-              <font-awesome-icon icon="up-right-from-square" class="file-preview-open-icon" />
-            </a>
-          </div>
-
-          <!-- ═══ CHECK IN PHOTO: always image, zoomable ═══ -->
           <div v-if="visitsDetail.photo" style="margin-top:8px">
-            <span class="detail-label" style="display:block; margin-bottom:8px">Photo Check In</span>
-            <img
-              :src="photoBase + visitsDetail.photo"
-              style="width:100%; border-radius:10px; object-fit:contain; max-height:280px; cursor: zoom-in;"
-              @click="openImageZoom(photoBase + visitsDetail.photo)"
-            />
+            <span class="detail-label" style="display:block; margin-bottom:8px">Photo</span>
+            <img :src="photoBase + visitsDetail.photo" style="width:100%; border-radius:10px; object-fit:contain; max-height:280px;" />
           </div>
-
           <div v-if="visitsDetail.latitude" style="margin-top:8px">
             
             <a :href="`https://www.google.com/maps?q=${visitsDetail.latitude},${visitsDetail.longitude}`"
@@ -1663,37 +1506,37 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               </td>
 
               <td class="td-actions">
-              <template v-if="!isRowActive(item)">
-                <button
-                  v-if="canVisitNow(item)"
-                  @click="visitNowCust(item)"
-                  :disabled="loadingVisitNow || activeVisitCustomersId !== null"
-                  class="act-visit-btn"
-                  :class="activeVisitCustomersId !== null ? 'disabled' : 'slate'"
-                >
-                  <font-awesome-icon icon="location-dot" /> Visit Now
-                </button>
-              </template>
-              <template v-else>
-                <span class="badge-active-ping emerald">
-                  <span class="ping-dot emerald-dot"></span> ACTIVE
-                </span>
-                <button
-                  v-if="item.visit_status === 'ONGOING'"
-                  @click="checkInCustomers(item)"
-                  class="act-visit-btn emerald"
-                >
-                  <font-awesome-icon icon="right-to-bracket" /> Check In
-                </button>
-                <button
-                  v-if="item.visit_status === 'CHECKED_IN'"
-                  @click="openCustomerCheckOut(item)"
-                  class="act-visit-btn rose"
-                >
-                  <font-awesome-icon icon="right-from-bracket" /> Check Out
-                </button>
-              </template>
-            </td>
+                <template v-if="activeVisitCustomersId !== item.id">
+                  <button
+                    v-if="canVisitNow(item)"
+                    @click="visitNowCust(item)"
+                    :disabled="loadingVisitNow || activeVisitCustomersId !== null"
+                    class="act-visit-btn"
+                    :class="activeVisitCustomersId !== null ? 'disabled' : 'slate'"
+                  >
+                    <font-awesome-icon icon="location-dot" /> Visit Now
+                  </button>
+                </template>
+                <template v-else>
+                  <span class="badge-active-ping emerald">
+                    <span class="ping-dot emerald-dot"></span> ACTIVE
+                  </span>
+                  <button
+                    v-if="activeCustomerPhase === 'visiting'"
+                    @click="checkInCustomers(item)"
+                    class="act-visit-btn emerald"
+                  >
+                    <font-awesome-icon icon="right-to-bracket" /> Check In
+                  </button>
+                  <button
+                    v-if="activeCustomerPhase === 'checked_in'"
+                    @click="openCustomerCheckOut(item)"
+                    class="act-visit-btn rose"
+                  >
+                    <font-awesome-icon icon="right-from-bracket" /> Check Out
+                  </button>
+                </template>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -1865,35 +1708,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           <p class="td-muted">{{ selectedCustomerCheckOut.contact_name }}</p>
         </div>
 
-        <!-- No. Reference -->
-        <div class="form-group">
-          <label>No. Reference <span style="color:#ef4444">*</span></label>
-          <input
-            v-model.trim="customerCheckOutForm.no_reference"
-            type="text"
-            maxlength="100"
-            placeholder="Masukkan nomor referensi..."
-            class="form-input"
-          />
-        </div>
-
-        <!-- Upload file atau foto Check Out -->
-        <div class="form-group">
-          <label>Upload File / Foto Check Out</label>
-          <input
-            type="file"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp"
-            class="form-input"
-            @change="onCheckOutFileChange"
-          />
-          <small v-if="selectedCheckOutFile" class="td-muted">
-            File dipilih: {{ selectedCheckOutFile.name }}
-          </small>
-          <small v-else class="td-muted">
-            Dokumen atau foto: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, WEBP. Maksimal 10 MB.
-          </small>
-        </div>
-
         <!-- Notes -->
         <div class="form-group">
           <label>Notes on Visit Result <span style="color:#ef4444">*</span></label>
@@ -1979,52 +1793,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
         </button>
       </template>
     </AppModal>
-
-    <!-- ══════════════════════════════════════════
-         IMAGE ZOOM LIGHTBOX
-         ══════════════════════════════════════════ -->
-    <Teleport to="body">
-      <div v-if="showImageZoom" class="lightbox-overlay" @click.self="closeImageZoom">
-        <div class="lightbox-toolbar">
-          <button class="lightbox-btn" @click="zoomOut" title="Zoom Out">
-            <font-awesome-icon icon="magnifying-glass-minus" />
-          </button>
-          <span class="lightbox-zoom-label">{{ Math.round(zoomLevel * 100) }}%</span>
-          <button class="lightbox-btn" @click="zoomIn" title="Zoom In">
-            <font-awesome-icon icon="magnifying-glass-plus" />
-          </button>
-          <button class="lightbox-btn" @click="resetZoom" title="Reset">
-            <font-awesome-icon icon="arrows-rotate" />
-          </button>
-          <button class="lightbox-btn lightbox-close" @click="closeImageZoom" title="Close">
-            <font-awesome-icon icon="xmark" />
-          </button>
-        </div>
-
-        <div
-          class="lightbox-canvas"
-          @wheel="onWheelZoom"
-          @mousedown="startDrag"
-          @mousemove="onDrag"
-          @mouseup="stopDrag"
-          @mouseleave="stopDrag"
-          @touchstart="startDrag"
-          @touchmove="onDrag"
-          @touchend="stopDrag"
-        >
-          <img
-            :src="zoomImageSrc"
-            class="lightbox-img"
-            :style="{
-              transform: `translate(${zoomPos.x}px, ${zoomPos.y}px) scale(${zoomLevel})`,
-              cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
-            }"
-            @dblclick="zoomLevel === 1 ? zoomIn() : resetZoom()"
-            draggable="false"
-          />
-        </div>
-      </div>
-    </Teleport>
 
     <!-- HIDDEN CANVAS -->
     <canvas ref="canvasRef" style="display:none"></canvas>
@@ -2575,109 +2343,4 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .result-amber   { background:#fef3c7; color:#92400e; }
 .result-orange  { background:#ffedd5; color:#9a3412; }
 .result-slate   { background:#f1f5f9; color:#475569; }
-
-/* ── FILE PREVIEW CARD (non-image check_out_file) ── */
-.file-preview-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--border-main);
-  border-radius: 10px;
-  background: var(--bg-input);
-  text-decoration: none;
-  transition: all 0.18s ease;
-}
-.file-preview-card:hover {
-  border-color: #6366f1;
-  background: rgba(99,102,241,0.06);
-}
-.file-preview-info { flex: 1; overflow: hidden; }
-.file-preview-name {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.file-preview-type {
-  margin: 2px 0 0;
-  font-size: 0.74rem;
-  color: var(--text-muted);
-}
-.file-preview-open-icon {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-/* ── LIGHTBOX / IMAGE ZOOM ── */
-.lightbox-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.9);
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.lightbox-toolbar {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
-  border-radius: 10px;
-  padding: 6px 10px;
-  z-index: 10000;
-}
-
-.lightbox-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: none;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: background 0.18s ease;
-}
-.lightbox-btn:hover { background: rgba(255, 255, 255, 0.3); }
-.lightbox-close:hover { background: #ef4444; }
-
-.lightbox-zoom-label {
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 700;
-  min-width: 46px;
-  text-align: center;
-}
-
-.lightbox-canvas {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  touch-action: none;
-}
-
-.lightbox-img {
-  max-width: 90vw;
-  max-height: 90vh;
-  object-fit: contain;
-  transition: transform 0.05s ease-out;
-  user-select: none;
-}
 </style>

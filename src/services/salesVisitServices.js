@@ -39,19 +39,6 @@ export const visitsSalesServices = {
   },
 
   // ── START VISIT — CUSTOMER ──
-  // branch_id: null = visit ke head office, terisi = visit ke branch tertentu
-  // async visitStartCustomers(customerId, payload = {}) {
-  //   const response = await api.post(`/customers/${customerId}/start`, payload)
-  //   return response
-  // },
-
-//   async visitStartCustomers(customerId, branchId = null) {
-//   return api.post(`/customers/${customerId}/start`, {
-//     branch_id: branchId,
-//   })
-// },
-
-
 async visitStartCustomers(customerId, branchId = null) {
   console.log('SERVICE kirim:', customerId, branchId)
 
@@ -100,11 +87,25 @@ async visitStartCustomers(customerId, branchId = null) {
   },
 
   // ── CHECK OUT — CUSTOMER ──
+  // async checkOutCustomers(visitId, payload) {
+  //   const response = await api.post(
+  //     `/visits/customers/${visitId}/check-out`,
+  //     payload
+  //   )
+  //   return response
+  // },
+
   async checkOutCustomers(visitId, payload) {
-    const response = await api.post(
-      `/visits/customers/${visitId}/check-out`,
-      payload
-    )
-    return response
-  },
+  const response = await api.post(
+    `/visits/customers/${visitId}/check-out`,
+    payload,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  )
+
+  return response
+},
 }

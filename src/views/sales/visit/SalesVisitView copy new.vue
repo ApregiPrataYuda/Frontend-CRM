@@ -9,7 +9,7 @@ import AppModal        from '@/components/AppModal.vue'
 import { useVisitDataStore }      from '@/stores/VisitSalesStore'
 import { useLeadsVisitStore }     from '@/stores/leadsVisitStore'
 import { useCustomersVisitStore } from '@/stores/customersVisitStore'
-import { usePermissionStore } from '@/stores/permissionStore'
+import { usePermissionStore } from '@/stores/PermissionStore'
 
 const router = useRouter()
 const route  = useRoute()
@@ -51,6 +51,9 @@ const {
 const showPerPageMenu = ref(false)
 const showSortByMenu  = ref(false)
 const showSortDirMenu = ref(false)
+
+// ── View mode (card / table) ──
+const viewMode = ref('card') // default tampilan: card
 
 const sortByOptions = [
   { label: 'Created Date', value: 'created_at'   },
@@ -397,27 +400,51 @@ function closeVisitCustNowModal() {
   if (loadingVisitNow.value) return
   showVisitCustNowModal.value = false; selectedCust.value = null
 }
+
+
 async function confirmVisitCustNow() {
   if (!selectedCust.value) return
-  const { success, message } = await visitDataStore.startVisitCustomers(selectedCust.value.id)
+
+  const branchId = selectedCust.value.target_type === 'branch'
+    ? Number(selectedCust.value.branch_id)
+    : null
+
+  const { success, message } = await visitDataStore.startVisitCustomers(
+    selectedCust.value.id,
+    branchId
+  )
+
   if (success) {
     toast.success(message)
     activeCustomerPhase.value = 'visiting'
     closeVisitCustNowModal()
-    visitDataStore.fetchVisits(visitDataStore.buildUrl())
-  } else { toast.error(message) }
+    // ── refresh keduanya biar list "Ready to Visit" langsung sinkron ──
+    await Promise.all([
+      visitDataStore.fetchVisits(visitDataStore.buildUrl()),
+      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()),
+    ])
+  } else {
+    toast.error(message)
+  }
 }
 
+
+// ── row dianggap aktif kalau backend sudah kasih active_visit_id untuk baris ini ──
+const isRowActive = (item) => !!item.active_visit_id
 // ════════════════════════════════════════════
 // CUSTOMER — CHECK IN
 // ════════════════════════════════════════════
 const showCheckInModalCustomers = ref(false)
 
 async function checkInCustomers(item) {
-  selectedVisit.value = item; capturedPhoto.value = null
+  selectedVisit.value = item
+  capturedPhoto.value = null
+  visitDataStore.activeVisitCustId      = item.active_visit_id
+  visitDataStore.activeVisitCustomersId = item.id
   showCheckInModalCustomers.value = true
   await nextTick(); await startCamera(); await getCurrentLocation()
 }
+
 function closeCheckInModalCustomers() {
   showCheckInModalCustomers.value = false; capturedPhoto.value = null; stopCamera()
 }
@@ -439,10 +466,11 @@ async function submitCheckInCustomers() {
       toast.success(result.message)
       closeCheckInModalCustomers()
       visitDataStore.fetchVisits(visitDataStore.buildUrl())
+      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // ← tambahkan ini
     } else { toast.error(result.message) }
-  } catch (err) { console.error(err); toast.error('Failed check in customer')
-  } finally { loadingCheckIn.value = false }
-}
+      } catch (err) { console.error(err); toast.error('Failed check in customer')
+      } finally { loadingCheckIn.value = false }
+    }
 
 // ════════════════════════════════════════════
 // CUSTOMER — CHECK OUT
@@ -490,8 +518,11 @@ watch(() => customerCheckOutForm.value.customer_response, (val) => {
   if (!customerCheckOutForm.value.has_potential_order) customerCheckOutForm.value.potential_order_detail = ''
 })
 
+
 function openCustomerCheckOut(item) {
   selectedCustomerCheckOut.value = item
+  visitDataStore.activeVisitCustId      = item.active_visit_id
+  visitDataStore.activeVisitCustomersId = item.id
   customerCheckOutForm.value = {
     notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
     has_potential_order: false, potential_order_detail: '',
@@ -499,6 +530,8 @@ function openCustomerCheckOut(item) {
   }
   showCheckOutCustomerModal.value = true
 }
+
+
 function closeCustomerCheckOutModal() {
   showCheckOutCustomerModal.value = false; selectedCustomerCheckOut.value = null
   customerCheckOutForm.value = {
@@ -519,15 +552,17 @@ async function submitCustomerCheckOut() {
       has_potential_order: f.has_potential_order, potential_order_detail: f.potential_order_detail,
       follow_up_at: f.follow_up_at, follow_up_notes: f.follow_up_notes, follow_up_type: f.follow_up_type,
     })
+    
     if (result.success) {
       activeCustomerPhase.value = null
       toast.success(result.message || 'Check out customer berhasil')
       closeCustomerCheckOutModal()
       visitDataStore.fetchVisits(visitDataStore.buildUrl())
+      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // ← tambahkan ini
     } else { toast.error(result.message || 'Gagal check out customer') }
-  } catch (err) { console.error(err); toast.error('Terjadi kesalahan saat check out customer')
-  } finally { loadingCustomerCheckOut.value = false }
-}
+      } catch (err) { console.error(err); toast.error('Terjadi kesalahan saat check out customer')
+      } finally { loadingCustomerCheckOut.value = false }
+    }
 
 
 function getResultClass(result) {
@@ -589,60 +624,36 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 
     <!-- TOOLBAR — 3 Action Buttons -->
     <div class="toolbar-top">
-      <!-- <div class="toolbar-center">
-
-        <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openLeadForm">
-          <font-awesome-icon icon="people-arrows" />
-          <span class="btn-label">Visit Leads</span>
-          <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
-        </button>
-
-        <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openCustomerForm">
-          <font-awesome-icon icon="handshake" />
-          <span class="btn-label">Visit Customers</span>
-          <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
-        </button>
-
-        <button v-if="canCreate" class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'SalesFollowUp' })">
-          <font-awesome-icon icon="phone-volume" />
-          <span class="btn-label">Follow Up</span>
-          <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
-        </button>
-
-      </div> -->
       <div class="toolbar-center">
 
-  <template v-if="canCreate">
-    <button class="btn-toolbar btn-purple" @click="openLeadForm">
-      <font-awesome-icon icon="people-arrows" />
-      <span class="btn-label">Visit Leads</span>
-      <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
-    </button>
+        <template v-if="canCreate">
+          <button class="btn-toolbar btn-purple" @click="openLeadForm">
+            <font-awesome-icon icon="people-arrows" />
+            <span class="btn-label">Visit Leads</span>
+            <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+          </button>
 
-    <button class="btn-toolbar btn-purple" @click="openCustomerForm">
-      <font-awesome-icon icon="handshake" />
-      <span class="btn-label">Visit Customers</span>
-      <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
-    </button>
+          <button class="btn-toolbar btn-purple" @click="openCustomerForm">
+            <font-awesome-icon icon="handshake" />
+            <span class="btn-label">Visit Customers</span>
+            <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+          </button>
 
-    <button class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'SalesFollowUp' })">
-      <font-awesome-icon icon="phone-volume" />
-      <span class="btn-label">Follow Up</span>
-      <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
-    </button>
-  </template>
+          <button class="btn-toolbar btn-purple" @click="() => $router.push({ name: 'SalesFollowUp' })">
+            <font-awesome-icon icon="phone-volume" />
+            <span class="btn-label">Follow Up</span>
+            <font-awesome-icon icon="location-arrow" class="btn-arrow-icon" />
+          </button>
+        </template>
 
-  <div v-else class="no-access-info">
-  
-    <div class="alert alert-danger" role="alert">
-        <font-awesome-icon icon="circle-info" />
-      Anda tidak memiliki akses untuk membuat data visit!
-    </div>
-  </div>
+        <div v-else class="no-access-info">
+          <div class="alert alert-danger" role="alert">
+            <font-awesome-icon icon="circle-info" />
+            Anda tidak memiliki akses untuk membuat data visit!
+          </div>
+        </div>
 
-  
-
-</div>
+      </div>
     </div>
 
     <!-- CONTROLS -->
@@ -668,6 +679,27 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               </div>
             </div>
           </div>
+
+          <!-- TOGGLE VIEW: CARD / TABLE -->
+          <div class="view-toggle">
+            <button
+              class="view-toggle-btn"
+              :class="{ active: viewMode === 'card' }"
+              @click="viewMode = 'card'"
+              title="Tampilan Card"
+            >
+              <font-awesome-icon icon="table-cells" /> Card
+            </button>
+            <button
+              class="view-toggle-btn"
+              :class="{ active: viewMode === 'table' }"
+              @click="viewMode = 'table'"
+              title="Tampilan Table"
+            >
+              <font-awesome-icon icon="list" /> Table
+            </button>
+          </div>
+
           <button class="btn-toolbar btn-orange" @click="visitDataStore.resetFilters()">
             <font-awesome-icon icon="rotate-left" /> Reset
           </button>
@@ -711,8 +743,10 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       </div>
     </div>
 
-    <!-- TABLE -->
-    <div class="table-card flex-grow-1 overflow-auto mb-3">
+    <!-- ══════════════════════════════════════════
+         TABLE VIEW
+         ══════════════════════════════════════════ -->
+    <div v-if="viewMode === 'table'" class="table-card flex-grow-1 overflow-auto mb-3">
       <table class="data-table">
         <thead>
           <tr>
@@ -779,7 +813,15 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             </td>
 
             <td class="td-name">{{ visit.visit_code }}</td>
-            <td class="td-name" style="text-transform:capitalize">{{ visit.company_name }}</td>
+
+            <!-- COMPANY + BRANCH INFO -->
+            <td class="td-name" style="text-transform:capitalize">
+              {{ visit.company_name }}
+              <div v-if="visit.target_type === 'BRANCH'" class="td-sub text-primary" style="text-transform:none">
+                <font-awesome-icon icon="code-branch" />
+                {{ visit.branch_name }}<span v-if="visit.branch_city"> — {{ visit.branch_city }}</span>
+              </div>
+            </td>
 
             <!-- VISIT TIME -->
             <td>
@@ -824,6 +866,98 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 
         </tbody>
       </table>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         CARD VIEW
+         ══════════════════════════════════════════ -->
+    <div v-else class="card-grid-wrap flex-grow-1 overflow-auto mb-3">
+
+      <!-- LOADING -->
+      <div v-if="loadingVisits" class="td-center" style="padding:40px 0">
+        <div class="spinner-custom" style="margin:0 auto"></div>
+      </div>
+
+      <!-- EMPTY -->
+      <div v-else-if="visitsData.length === 0" class="empty-state">
+        <img src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif" alt="No data" class="empty-img" />
+        <div class="empty-text">No data found</div>
+      </div>
+
+      <!-- CARDS -->
+      <div v-else class="visit-card-grid">
+        <div
+          v-for="(visit, index) in visitsData"
+          :key="visit.id"
+          class="visit-card"
+        >
+          <div class="visit-card-header">
+            <span class="visit-type-badge" :class="visit.visit_type === 'LEAD' ? 'type-lead' : 'type-customer'">
+              <font-awesome-icon :icon="visit.visit_type === 'LEAD' ? 'user-clock' : 'building-user'" />
+              {{ visit.visit_type }}
+            </span>
+            <span v-if="visit.visit_result" class="result-badge" :class="getResultClass(visit.visit_result)">
+              <font-awesome-icon :icon="getResultIcon(visit.visit_result)" />
+              {{ visit.visit_result?.replaceAll('_', ' ')?.replace(/\b\w/g, l => l.toUpperCase()) }}
+            </span>
+            <span v-else class="badge-empty">—</span>
+          </div>
+
+          <p class="visit-card-company">{{ visit.company_name }}</p>
+          <p v-if="visit.target_type === 'BRANCH'" class="td-sub text-primary" style="margin:0">
+            <font-awesome-icon icon="code-branch" />
+            {{ visit.branch_name }}<span v-if="visit.branch_city"> — {{ visit.branch_city }}</span>
+          </p>
+          <p class="visit-card-code">{{ visit.visit_code }}</p>
+
+          <div class="visit-card-info">
+            <div class="visit-card-row">
+              <font-awesome-icon icon="calendar" class="visit-card-icon" />
+              <div>
+                <p class="td-name" style="margin:0">{{ visitDataStore.formatDateTime(visit.visit_at) }}</p>
+                <p class="td-muted" style="margin:0">Scheduled Visit</p>
+              </div>
+            </div>
+
+            <div class="visit-card-row">
+              <div v-if="visit.check_in_at" class="checkin-badge">
+                <font-awesome-icon icon="right-to-bracket" />
+                {{ visitDataStore.formatDateTime(visit.check_in_at) }}
+              </div>
+              <span v-else class="badge-empty">Not Checked In Yet</span>
+            </div>
+
+            <div class="visit-card-row">
+              <div v-if="visit.check_out_at" class="checkout-badge">
+                <font-awesome-icon icon="right-from-bracket" />
+                {{ visitDataStore.formatDateTime(visit.check_out_at) }}
+              </div>
+              <span v-else class="badge-empty">Not Checked Out Yet</span>
+            </div>
+          </div>
+
+          <div class="visit-card-durations">
+            <div class="dur-item">
+              <span class="dur-label">To Check In</span>
+              <span class="dur-value">{{ visitDataStore.formatDuration(visit.time_from_visit_to_check_in) }}</span>
+            </div>
+            <div class="dur-item">
+              <span class="dur-label">To Check Out</span>
+              <span class="dur-value">{{ visitDataStore.formatDuration(visit.time_from_check_in_to_check_out) }}</span>
+            </div>
+            <div class="dur-item">
+              <span class="dur-label">Duration</span>
+              <span class="dur-value">{{ visitDataStore.formatDuration(visit.total_time_result) }}</span>
+            </div>
+          </div>
+
+          <div class="visit-card-footer">
+            <button class="act-btn act-info" title="Detail" @click="openDetail(visit.id)">
+              <font-awesome-icon icon="eye" /> Detail
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- PAGINATION -->
@@ -882,6 +1016,20 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <span class="detail-label">Type</span>
             <span class="detail-value">{{ visitsDetail.visit_type }}</span>
           </div>
+
+          <!-- ═══ TARGET: HEAD OFFICE / BRANCH ═══ -->
+          <div v-if="visitsDetail.target_type" class="detail-row">
+            <span class="detail-label">Target</span>
+            <span class="target-type-badge" :class="visitsDetail.target_type === 'BRANCH' ? 'target-branch' : 'target-hq'">
+              <font-awesome-icon :icon="visitsDetail.target_type === 'BRANCH' ? 'code-branch' : 'building'" />
+              {{ visitsDetail.target_type === 'BRANCH' ? 'Branch' : 'Head Office' }}
+            </span>
+          </div>
+          <div v-if="visitsDetail.target_type === 'BRANCH'" class="detail-row">
+            <span class="detail-label">Nama Cabang</span>
+            <span class="detail-value">{{ visitsDetail.branch_name }} — {{ visitsDetail.branch_city ?? '-' }}</span>
+          </div>
+
           <div class="detail-row">
             <span class="detail-label">Status</span>
             <span class="detail-value">{{ visitsDetail.visit_status }}</span>
@@ -1274,7 +1422,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       icon="handshake"
       size="xl"
       @close="closeCustomerModal"
-    >
+     >
       <div class="modal-toolbar">
         <div class="showing-wrap">
           <span class="showing-label">Showing:</span>
@@ -1303,8 +1451,11 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
         <table class="data-table">
           <thead>
             <tr>
-              <th>No</th><th>Company</th><th>Contact</th>
-              <th>Address</th><th>Phone</th><th>Status</th>
+              <th>No</th>
+              <th>Target</th>
+              <th>Company</th>
+              <th>Kontak</th>
+              <th>Address</th>
               <th style="text-align:center">Action</th>
             </tr>
           </thead>
@@ -1320,55 +1471,85 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <tr
               v-else
               v-for="(item, index) in customersData"
-              :key="item.id"
+              :key="item.target_type === 'branch' ? `branch-${item.branch_id}` : item.id"
               class="data-row"
               :class="activeVisitCustomersId === item.id ? 'row-active-customer' : ''"
             >
               <td class="td-no">{{ index + 1 + customersPagination.per_page * (customersPagination.current_page - 1) }}.</td>
+
+              <!-- ═══ TARGET TYPE BADGE ═══ -->
+              <td>
+                <span
+                  class="target-type-badge"
+                  :class="item.target_type === 'branch' ? 'target-branch' : 'target-hq'"
+                >
+                  <font-awesome-icon :icon="item.target_type === 'branch' ? 'code-branch' : 'building'" />
+                  {{ item.target_type === 'branch' ? 'Branch' : 'Head Office' }}
+                </span>
+              </td>
+
+              <!-- ═══ COMPANY (+ nama branch & kota kalau target branch) ═══ -->
               <td>
                 <p class="td-name">{{ item.company_name ?? '-' }}</p>
                 <p class="td-muted" style="font-family:monospace">{{ item.customer_code ?? '-' }}</p>
+                <p v-if="item.target_type === 'branch'" class="td-sub text-primary" style="margin:2px 0 0">
+                  <font-awesome-icon icon="code-branch" />
+                  {{ item.branch_name ?? '-' }}<span v-if="item.city"> — {{ item.city }}</span>
+                </p>
               </td>
-              <td>{{ item.contact_name ?? '-' }}</td>
+
+              <!-- ═══ KONTAK (bisa banyak) ═══ -->
+              <td style="max-width:220px">
+                <div v-if="item.contacts?.length">
+                  <div v-for="ct in item.contacts" :key="ct.id" class="contact-mini-row">
+                    <span class="fw-semibold">{{ ct.name }}</span> <br>
+                    <span v-if="ct.is_primary" class="contact-primary-tag">Kontak Utama</span>
+                    <span v-if="ct.position" class="td-muted"> · {{ ct.position }}</span>
+                    <div v-if="ct.phone" class="td-muted" style="font-size:0.76rem">{{ ct.phone }}</div>
+                  </div>
+                </div>
+                <span v-else class="td-muted">{{ item.contact_name ?? '-' }}</span>
+              </td>
+
+              <!-- ═══ ADDRESS ═══ -->
               <td style="max-width:180px">
                 <p class="td-muted" style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis" :title="item.address">
                   {{ item.address || '—' }}
                 </p>
               </td>
-              <td>{{ item.phone ?? '-' }}</td>
-              <td><span class="badge-source">{{ item.status ?? 'Active' }}</span></td>
+
               <td class="td-actions">
-                <template v-if="activeVisitCustomersId !== item.id">
-                  <button
-                    v-if="canVisitNow(item)"
-                    @click="visitNowCust(item)"
-                    :disabled="loadingVisitNow || activeVisitCustomersId !== null"
-                    class="act-visit-btn"
-                    :class="activeVisitCustomersId !== null ? 'disabled' : 'slate'"
-                  >
-                    <font-awesome-icon icon="location-dot" /> Visit Now
-                  </button>
-                </template>
-                <template v-else>
-                  <span class="badge-active-ping emerald">
-                    <span class="ping-dot emerald-dot"></span> ACTIVE
-                  </span>
-                  <button
-                    v-if="activeCustomerPhase === 'visiting'"
-                    @click="checkInCustomers(item)"
-                    class="act-visit-btn emerald"
-                  >
-                    <font-awesome-icon icon="right-to-bracket" /> Check In
-                  </button>
-                  <button
-                    v-if="activeCustomerPhase === 'checked_in'"
-                    @click="openCustomerCheckOut(item)"
-                    class="act-visit-btn rose"
-                  >
-                    <font-awesome-icon icon="right-from-bracket" /> Check Out
-                  </button>
-                </template>
-              </td>
+              <template v-if="!isRowActive(item)">
+                <button
+                  v-if="canVisitNow(item)"
+                  @click="visitNowCust(item)"
+                  :disabled="loadingVisitNow || activeVisitCustomersId !== null"
+                  class="act-visit-btn"
+                  :class="activeVisitCustomersId !== null ? 'disabled' : 'slate'"
+                >
+                  <font-awesome-icon icon="location-dot" /> Visit Now
+                </button>
+              </template>
+              <template v-else>
+                <span class="badge-active-ping emerald">
+                  <span class="ping-dot emerald-dot"></span> ACTIVE
+                </span>
+                <button
+                  v-if="item.visit_status === 'ONGOING'"
+                  @click="checkInCustomers(item)"
+                  class="act-visit-btn emerald"
+                >
+                  <font-awesome-icon icon="right-to-bracket" /> Check In
+                </button>
+                <button
+                  v-if="item.visit_status === 'CHECKED_IN'"
+                  @click="openCustomerCheckOut(item)"
+                  class="act-visit-btn rose"
+                >
+                  <font-awesome-icon icon="right-from-bracket" /> Check Out
+                </button>
+              </template>
+            </td>
             </tr>
           </tbody>
         </table>
@@ -1406,6 +1587,16 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
         <div class="detail-info-box">
           <p class="detail-box-label">Customer yang akan dikunjungi</p>
           <p style="font-weight:700; font-size:0.95rem">{{ selectedCust.company_name }}</p>
+
+          <!-- ═══ TARGET: BRANCH atau HEAD OFFICE ═══ -->
+          <p v-if="selectedCust.target_type === 'branch'" class="td-muted text-primary" style="font-weight:600">
+            <font-awesome-icon icon="code-branch" />
+            {{ selectedCust.branch_name }}<span v-if="selectedCust.city"> — {{ selectedCust.city }}</span>
+          </p>
+          <p v-else class="td-muted text-primary" style="font-weight:600">
+            <font-awesome-icon icon="building" /> Head Office
+          </p>
+
           <p class="td-muted">{{ selectedCust.contact_name }}</p>
           <p class="td-muted">{{ selectedCust.address ?? '-' }}</p>
         </div>
@@ -1729,9 +1920,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 
 /* Sistem Warna & Wrapper Global */
 .h-100 {
-  /* --border-main: #e2e8f0;
-  --bg-input: #f8fafc;
-  --text-primary: #334155; */
   --text-muted: #64748b;
   --primary-color: #6366f1;
 }
@@ -1760,32 +1948,44 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 /* ===== TOOLBAR TOP ===== */
 .toolbar-top {
   display: flex;
+  justify-content: center;
   align-items: center;
-  justify-content: space-between;
   background: var(--bg-card);
   border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 12px;
   box-shadow: 0 1px 3px var(--shadow-color);
-  flex-wrap: wrap;
-  gap: 8px;
 }
-.toolbar-left { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
 .btn-toolbar {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
+  gap: 8px;
+  padding: 9px 20px;
   border: none;
   border-radius: 8px;
-  font-size: 0.83rem;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
+  flex: 0 1 auto;
 }
+
 .btn-purple { background: #6366f1; color: #fff; }
-.btn-purple:hover { background: #4f46e5; }
+.btn-purple:hover { background: #4f46e5; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+.btn-purple:active { transform: translateY(0); }
+
+.btn-arrow-icon { font-size: 0.75rem; opacity: 0.8; }
 .btn-orange { background: #f59e0b; color: #fff; }
 .btn-orange:hover { background: #d97706; }
 .btn-arrow { font-size: 0.6rem; opacity: 0.7; }
@@ -1809,6 +2009,100 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .search-btn { padding: 7px 12px; background: #6366f1; color: #fff; border: none; cursor: pointer; }
 .search-btn:hover { background: #4f46e5; }
 .sort-wrap { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* ===== VIEW TOGGLE (Card/Table) ===== */
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  padding: 3px;
+}
+.view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.view-toggle-btn:hover { color: #6366f1; }
+.view-toggle-btn.active { background: #6366f1; color: #fff; }
+
+/* ===== CARD GRID ===== */
+.card-grid-wrap { background: transparent; }
+.visit-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.visit-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px var(--shadow-color);
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.visit-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+
+.visit-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.visit-card-company {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin: 0;
+  text-transform: capitalize;
+}
+.visit-card-code {
+  font-family: monospace;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+.visit-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--border-main);
+  border-bottom: 1px solid var(--border-main);
+  padding: 10px 0;
+}
+.visit-card-row { display: flex; align-items: center; gap: 8px; }
+.visit-card-icon { color: #3b82f6; width: 16px; }
+
+.visit-card-durations {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.dur-item { display: flex; flex-direction: column; gap: 2px; text-align: center; }
+.dur-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }
+.dur-value { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); }
+
+.visit-card-footer { display: flex; justify-content: flex-end; }
+.visit-card-footer .act-btn {
+  width: auto;
+  padding: 6px 14px;
+  gap: 6px;
+  border-radius: 8px;
+}
 
 /* ===== DROPDOWN CORE ===== */
 .drop-wrap { position: relative; }
@@ -1867,11 +2161,12 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .td-no { color: var(--text-muted); font-weight: 600; }
 .td-name { font-weight: 500; }
 .td-muted { color: var(--text-muted); font-size: 0.84rem; }
+.td-sub { color: var(--text-muted); font-size: 0.78rem; margin-top: 2px; }
 .td-center { text-align: center; padding: 40px; color: var(--text-muted); }
 .td-actions { text-align: center; white-space: nowrap; }
 
 /* ACTION BUTTONS */
-.act-btn { width: 30px; height: 30px; border-radius: 6px; border: 1.5px solid; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; transition: all 0.18s ease; margin: 0 2px; background: transparent; }
+.act-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; border: 1.5px solid; cursor: pointer; font-size: 0.8rem; transition: all 0.18s ease; margin: 0 2px; background: transparent; }
 .act-edit         { color: #f59e0b; border-color: #f59e0b; }
 .act-edit:hover   { background: #f59e0b; color: #fff; }
 .act-delete       { color: #ef4444; border-color: #ef4444; }
@@ -1929,6 +2224,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   .btn-prev-next { flex: 1; max-width: 48%; padding: 10px 14px; }
   .page-badges { width: 100%; justify-content: center; flex-wrap: wrap; }
   .page-badge { flex: 1; text-align: center; font-size: 0.7rem; }
+  .visit-card-grid { grid-template-columns: 1fr; }
 }
 
 /* ── SPINNER & EMPTY ── */
@@ -1946,10 +2242,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .form-textarea { resize: none; min-height: 90px; line-height: 1.5; }
 
 /* MODAL FOOTER BUTTONS */
-/* Cari class .btn-cancel di bagian <style scoped> file tabel kamu, lalu ganti menjadi ini: */
 .btn-cancel {
   padding: 8px 18px;
-  background: var(--bg-main, #f1f5f9); /* Menggunakan background dinamis, jika tidak ada fallback ke light mode */
+  background: var(--bg-main, #f1f5f9);
   color: var(--text-muted);
   border: 1px solid var(--border-main);
   border-radius: 8px;
@@ -1958,14 +2253,10 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   cursor: pointer;
   transition: all 0.2s ease;
 }
-
-/* Berikan efek hover agar lebih interaktif */
 .btn-cancel:hover {
   background: var(--border-main);
   color: var(--text-primary);
 }
-.btn-save { display: inline-flex; align-items: center; gap: 7px; padding: 8px 18px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
-.btn-save:hover { background: #4f46e5; }
 
 /* DETAIL MODAL CONTENT */
 .detail-list { display: flex; flex-direction: column; }
@@ -1977,16 +2268,16 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .detail-badge { font-size: 0.82rem; font-weight: 600; padding: 3px 12px; border-radius: 6px; background: rgba(99,102,241,0.1); color: #6366f1; border: 1px solid rgba(99,102,241,0.2); }
 .badge-active { font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: rgba(34,197,94,0.1); color: #16a34a; }
 
-/* ===== NEW RESPONSIVE SEGMENTED PILL ===== */
+/* ===== SEGMENTED PILL ===== */
 .segment-group {
-  display: flex; 
+  display: flex;
   align-items: center;
   border: 1px solid var(--border-main);
-  border-radius: 50px; 
-  padding: 4px; 
+  border-radius: 50px;
+  padding: 4px;
   background: var(--bg-input);
   width: 100%;
-  max-width: 500px; 
+  max-width: 500px;
   overflow-x: auto;
   white-space: nowrap;
   -webkit-overflow-scrolling: touch;
@@ -1994,200 +2285,68 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 }
 .segment-group::-webkit-scrollbar { display: none; }
 .segment-btn {
-  flex: 1; 
+  flex: 1;
   text-align: center;
   border: none;
   background: transparent;
-  padding: 10px 16px; 
+  padding: 10px 16px;
   color: var(--text-primary);
   font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
-  border-radius: 50px; 
+  border-radius: 50px;
   transition: all 0.2s ease;
-  white-space: nowrap; 
+  white-space: nowrap;
 }
 .segment-btn:hover:not(.active) { background: rgba(99, 102, 241, 0.08); color: #6366f1; }
 .segment-btn.active { background: #6366f1; color: #fff; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25); }
 
-/* ===== NEW CUSTOM PILL FILE INPUT + PREVIEW ===== */
-.pill-input-container {
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--border-main);
-  border-radius: 50px;
-  background: var(--bg-input);
-  padding: 4px;
-  width: 100%;
-  max-width: 500px;
-  box-sizing: border-box;
-}
-.hidden-input { display: none; }
-.pill-upload-btn {
+/* ── TARGET TYPE BADGE ── */
+.target-type-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: var(--primary-color);
-  color: #ffffff;
-  padding: 10px 20px;
-  border-radius: 50px;
-  font-size: 0.84rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
-  flex-shrink: 0;
-}
-.pill-upload-btn:hover { background: #4f46e5; transform: translateY(-1px); }
-.pill-upload-btn:active { transform: translateY(0); }
-
-.file-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.84rem;
-  color: #94a3b8;
-  padding: 0 16px;
-  overflow: hidden;
-  flex: 1;
-}
-.file-text-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-.file-info.has-file { color: var(--text-primary); font-weight: 500; }
-
-.mini-preview {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 1.5px solid var(--border-main);
-  background: #fff;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.mini-preview img { width: 100%; height: 100%; object-fit: cover; }
-
-/* Perbaikan Potongan Kode CSS yang Terputus sebelumnya */
-.form-select {
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 1.25rem;
-  padding-right: 40px;
-}
-
-
-.toolbar-top {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: var(--bg-card);
-  border-radius: 10px;
-  padding: 12px 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 1px 3px var(--shadow-color);
-}
-
-.toolbar-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-/* Desktop */
-.btn-toolbar {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 20px;
-  border: none;
+  gap: 5px;
+  padding: 4px 10px;
   border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  font-size: 0.74rem;
+  font-weight: 700;
   white-space: nowrap;
-  flex: 0 1 auto;
+}
+.target-hq     { background: #e0e7ff; color: #3730a3; }
+.target-branch { background: #fef3c7; color: #92400e; }
+
+/* ── KONTAK MINI (list dalam tabel) ── */
+.contact-mini-row {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border-main);
+  font-size: 0.8rem;
+}
+.contact-mini-row:last-child { border-bottom: none; }
+.contact-primary-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: rgba(99,102,241,0.12);
+  color: #6366f1;
+  margin-left: 4px;
 }
 
-.btn-purple { background: #6366f1; color: #fff; }
-.btn-purple:hover { background: #4f46e5; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
-.btn-purple:active { transform: translateY(0); }
-
-.btn-arrow-icon { font-size: 0.75rem; opacity: 0.8; }
-
-/* Tablet (≤ 768px) — tombol melebar rata */
+/* Tablet (≤ 768px) */
 @media (max-width: 768px) {
-  .toolbar-center {
-    gap: 8px;
-  }
-
-  .btn-toolbar {
-    flex: 1 1 calc(33.33% - 8px);
-    justify-content: center;
-    padding: 10px 12px;
-    font-size: 0.82rem;
-    min-width: 100px;
-  }
+  .toolbar-center { gap: 8px; }
+  .btn-toolbar { flex: 1 1 calc(33.33% - 8px); justify-content: center; padding: 10px 12px; font-size: 0.82rem; min-width: 100px; }
 }
 
-/* Mobile (≤ 480px) — tombol full width, teks tetap tampil */
-/* Mobile (≤ 480px) — full width, teks tetap tampil */
+/* Mobile (≤ 480px) */
 @media (max-width: 480px) {
-  .toolbar-center {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .btn-toolbar {
-    flex: 1 1 100%;
-    width: 100%;
-    padding: 11px 16px;
-    font-size: 0.85rem;
-    justify-content: center;
-  }
-
-  .btn-label {
-    display: inline; /* teks selalu tampil */
-  }
-
-  .btn-arrow-icon {
-    display: inline; /* icon arrow tetap tampil */
-  }
+  .toolbar-center { flex-direction: column; gap: 8px; }
+  .btn-toolbar { flex: 1 1 100%; width: 100%; padding: 11px 16px; font-size: 0.85rem; justify-content: center; }
 }
 
-/* Layar sangat kecil (≤ 360px) — TIDAK sembunyikan teks */
+/* Layar sangat kecil (≤ 360px) */
 @media (max-width: 360px) {
-  .btn-toolbar {
-    flex: 1 1 100%;
-    width: 100%;
-    padding: 10px 14px;
-    font-size: 0.8rem;
-    gap: 6px;
-    justify-content: center;
-  }
-
-  .btn-label {
-    display: inline; /* tetap tampil */
-  }
-
-  .btn-arrow-icon {
-    display: inline; /* tetap tampil */
-  }
+  .btn-toolbar { flex: 1 1 100%; width: 100%; padding: 10px 14px; font-size: 0.8rem; gap: 6px; justify-content: center; }
 }
 
 .result-emerald { background:#d1fae5; color:#065f46; }

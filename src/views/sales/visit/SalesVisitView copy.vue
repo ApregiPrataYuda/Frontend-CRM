@@ -400,27 +400,51 @@ function closeVisitCustNowModal() {
   if (loadingVisitNow.value) return
   showVisitCustNowModal.value = false; selectedCust.value = null
 }
+
+
 async function confirmVisitCustNow() {
   if (!selectedCust.value) return
-  const { success, message } = await visitDataStore.startVisitCustomers(selectedCust.value.id)
+
+  const branchId = selectedCust.value.target_type === 'branch'
+    ? Number(selectedCust.value.branch_id)
+    : null
+
+  const { success, message } = await visitDataStore.startVisitCustomers(
+    selectedCust.value.id,
+    branchId
+  )
+
   if (success) {
     toast.success(message)
     activeCustomerPhase.value = 'visiting'
     closeVisitCustNowModal()
-    visitDataStore.fetchVisits(visitDataStore.buildUrl())
-  } else { toast.error(message) }
+    // ── refresh keduanya biar list "Ready to Visit" langsung sinkron ──
+    await Promise.all([
+      visitDataStore.fetchVisits(visitDataStore.buildUrl()),
+      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()),
+    ])
+  } else {
+    toast.error(message)
+  }
 }
 
+
+// ── row dianggap aktif kalau backend sudah kasih active_visit_id untuk baris ini ──
+const isRowActive = (item) => !!item.active_visit_id
 // ════════════════════════════════════════════
 // CUSTOMER — CHECK IN
 // ════════════════════════════════════════════
 const showCheckInModalCustomers = ref(false)
 
 async function checkInCustomers(item) {
-  selectedVisit.value = item; capturedPhoto.value = null
+  selectedVisit.value = item
+  capturedPhoto.value = null
+  visitDataStore.activeVisitCustId      = item.active_visit_id
+  visitDataStore.activeVisitCustomersId = item.id
   showCheckInModalCustomers.value = true
   await nextTick(); await startCamera(); await getCurrentLocation()
 }
+
 function closeCheckInModalCustomers() {
   showCheckInModalCustomers.value = false; capturedPhoto.value = null; stopCamera()
 }
@@ -442,10 +466,11 @@ async function submitCheckInCustomers() {
       toast.success(result.message)
       closeCheckInModalCustomers()
       visitDataStore.fetchVisits(visitDataStore.buildUrl())
+      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // ← tambahkan ini
     } else { toast.error(result.message) }
-  } catch (err) { console.error(err); toast.error('Failed check in customer')
-  } finally { loadingCheckIn.value = false }
-}
+      } catch (err) { console.error(err); toast.error('Failed check in customer')
+      } finally { loadingCheckIn.value = false }
+    }
 
 // ════════════════════════════════════════════
 // CUSTOMER — CHECK OUT
@@ -453,6 +478,7 @@ async function submitCheckInCustomers() {
 const showCheckOutCustomerModal = ref(false)
 const selectedCustomerCheckOut  = ref(null)
 const loadingCustomerCheckOut   = ref(false)
+const selectedCheckOutFile      = ref(null)
 
 const customerResponses = [
   { value: 'maintained',        label: 'Relationship Maintained', desc: 'Routine visit / engagement',       icon: 'fa-solid fa-handshake'           },
@@ -466,7 +492,7 @@ const customerResponses = [
 const followUpTypes = ['CALL', 'VISIT', 'WHATSAPP', 'EMAIL', 'MEETING']
 
 const customerCheckOutForm = ref({
-  notes: '', customer_response: '',
+  no_reference: '', notes: '', customer_response: '',
   has_complaint: false, complaint_detail: '',
   has_potential_order: false, potential_order_detail: '',
   follow_up_at: '', follow_up_notes: '', follow_up_type: '',
@@ -480,11 +506,19 @@ const showCustomerComplaintSection      = computed(() => ['complaint_handled', '
 const showCustomerPotentialOrderSection = computed(() => ['upsell_identified', 'improved'].includes(customerCheckOutForm.value.customer_response))
 const isCustomerCheckOutValid           = computed(() => {
   const f = customerCheckOutForm.value
-  if (!f.notes.trim() || !f.customer_response || !f.follow_up_at || !f.follow_up_type) return false
+  if (!f.no_reference.trim() || !f.notes.trim() || !f.customer_response || !f.follow_up_at || !f.follow_up_type) return false
   if (f.has_complaint       && !f.complaint_detail.trim())       return false
   if (f.has_potential_order && !f.potential_order_detail.trim()) return false
   return true
 })
+
+// function onCheckOutFileChange(event) {
+//   selectedCheckOutFile.value = event.target.files?.[0] ?? null
+// }
+
+function onCheckOutFileChange(event) {
+  selectedCheckOutFile.value = event.target.files?.[0] ?? null
+}
 
 watch(() => customerCheckOutForm.value.customer_response, (val) => {
   customerCheckOutForm.value.has_complaint       = ['complaint_handled', 'at_risk'].includes(val)
@@ -493,19 +527,26 @@ watch(() => customerCheckOutForm.value.customer_response, (val) => {
   if (!customerCheckOutForm.value.has_potential_order) customerCheckOutForm.value.potential_order_detail = ''
 })
 
+
 function openCustomerCheckOut(item) {
   selectedCustomerCheckOut.value = item
+  selectedCheckOutFile.value = null
+  visitDataStore.activeVisitCustId      = item.active_visit_id
+  visitDataStore.activeVisitCustomersId = item.id
   customerCheckOutForm.value = {
-    notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
+    no_reference: '', notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
     has_potential_order: false, potential_order_detail: '',
     follow_up_at: '', follow_up_notes: '', follow_up_type: '',
   }
   showCheckOutCustomerModal.value = true
 }
+
+
 function closeCustomerCheckOutModal() {
   showCheckOutCustomerModal.value = false; selectedCustomerCheckOut.value = null
+  selectedCheckOutFile.value = null
   customerCheckOutForm.value = {
-    notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
+    no_reference: '', notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
     has_potential_order: false, potential_order_detail: '',
     follow_up_at: '', follow_up_notes: '', follow_up_type: '',
   }
@@ -516,21 +557,34 @@ async function submitCustomerCheckOut() {
   const f = customerCheckOutForm.value
   loadingCustomerCheckOut.value = true
   try {
-    const result = await visitDataStore.submitCheckOutCustomers(visitId, {
-      notes: f.notes, customer_response: f.customer_response,
-      has_complaint: f.has_complaint, complaint_detail: f.complaint_detail,
-      has_potential_order: f.has_potential_order, potential_order_detail: f.potential_order_detail,
-      follow_up_at: f.follow_up_at, follow_up_notes: f.follow_up_notes, follow_up_type: f.follow_up_type,
-    })
+    const formData = new FormData()
+    formData.append('no_reference', f.no_reference)
+    formData.append('notes', f.notes)
+    formData.append('customer_response', f.customer_response)
+    formData.append('has_complaint', f.has_complaint ? '1' : '0')
+    formData.append('complaint_detail', f.complaint_detail || '')
+    formData.append('has_potential_order', f.has_potential_order ? '1' : '0')
+    formData.append('potential_order_detail', f.potential_order_detail || '')
+    formData.append('follow_up_at', f.follow_up_at)
+    formData.append('follow_up_notes', f.follow_up_notes || '')
+    formData.append('follow_up_type', f.follow_up_type)
+
+    if (selectedCheckOutFile.value) {
+      formData.append('check_out_file', selectedCheckOutFile.value)
+    }
+
+    const result = await visitDataStore.submitCheckOutCustomers(visitId, formData)
+    
     if (result.success) {
       activeCustomerPhase.value = null
       toast.success(result.message || 'Check out customer berhasil')
       closeCustomerCheckOutModal()
       visitDataStore.fetchVisits(visitDataStore.buildUrl())
+      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // ← tambahkan ini
     } else { toast.error(result.message || 'Gagal check out customer') }
-  } catch (err) { console.error(err); toast.error('Terjadi kesalahan saat check out customer')
-  } finally { loadingCustomerCheckOut.value = false }
-}
+      } catch (err) { console.error(err); toast.error('Terjadi kesalahan saat check out customer')
+      } finally { loadingCustomerCheckOut.value = false }
+    }
 
 
 function getResultClass(result) {
@@ -571,6 +625,86 @@ function getResultIcon(result) {
 
 // ── helpers ──
 const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
+
+
+// ── FILE TYPE HELPER (untuk check_out_file preview) ──
+const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+
+function getFileExtension(filename = '') {
+  return filename.split('.').pop()?.toLowerCase() ?? ''
+}
+
+function isImageFile(filename = '') {
+  return imageExtensions.includes(getFileExtension(filename))
+}
+
+function getFileIconMeta(filename = '') {
+  const ext = getFileExtension(filename)
+  const map = {
+    pdf : { icon: 'file-pdf',  color: '#ef4444', label: 'PDF Document' },
+    doc : { icon: 'file-word', color: '#2563eb', label: 'Word Document' },
+    docx: { icon: 'file-word', color: '#2563eb', label: 'Word Document' },
+    xls : { icon: 'file-excel', color: '#16a34a', label: 'Excel Document' },
+    xlsx: { icon: 'file-excel', color: '#16a34a', label: 'Excel Document' },
+  }
+  return map[ext] ?? { icon: 'file', color: '#64748b', label: 'File' }
+}
+
+function getFileNameOnly(path = '') {
+  return path.split('/').pop() ?? path
+}
+
+
+// ── IMAGE ZOOM / LIGHTBOX ──
+const showImageZoom = ref(false)
+const zoomImageSrc  = ref('')
+const zoomLevel     = ref(1)
+const zoomPos       = ref({ x: 0, y: 0 })
+const isDragging    = ref(false)
+const dragStart      = ref({ x: 0, y: 0 })
+
+function openImageZoom(src) {
+  zoomImageSrc.value = src
+  zoomLevel.value = 1
+  zoomPos.value = { x: 0, y: 0 }
+  showImageZoom.value = true
+}
+
+function closeImageZoom() {
+  showImageZoom.value = false
+  zoomImageSrc.value = ''
+  zoomLevel.value = 1
+  zoomPos.value = { x: 0, y: 0 }
+}
+
+function zoomIn()  { zoomLevel.value = Math.min(zoomLevel.value + 0.5, 5) }
+function zoomOut() {
+  zoomLevel.value = Math.max(zoomLevel.value - 0.5, 1)
+  if (zoomLevel.value === 1) zoomPos.value = { x: 0, y: 0 }
+}
+function resetZoom() { zoomLevel.value = 1; zoomPos.value = { x: 0, y: 0 } }
+
+function onWheelZoom(e) {
+  e.preventDefault()
+  if (e.deltaY < 0) zoomIn()
+  else zoomOut()
+}
+
+function startDrag(e) {
+  if (zoomLevel.value === 1) return
+  isDragging.value = true
+  const point = e.touches ? e.touches[0] : e
+  dragStart.value = { x: point.clientX - zoomPos.value.x, y: point.clientY - zoomPos.value.y }
+}
+function onDrag(e) {
+  if (!isDragging.value) return
+  const point = e.touches ? e.touches[0] : e
+  zoomPos.value = {
+    x: point.clientX - dragStart.value.x,
+    y: point.clientY - dragStart.value.y,
+  }
+}
+function stopDrag() { isDragging.value = false }
 </script>
 
 <template>
@@ -722,6 +856,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <th>Type</th>
             <th>Result Visit</th>
             <th>Visit Code</th>
+            <th>No Reference</th>
             <th>Company</th>
             <th>Visit Time</th>
             <th>Check In</th>
@@ -781,7 +916,16 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             </td>
 
             <td class="td-name">{{ visit.visit_code }}</td>
-            <td class="td-name" style="text-transform:capitalize">{{ visit.company_name }}</td>
+            <td class="td-name">{{ visit.no_reference }}</td>
+
+            <!-- COMPANY + BRANCH INFO -->
+            <td class="td-name" style="text-transform:capitalize">
+              {{ visit.company_name }}
+              <div v-if="visit.target_type === 'BRANCH'" class="td-sub text-primary" style="text-transform:none">
+                <font-awesome-icon icon="code-branch" />
+                {{ visit.branch_name }}<span v-if="visit.branch_city"> — {{ visit.branch_city }}</span>
+              </div>
+            </td>
 
             <!-- VISIT TIME -->
             <td>
@@ -864,7 +1008,12 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           </div>
 
           <p class="visit-card-company">{{ visit.company_name }}</p>
+          <p v-if="visit.target_type === 'BRANCH'" class="td-sub text-primary" style="margin:0">
+            <font-awesome-icon icon="code-branch" />
+            {{ visit.branch_name }}<span v-if="visit.branch_city"> — {{ visit.branch_city }}</span>
+          </p>
           <p class="visit-card-code">{{ visit.visit_code }}</p>
+          <p class="visit-card-code"> No Reference: {{ visit.no_reference }}</p>
 
           <div class="visit-card-info">
             <div class="visit-card-row">
@@ -972,6 +1121,20 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <span class="detail-label">Type</span>
             <span class="detail-value">{{ visitsDetail.visit_type }}</span>
           </div>
+
+          <!-- ═══ TARGET: HEAD OFFICE / BRANCH ═══ -->
+          <div v-if="visitsDetail.target_type" class="detail-row">
+            <span class="detail-label">Target</span>
+            <span class="target-type-badge" :class="visitsDetail.target_type === 'BRANCH' ? 'target-branch' : 'target-hq'">
+              <font-awesome-icon :icon="visitsDetail.target_type === 'BRANCH' ? 'code-branch' : 'building'" />
+              {{ visitsDetail.target_type === 'BRANCH' ? 'Branch' : 'Head Office' }}
+            </span>
+          </div>
+          <div v-if="visitsDetail.target_type === 'BRANCH'" class="detail-row">
+            <span class="detail-label">Nama Cabang</span>
+            <span class="detail-value">{{ visitsDetail.branch_name }} — {{ visitsDetail.branch_city ?? '-' }}</span>
+          </div>
+
           <div class="detail-row">
             <span class="detail-label">Status</span>
             <span class="detail-value">{{ visitsDetail.visit_status }}</span>
@@ -1004,8 +1167,43 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <span class="detail-label">Notes</span>
             <p style="font-size:0.85rem; color:var(--text-primary); margin:0">{{ visitsDetail.notes || '-' }}</p>
           </div>
+
+          <!-- <div v-if="visitsDetail.check_out_file" style="margin-top:8px">
+            <span class="detail-label" style="display:block; margin-bottom:8px">Photo / File Check Out</span>
+            <img :src="photoBase + visitsDetail.check_out_file" style="width:100%; border-radius:10px; object-fit:contain; max-height:280px;" />
+          </div> -->
+          <div v-if="visitsDetail.check_out_file" style="margin-top:8px">
+  <span class="detail-label" style="display:block; margin-bottom:8px">Photo / File Check Out</span>
+
+  <!-- Kalau file adalah gambar -->
+  <img
+    v-if="isImageFile(visitsDetail.check_out_file)"
+    :src="photoBase + visitsDetail.check_out_file"
+    style="width:100%; border-radius:10px; object-fit:contain; max-height:280px;"
+  />
+
+  <!-- Kalau file bukan gambar (PDF/DOC/XLS dll) -->
+  <a
+    v-else
+    :href="photoBase + visitsDetail.check_out_file"
+    target="_blank"
+    class="file-preview-card"
+  >
+    <font-awesome-icon
+      :icon="getFileIconMeta(visitsDetail.check_out_file).icon"
+      :style="{ color: getFileIconMeta(visitsDetail.check_out_file).color }"
+      style="font-size: 1.8rem;"
+    />
+    <div class="file-preview-info">
+      <p class="file-preview-name">{{ getFileNameOnly(visitsDetail.check_out_file) }}</p>
+      <p class="file-preview-type">{{ getFileIconMeta(visitsDetail.check_out_file).label }} · Klik untuk membuka</p>
+    </div>
+    <font-awesome-icon icon="up-right-from-square" class="file-preview-open-icon" />
+  </a>
+</div>
+
           <div v-if="visitsDetail.photo" style="margin-top:8px">
-            <span class="detail-label" style="display:block; margin-bottom:8px">Photo</span>
+            <span class="detail-label" style="display:block; margin-bottom:8px">Photo Check In</span>
             <img :src="photoBase + visitsDetail.photo" style="width:100%; border-radius:10px; object-fit:contain; max-height:280px;" />
           </div>
           <div v-if="visitsDetail.latitude" style="margin-top:8px">
@@ -1358,7 +1556,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     <!-- ══════════════════════════════════════════
          CUSTOMERS LIST MODAL
          ══════════════════════════════════════════ -->
-    <!-- <AppModal
+    <AppModal
       :show="showCustomerForm"
       title="Data Customers Ready To Visit"
       icon="handshake"
@@ -1393,8 +1591,11 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
         <table class="data-table">
           <thead>
             <tr>
-              <th>No</th><th>Company</th><th>Contact</th>
-              <th>Address</th><th>Phone</th><th>Status</th>
+              <th>No</th>
+              <th>Target</th>
+              <th>Company</th>
+              <th>Kontak</th>
+              <th>Address</th>
               <th style="text-align:center">Action</th>
             </tr>
           </thead>
@@ -1410,55 +1611,85 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <tr
               v-else
               v-for="(item, index) in customersData"
-              :key="item.id"
+              :key="item.target_type === 'branch' ? `branch-${item.branch_id}` : item.id"
               class="data-row"
               :class="activeVisitCustomersId === item.id ? 'row-active-customer' : ''"
             >
               <td class="td-no">{{ index + 1 + customersPagination.per_page * (customersPagination.current_page - 1) }}.</td>
+
+              <!-- ═══ TARGET TYPE BADGE ═══ -->
+              <td>
+                <span
+                  class="target-type-badge"
+                  :class="item.target_type === 'branch' ? 'target-branch' : 'target-hq'"
+                >
+                  <font-awesome-icon :icon="item.target_type === 'branch' ? 'code-branch' : 'building'" />
+                  {{ item.target_type === 'branch' ? 'Branch' : 'Head Office' }}
+                </span>
+              </td>
+
+              <!-- ═══ COMPANY (+ nama branch & kota kalau target branch) ═══ -->
               <td>
                 <p class="td-name">{{ item.company_name ?? '-' }}</p>
                 <p class="td-muted" style="font-family:monospace">{{ item.customer_code ?? '-' }}</p>
+                <p v-if="item.target_type === 'branch'" class="td-sub text-primary" style="margin:2px 0 0">
+                  <font-awesome-icon icon="code-branch" />
+                  {{ item.branch_name ?? '-' }}<span v-if="item.city"> — {{ item.city }}</span>
+                </p>
               </td>
-              <td>{{ item.contact_name ?? '-' }}</td>
+
+              <!-- ═══ KONTAK (bisa banyak) ═══ -->
+              <td style="max-width:220px">
+                <div v-if="item.contacts?.length">
+                  <div v-for="ct in item.contacts" :key="ct.id" class="contact-mini-row">
+                    <span class="fw-semibold">{{ ct.name }}</span> <br>
+                    <span v-if="ct.is_primary" class="contact-primary-tag">Kontak Utama</span>
+                    <span v-if="ct.position" class="td-muted"> · {{ ct.position }}</span>
+                    <div v-if="ct.phone" class="td-muted" style="font-size:0.76rem">{{ ct.phone }}</div>
+                  </div>
+                </div>
+                <span v-else class="td-muted">{{ item.contact_name ?? '-' }}</span>
+              </td>
+
+              <!-- ═══ ADDRESS ═══ -->
               <td style="max-width:180px">
                 <p class="td-muted" style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis" :title="item.address">
                   {{ item.address || '—' }}
                 </p>
               </td>
-              <td>{{ item.phone ?? '-' }}</td>
-              <td><span class="badge-source">{{ item.status ?? 'Active' }}</span></td>
+
               <td class="td-actions">
-                <template v-if="activeVisitCustomersId !== item.id">
-                  <button
-                    v-if="canVisitNow(item)"
-                    @click="visitNowCust(item)"
-                    :disabled="loadingVisitNow || activeVisitCustomersId !== null"
-                    class="act-visit-btn"
-                    :class="activeVisitCustomersId !== null ? 'disabled' : 'slate'"
-                  >
-                    <font-awesome-icon icon="location-dot" /> Visit Now
-                  </button>
-                </template>
-                <template v-else>
-                  <span class="badge-active-ping emerald">
-                    <span class="ping-dot emerald-dot"></span> ACTIVE
-                  </span>
-                  <button
-                    v-if="activeCustomerPhase === 'visiting'"
-                    @click="checkInCustomers(item)"
-                    class="act-visit-btn emerald"
-                  >
-                    <font-awesome-icon icon="right-to-bracket" /> Check In
-                  </button>
-                  <button
-                    v-if="activeCustomerPhase === 'checked_in'"
-                    @click="openCustomerCheckOut(item)"
-                    class="act-visit-btn rose"
-                  >
-                    <font-awesome-icon icon="right-from-bracket" /> Check Out
-                  </button>
-                </template>
-              </td>
+              <template v-if="!isRowActive(item)">
+                <button
+                  v-if="canVisitNow(item)"
+                  @click="visitNowCust(item)"
+                  :disabled="loadingVisitNow || activeVisitCustomersId !== null"
+                  class="act-visit-btn"
+                  :class="activeVisitCustomersId !== null ? 'disabled' : 'slate'"
+                >
+                  <font-awesome-icon icon="location-dot" /> Visit Now
+                </button>
+              </template>
+              <template v-else>
+                <span class="badge-active-ping emerald">
+                  <span class="ping-dot emerald-dot"></span> ACTIVE
+                </span>
+                <button
+                  v-if="item.visit_status === 'ONGOING'"
+                  @click="checkInCustomers(item)"
+                  class="act-visit-btn emerald"
+                >
+                  <font-awesome-icon icon="right-to-bracket" /> Check In
+                </button>
+                <button
+                  v-if="item.visit_status === 'CHECKED_IN'"
+                  @click="openCustomerCheckOut(item)"
+                  class="act-visit-btn rose"
+                >
+                  <font-awesome-icon icon="right-from-bracket" /> Check Out
+                </button>
+              </template>
+            </td>
             </tr>
           </tbody>
         </table>
@@ -1479,166 +1710,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       <template #footer>
         <button class="btn-cancel" @click="closeCustomerModal">Close</button>
       </template>
-    </AppModal> -->
-
-    <AppModal
-  :show="showCustomerForm"
-  title="Data Customers Ready To Visit"
-  icon="handshake"
-  size="xl"
-  @close="closeCustomerModal"
- >
-  <div class="modal-toolbar">
-    <div class="showing-wrap">
-      <span class="showing-label">Showing:</span>
-      <select
-        v-model="customersPagination.per_page"
-        @change="customersVisitStore.changePageSize()"
-        class="form-input" style="width:auto; padding:6px 10px"
-      >
-        <option :value="10">10</option>
-        <option :value="25">25</option>
-        <option :value="50">50</option>
-      </select>
-    </div>
-    <div class="search-wrap">
-      <input
-        v-model="searchCustomers"
-        @input="customersVisitStore.searchCustomersWithDelay(searchCustomers)"
-        placeholder="Search customer..."
-        class="search-input"
-      />
-      <button class="search-btn"><font-awesome-icon icon="magnifying-glass" /></button>
-    </div>
-  </div>
-
-  <div style="overflow-x:auto; margin-top:12px">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>No</th>
-          <th>Target</th>
-          <th>Company</th>
-          <th>Kontak</th>
-          <th>Address</th>
-          <!-- <th>Status</th> -->
-          <th style="text-align:center">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-if="loadingCustomers">
-          <td colspan="7" class="td-center">
-            <div class="spinner-wrap"><div class="spinner"></div><span>Loading customers...</span></div>
-          </td>
-        </tr>
-        <tr v-else-if="customersData.length === 0">
-          <td colspan="7" class="td-center">📭 Tidak ada customers yang siap dikunjungi</td>
-        </tr>
-        <tr
-          v-else
-          v-for="(item, index) in customersData"
-          :key="item.target_type === 'branch' ? `branch-${item.branch_id}` : item.id"
-          class="data-row"
-          :class="activeVisitCustomersId === item.id ? 'row-active-customer' : ''"
-        >
-          <td class="td-no">{{ index + 1 + customersPagination.per_page * (customersPagination.current_page - 1) }}.</td>
-
-          <!-- ═══ TARGET TYPE BADGE ═══ -->
-          <td>
-            <span
-              class="target-type-badge"
-              :class="item.target_type === 'branch' ? 'target-branch' : 'target-hq'"
-            >
-              <font-awesome-icon :icon="item.target_type === 'branch' ? 'code-branch' : 'building'" />
-              {{ item.target_type === 'branch' ? 'Branch' : 'Head Office' }}
-            </span>
-          </td>
-
-          <!-- ═══ COMPANY (+ nama branch & kota kalau target branch) ═══ -->
-          <td>
-            <p class="td-name">{{ item.company_name ?? '-' }}</p>
-            <p class="td-muted" style="font-family:monospace">{{ item.customer_code ?? '-' }}</p>
-            <p v-if="item.target_type === 'branch'" class="td-sub text-primary" style="margin:2px 0 0">
-              <font-awesome-icon icon="code-branch" />
-              {{ item.branch_name ?? '-' }}<span v-if="item.city"> — {{ item.city }}</span>
-            </p>
-          </td>
-
-          <!-- ═══ KONTAK (bisa banyak) ═══ -->
-          <td style="max-width:220px">
-            <div v-if="item.contacts?.length">
-              <div v-for="ct in item.contacts" :key="ct.id" class="contact-mini-row">
-                <span class="fw-semibold">{{ ct.name }}</span> <br></br>
-                <span v-if="ct.is_primary" class="contact-primary-tag">Kontak Utama</span>
-                <span v-if="ct.position" class="td-muted"> · {{ ct.position }}</span>
-                <div v-if="ct.phone" class="td-muted" style="font-size:0.76rem">{{ ct.phone }}</div>
-              </div>
-            </div>
-            <span v-else class="td-muted">{{ item.contact_name ?? '-' }}</span>
-          </td>
-
-          <!-- ═══ ADDRESS ═══ -->
-          <td style="max-width:180px">
-            <p class="td-muted" style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis" :title="item.address">
-              {{ item.address || '—' }}
-            </p>
-          </td>
-
-          <!-- <td><span class="badge-source">{{ item.customer_status ?? 'Active' }}</span></td> -->
-
-          <td class="td-actions">
-            <template v-if="activeVisitCustomersId !== item.id">
-              <button
-                v-if="canVisitNow(item)"
-                @click="visitNowCust(item)"
-                :disabled="loadingVisitNow || activeVisitCustomersId !== null"
-                class="act-visit-btn"
-                :class="activeVisitCustomersId !== null ? 'disabled' : 'slate'"
-              >
-                <font-awesome-icon icon="location-dot" /> Visit Now
-              </button>
-            </template>
-            <template v-else>
-              <span class="badge-active-ping emerald">
-                <span class="ping-dot emerald-dot"></span> ACTIVE
-              </span>
-              <button
-                v-if="activeCustomerPhase === 'visiting'"
-                @click="checkInCustomers(item)"
-                class="act-visit-btn emerald"
-              >
-                <font-awesome-icon icon="right-to-bracket" /> Check In
-              </button>
-              <button
-                v-if="activeCustomerPhase === 'checked_in'"
-                @click="openCustomerCheckOut(item)"
-                class="act-visit-btn rose"
-              >
-                <font-awesome-icon icon="right-from-bracket" /> Check Out
-              </button>
-            </template>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="modal-pagination">
-    <span class="td-muted" style="font-size:0.82rem">Total: {{ customersPagination.total }}</span>
-    <div class="pagination-nav">
-      <button class="btn-prev-next" :disabled="!customersPagination.prev_page_url" @click="customersVisitStore.fetchCustomersVisit(customersPagination.prev_page_url)">
-        <font-awesome-icon icon="circle-left" /> Prev
-      </button>
-      <button class="btn-prev-next" :disabled="!customersPagination.next_page_url" @click="customersVisitStore.fetchCustomersVisit(customersPagination.next_page_url)">
-        Next <font-awesome-icon icon="circle-right" />
-      </button>
-    </div>
-  </div>
-
-  <template #footer>
-    <button class="btn-cancel" @click="closeCustomerModal">Close</button>
-  </template>
-</AppModal>
+    </AppModal>
 
 
     <!-- ══════════════════════════════════════════
@@ -1655,6 +1727,16 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
         <div class="detail-info-box">
           <p class="detail-box-label">Customer yang akan dikunjungi</p>
           <p style="font-weight:700; font-size:0.95rem">{{ selectedCust.company_name }}</p>
+
+          <!-- ═══ TARGET: BRANCH atau HEAD OFFICE ═══ -->
+          <p v-if="selectedCust.target_type === 'branch'" class="td-muted text-primary" style="font-weight:600">
+            <font-awesome-icon icon="code-branch" />
+            {{ selectedCust.branch_name }}<span v-if="selectedCust.city"> — {{ selectedCust.city }}</span>
+          </p>
+          <p v-else class="td-muted text-primary" style="font-weight:600">
+            <font-awesome-icon icon="building" /> Head Office
+          </p>
+
           <p class="td-muted">{{ selectedCust.contact_name }}</p>
           <p class="td-muted">{{ selectedCust.address ?? '-' }}</p>
         </div>
@@ -1777,6 +1859,36 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           <p class="detail-box-label">Customer</p>
           <p style="font-weight:700">{{ selectedCustomerCheckOut.company_name }}</p>
           <p class="td-muted">{{ selectedCustomerCheckOut.contact_name }}</p>
+        </div>
+
+        <!-- No. Reference -->
+        <div class="form-group">
+          <label>No. Reference <span style="color:#ef4444">*</span></label>
+          <input
+            v-model.trim="customerCheckOutForm.no_reference"
+            type="text"
+            maxlength="100"
+            placeholder="Masukkan nomor referensi..."
+            class="form-input"
+          />
+        </div>
+
+        <!-- Upload file atau foto Check Out -->
+        <div class="form-group">
+          <label>Upload File / Foto Check Out</label>
+          <input
+            type="file"
+        
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp"
+            class="form-input"
+            @change="onCheckOutFileChange"
+          />
+          <small v-if="selectedCheckOutFile" class="td-muted">
+            File dipilih: {{ selectedCheckOutFile.name }}
+          </small>
+          <small v-else class="td-muted">
+            Dokumen atau foto: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, WEBP. Maksimal 10 MB.
+          </small>
         </div>
 
         <!-- Notes -->
@@ -2219,6 +2331,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .td-no { color: var(--text-muted); font-weight: 600; }
 .td-name { font-weight: 500; }
 .td-muted { color: var(--text-muted); font-size: 0.84rem; }
+.td-sub { color: var(--text-muted); font-size: 0.78rem; margin-top: 2px; }
 .td-center { text-align: center; padding: 40px; color: var(--text-muted); }
 .td-actions { text-align: center; white-space: nowrap; }
 
@@ -2358,7 +2471,6 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .segment-btn:hover:not(.active) { background: rgba(99, 102, 241, 0.08); color: #6366f1; }
 .segment-btn.active { background: #6366f1; color: #fff; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25); }
 
-
 /* ── TARGET TYPE BADGE ── */
 .target-type-badge {
   display: inline-flex;
@@ -2390,6 +2502,41 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   margin-left: 4px;
 }
 
+
+.file-preview-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-main);
+  border-radius: 10px;
+  background: var(--bg-input);
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+.file-preview-card:hover {
+  border-color: #6366f1;
+  background: rgba(99,102,241,0.06);
+}
+.file-preview-info { flex: 1; overflow: hidden; }
+.file-preview-name {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-preview-type {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+.file-preview-open-icon {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
 
 /* Tablet (≤ 768px) */
 @media (max-width: 768px) {

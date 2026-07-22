@@ -182,7 +182,10 @@ import {
   faTableCells,
   faIndustry,
   faHourglassHalf,
-  faCodeBranch
+  faCodeBranch,
+  faUpRightFromSquare,
+  faMagnifyingGlassMinus,
+  faMagnifyingGlassPlus
 
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -353,7 +356,10 @@ library.add(
   faTableCells,
   faIndustry,
   faHourglassHalf,
-  faCodeBranch
+  faCodeBranch,
+  faUpRightFromSquare,
+  faMagnifyingGlassMinus,
+  faMagnifyingGlassPlus
 
 )
 
