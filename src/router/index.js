@@ -559,6 +559,15 @@ const routes = [
           role: [3]
         }
       },
+      {
+        path: 'reassignment-sales',
+        name: 'Reassignment Sales Page',
+        component: () =>
+          import('@/views/manager/reassignment/reassigmentSalesView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
 
       /* ========================================
          SHARED

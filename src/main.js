@@ -185,7 +185,8 @@ import {
   faCodeBranch,
   faUpRightFromSquare,
   faMagnifyingGlassMinus,
-  faMagnifyingGlassPlus
+  faMagnifyingGlassPlus,
+  faRightLeft
 
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -359,7 +360,8 @@ library.add(
   faCodeBranch,
   faUpRightFromSquare,
   faMagnifyingGlassMinus,
-  faMagnifyingGlassPlus
+  faMagnifyingGlassPlus,
+  faRightLeft
 
 )
 
