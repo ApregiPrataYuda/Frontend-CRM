@@ -111,6 +111,11 @@ function getContactError(index, field) {
   return errorCustomers.value[`contacts.${index}.${field}`]?.[0] ?? null
 }
 
+function isValidPhone(phone) {
+  if (!phone || !phone.trim()) return true // nullable, boleh kosong
+  return /^(\+62|62|0)8[0-9]{8,11}$/.test(phone.trim())
+}
+
 // ── TOAST ─────────────────────────────────────────────
 const toast      = ref({ show: false, type: '', message: '' })
 let   toastTimer = null
@@ -367,27 +372,32 @@ function openAddModal() {
   isAddModalVisible.value = true
 }
 
-function openEditModal(c) {
+
+async function openEditModal(c) {
   isEdit.value = true
   editId.value = c.id
   resetForm()
+
+  formLoading.value = true
+  await store.detailCustomer(c.id)   // endpoint showCostumers() -> sudah include contacts
+  formLoading.value = false
+
+  const detail = store.customersDetail
+  if (!detail) return // safety, kalau fetch gagal
+
   formData.value = {
-    company_name     : c.company_name     ?? '',
-    customer_status  : c.customer_status  ?? '',
-    industry_id      : c.industry_id      ?? '',
-    lead_category_id : c.lead_category_id ?? '',
-    lead_source      : c.lead_source      ?? '',
-    notes            : c.notes            ?? '',
-    address          : c.address          ?? '',
-    visibility       : c.visibility       ?? 'PUBLIC',
+    company_name     : detail.company_name     ?? '',
+    customer_status  : detail.customer_status  ?? '',
+    industry_id      : detail.industry_id      ?? '',
+    lead_category_id : detail.lead_category_id ?? '',
+    lead_source      : detail.lead_source      ?? '',
+    notes            : detail.notes            ?? '',
+    address          : detail.address          ?? '',
+    visibility       : detail.visibility       ?? 'PUBLIC',
   }
 
-  // ── isi kontak dari data existing ──
-  // Kalau item punya array contacts (dari endpoint yang sudah join
-  // customer_contacts) pakai itu. Kalau belum ada (data lama / list
-  // yang belum di-join), fallback ke contact_name/email/phone lama.
-  if (c.contacts?.length) {
-    contactsForm.value = c.contacts.map(ct => ({
+  if (detail.contacts?.length) {
+    contactsForm.value = detail.contacts.map(ct => ({
       id         : ct.id,
       name       : ct.name ?? '',
       position   : ct.position ?? '',
@@ -397,19 +407,15 @@ function openEditModal(c) {
     }))
   } else {
     contactsForm.value = [{
-      id         : null,
-      name       : c.contact_name ?? '',
-      position   : '',
-      email      : c.email ?? '',
-      phone      : c.phone ?? '',
-      is_primary : true,
+      id: null, name: detail.contact_name ?? '', position: '',
+      email: detail.email ?? '', phone: detail.phone ?? '', is_primary: true,
     }]
   }
 
-  assignVisibility.value     = c.visibility      ?? 'PUBLIC'
-  selectedStatusStatis.value = c.customer_status ?? null
-  selectedIndustry.value     = industrySelectData.value?.find(i => i.id === c.industry_id)      ?? null
-  selectedCategory.value     = categorySelectData.value?.find(i => i.id === c.lead_category_id) ?? null
+  assignVisibility.value     = detail.visibility      ?? 'PUBLIC'
+  selectedStatusStatis.value = detail.customer_status ?? null
+  selectedIndustry.value     = industrySelectData.value?.find(i => i.id === detail.industry_id)      ?? null
+  selectedCategory.value     = categorySelectData.value?.find(i => i.id === detail.lead_category_id) ?? null
   isAddModalVisible.value    = true
 }
 
@@ -420,6 +426,104 @@ function closeAddModal() {
   resetForm()
 }
 
+// async function handleSave() {
+//   // ── MODE: TAMBAH / EDIT CABANG (company sudah matched) ──
+//   if (store.matchedCompany) {
+//     const hasEmptyName = contactsForm.value.some(contact => !contact.name?.trim())
+//     if (hasEmptyName) {
+//       showToast('error', 'Nama kontak wajib diisi untuk setiap kontak.')
+//       return
+//     }
+//     if (!contactsForm.value.some(contact => contact.is_primary)) {
+//       contactsForm.value[0].is_primary = true
+//     }
+
+//     formLoading.value    = true
+//     errorCustomers.value = null
+//     try {
+//       const payload = {
+//         branch_name : branchFormData.value.branch_name,
+//         address     : branchFormData.value.address,
+//         city        : branchFormData.value.city,
+//         contacts: contactsForm.value.map(contact => ({
+//           ...(contact.id ? { id: contact.id } : {}),
+//           name       : contact.name,
+//           position   : contact.position || null,
+//           email      : contact.email || null,
+//           phone      : contact.phone || null,
+//           is_primary : contact.is_primary,
+//         })),
+//       }
+
+//       if (isBranchEdit.value) {
+//         await store.updateBranch(branchEditId.value, payload)
+//         await store.fetchSubmissions()
+//         showToast('success', 'Cabang customer berhasil diperbarui!')
+//       } else {
+//         await store.saveBranch(store.matchedCompany.id, payload)
+//         showToast('success', 'Cabang berhasil diajukan dan sedang menunggu approval Manager.')
+//       }
+//       closeAddModal()
+//     } catch {
+//       // error per-field tampil via getError()
+//     } finally {
+//       formLoading.value = false
+//     }
+//     return
+//   }
+
+//   // ── VALIDASI KONTAK ──
+//   const hasEmptyName = contactsForm.value.some(c => !c.name?.trim())
+//   if (hasEmptyName) {
+//     showToast('error', 'Nama kontak wajib diisi untuk setiap kontak.')
+//     return
+//   }
+//   if (!contactsForm.value.some(c => c.is_primary)) {
+//     contactsForm.value[0].is_primary = true
+//   }
+
+//   formLoading.value         = true
+//   errorCustomers.value      = null
+//   formData.value.visibility = assignVisibility.value
+
+//   // ── GABUNGKAN contacts ke payload ──
+//   const payload = {
+//     ...formData.value,
+//     contacts: contactsForm.value.map(c => ({
+//       ...(c.id ? { id: c.id } : {}),
+//       name       : c.name,
+//       position   : c.position || null,
+//       email      : c.email || null,
+//       phone      : c.phone || null,
+//       is_primary : c.is_primary,
+//     })),
+//   }
+
+//   try {
+//     if (isEdit.value) {
+//       await store.updateCustomer(editId.value, payload)
+//       showToast('success', 'Customer berhasil diperbarui!')
+//     } else {
+//       await store.saveCustomer(payload)
+//       showToast(
+//           'success',
+//           'Customer berhasil diajukan dan sedang menunggu approval Manager.'
+//       )
+//     }
+//     closeAddModal()
+//   } catch {
+//     // error per-field tampil via getError()
+//   } finally {
+//     formLoading.value = false
+//   }
+// }
+
+
+// function isValidPhone(phone) {
+//   if (!phone || !phone.trim()) return true // nullable, boleh kosong
+//   return /^(\+62|62|0)8[0-9]{8,11}$/.test(phone.trim())
+// }
+
 async function handleSave() {
   // ── MODE: TAMBAH / EDIT CABANG (company sudah matched) ──
   if (store.matchedCompany) {
@@ -428,6 +532,14 @@ async function handleSave() {
       showToast('error', 'Nama kontak wajib diisi untuk setiap kontak.')
       return
     }
+
+    // ── VALIDASI FORMAT PHONE ──
+    const hasInvalidPhone = contactsForm.value.some(contact => !isValidPhone(contact.phone))
+    if (hasInvalidPhone) {
+      showToast('error', 'Format nomor telepon tidak valid. Gunakan 08xx, +628xx, atau 628xx.')
+      return
+    }
+
     if (!contactsForm.value.some(contact => contact.is_primary)) {
       contactsForm.value[0].is_primary = true
     }
@@ -472,6 +584,14 @@ async function handleSave() {
     showToast('error', 'Nama kontak wajib diisi untuk setiap kontak.')
     return
   }
+
+  // ── VALIDASI FORMAT PHONE ──
+  const hasInvalidPhone = contactsForm.value.some(c => !isValidPhone(c.phone))
+  if (hasInvalidPhone) {
+    showToast('error', 'Format nomor telepon tidak valid. Gunakan 08xx, +628xx, atau 628xx.')
+    return
+  }
+
   if (!contactsForm.value.some(c => c.is_primary)) {
     contactsForm.value[0].is_primary = true
   }
@@ -527,13 +647,11 @@ function closeSubmissionModal() {
 const isBranchEdit = ref(false)
 const branchEditId = ref(null)
 
-function openEditBranch(item) {
-
+async function openEditBranch(item) {
   resetForm()
 
   isEdit.value = false
   isBranchEdit.value = true
-
   branchEditId.value = item.branch.id
 
   store.selectExistingCompany({
@@ -542,15 +660,21 @@ function openEditBranch(item) {
     customer_code: item.customer.customer_code,
   })
 
+  formLoading.value = true
+  await store.fetchBranches(item.customer.id)   // GET /customers/{id}/branches -> include contacts
+  formLoading.value = false
+
+  const fullBranch = store.branchesData.find(b => b.id === item.branch.id)
+  if (!fullBranch) return // safety
+
   branchFormData.value = {
-    branch_name: item.branch.branch_name ?? '',
-    address: item.branch.address ?? '',
-    city: item.branch.city ?? '',
+    branch_name: fullBranch.branch_name ?? '',
+    address: fullBranch.address ?? '',
+    city: fullBranch.city ?? '',
   }
 
-  // Resource baru mengirim branch.contacts. Fallback untuk branch lama.
-  contactsForm.value = item.branch.contacts?.length
-    ? item.branch.contacts.map(contact => ({
+  contactsForm.value = fullBranch.contacts?.length
+    ? fullBranch.contacts.map(contact => ({
         id         : contact.id,
         name       : contact.name ?? '',
         position   : contact.position ?? '',
@@ -559,12 +683,8 @@ function openEditBranch(item) {
         is_primary : !!contact.is_primary,
       }))
     : [{
-        id         : null,
-        name       : item.branch.contact_name ?? '',
-        position   : '',
-        email      : item.branch.email ?? '',
-        phone      : item.branch.phone ?? '',
-        is_primary : true,
+        id: null, name: fullBranch.contact_name ?? '', position: '',
+        email: fullBranch.email ?? '', phone: fullBranch.phone ?? '', is_primary: true,
       }]
 
   isAddModalVisible.value = true
@@ -1451,16 +1571,28 @@ async function openDeleteBranchModal(item) {
                 <font-awesome-icon icon="user" class="cc-icon" />
                 Dibuat oleh: {{ branch.creator_name }}
               </div>
-              <!-- ═══ KONTAK BRANCH (kalau backend sudah menyertakan branch.contacts) ═══ -->
-              <div v-if="branch.contacts?.length" class="branch-item-row" style="flex-direction:column; align-items:flex-start; gap:2px;">
-                <span style="font-weight:600;">
-                  <font-awesome-icon icon="address-book" class="cc-icon" /> Kontak Cabang:
-                </span>
-                <span v-for="ct in branch.contacts" :key="ct.id" style="margin-left:20px;">
-                  {{ ct.name }}<span v-if="ct.is_primary"> (Utama)</span>
-                  <span v-if="ct.phone"> — {{ ct.phone }}</span>
-                </span>
-              </div>
+               <!-- ═══ KONTAK BRANCH (kalau backend sudah menyertakan branch.contacts) ═══ -->
+            <!-- ═══ KONTAK BRANCH ═══ -->
+<div v-if="branch.contacts?.length" class="branch-contacts-block">
+  <div class="branch-contacts-title">
+    <font-awesome-icon icon="address-book" />
+    Kontak Cabang <span v-if="branch.contacts.length > 1">({{ branch.contacts.length }})</span>
+  </div>
+
+  <div v-for="ct in branch.contacts" :key="ct.id" class="branch-contact-mini">
+    <div class="bcm-top">
+      <span class="bcm-name">{{ ct.name }}</span>
+      <span v-if="ct.is_primary" class="detail-badge">Utama</span>
+      <span v-if="ct.position" class="bcm-position">{{ ct.position }}</span>
+    </div>
+    <div v-if="ct.phone" class="bcm-row">
+      <font-awesome-icon icon="phone" class="cc-icon" /> {{ ct.phone }}
+    </div>
+    <div v-if="ct.email" class="bcm-row">
+      <font-awesome-icon icon="envelope" class="cc-icon" /> {{ ct.email }}
+    </div>
+  </div>
+</div>
             </div>
           </div>
 
@@ -1983,6 +2115,34 @@ async function openDeleteBranchModal(item) {
 .si-reject-text { line-height: 1.5; }
 .si-pending-note { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; color: #b45309; font-size: 0.8rem; }
 
+
+.branch-contacts-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-main);
+}
+.branch-contacts-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 8px;
+}
+.branch-contact-mini {
+  background: var(--bg-input);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+.branch-contact-mini:last-child { margin-bottom: 0; }
+.bcm-top {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.bcm-name { font-weight: 700; font-size: 0.82rem; color: var(--text-primary); }
+.bcm-position { font-size: 0.72rem; color: var(--text-muted); font-style: italic; }
+.bcm-row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;
+}
 
 .empty-title{
     margin-top:12px;
