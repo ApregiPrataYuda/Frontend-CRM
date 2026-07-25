@@ -1,4 +1,3 @@
-
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import AppModal from '@/components/AppModal.vue'
@@ -234,7 +233,7 @@ function closeDetailModal() {
             <input
               :value="store.searchBranches"
               type="text"
-              placeholder="Search Branch, Company, Contact, Sales..."
+              placeholder="Search Branch / Company..."
               class="search-input"
               @input="store.searchWithDelay($event.target.value)"
             />
@@ -314,21 +313,6 @@ function closeDetailModal() {
               <span>{{ item.address || item.city || '-' }}</span>
             </div>
             <div class="cc-row">
-              <font-awesome-icon icon="user-tie" class="cc-icon" />
-              <span>Sales Pemegang : {{ item.assigned_name ?? '-' }}</span>
-            </div>
-
-            <div class="cc-row">
-              <font-awesome-icon icon="address-card" class="cc-icon" />
-              <span>{{ item.contact_name ?? '-' }} <template v-if="item.contact_position">({{ item.contact_position }})</template></span>
-            </div>
-
-            <div class="cc-row">
-              <font-awesome-icon icon="phone" class="cc-icon" />
-              <span>{{ item.contact_phone ?? '-' }}</span>
-            </div>
-
-            <div class="cc-row">
               <font-awesome-icon icon="user" class="cc-icon" />
               <span>Diajukan oleh: {{ item.created_by_name ?? '-' }}</span>
             </div>
@@ -366,8 +350,6 @@ function closeDetailModal() {
             <th style="width:60px">NO.</th>
             <th>Cabang</th>
             <th>Company</th>
-            <th>Primary Contact</th>
-            <th>Sales Pemegang</th>
             <th>Diajukan Oleh</th>
             <th>Status</th>
             <th style="width:150px; text-align:center">ACTIONS</th>
@@ -386,11 +368,6 @@ function closeDetailModal() {
               {{ item.company_name }}
               <div class="td-sub">{{ item.customer_code }}</div>
             </td>
-            <td class="td-name">
-              {{ item.contact_name ?? '-' }}
-              <div class="td-sub">{{ item.contact_position ?? '-' }}</div>
-            </td>
-            <td class="td-name">{{ item.assigned_name ?? '-' }}</td>
             <td class="td-name">{{ item.created_by_name ?? '-' }}</td>
             <td class="td-name">
               <span class="status-badge" :class="store.getApprovalConfig(item.approval_status).label">
@@ -482,7 +459,7 @@ function closeDetailModal() {
             <span class="detail-value">{{ detailItem.city ?? '-' }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Sales Pemegang</span>
+            <span class="detail-label">Sales</span>
             <span class="detail-value">{{ detailItem.assigned_name ?? 'Belum ditentukan' }}</span>
           </div>
 

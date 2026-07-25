@@ -426,103 +426,6 @@ function closeAddModal() {
   resetForm()
 }
 
-// async function handleSave() {
-//   // ── MODE: TAMBAH / EDIT CABANG (company sudah matched) ──
-//   if (store.matchedCompany) {
-//     const hasEmptyName = contactsForm.value.some(contact => !contact.name?.trim())
-//     if (hasEmptyName) {
-//       showToast('error', 'Nama kontak wajib diisi untuk setiap kontak.')
-//       return
-//     }
-//     if (!contactsForm.value.some(contact => contact.is_primary)) {
-//       contactsForm.value[0].is_primary = true
-//     }
-
-//     formLoading.value    = true
-//     errorCustomers.value = null
-//     try {
-//       const payload = {
-//         branch_name : branchFormData.value.branch_name,
-//         address     : branchFormData.value.address,
-//         city        : branchFormData.value.city,
-//         contacts: contactsForm.value.map(contact => ({
-//           ...(contact.id ? { id: contact.id } : {}),
-//           name       : contact.name,
-//           position   : contact.position || null,
-//           email      : contact.email || null,
-//           phone      : contact.phone || null,
-//           is_primary : contact.is_primary,
-//         })),
-//       }
-
-//       if (isBranchEdit.value) {
-//         await store.updateBranch(branchEditId.value, payload)
-//         await store.fetchSubmissions()
-//         showToast('success', 'Cabang customer berhasil diperbarui!')
-//       } else {
-//         await store.saveBranch(store.matchedCompany.id, payload)
-//         showToast('success', 'Cabang berhasil diajukan dan sedang menunggu approval Manager.')
-//       }
-//       closeAddModal()
-//     } catch {
-//       // error per-field tampil via getError()
-//     } finally {
-//       formLoading.value = false
-//     }
-//     return
-//   }
-
-//   // ── VALIDASI KONTAK ──
-//   const hasEmptyName = contactsForm.value.some(c => !c.name?.trim())
-//   if (hasEmptyName) {
-//     showToast('error', 'Nama kontak wajib diisi untuk setiap kontak.')
-//     return
-//   }
-//   if (!contactsForm.value.some(c => c.is_primary)) {
-//     contactsForm.value[0].is_primary = true
-//   }
-
-//   formLoading.value         = true
-//   errorCustomers.value      = null
-//   formData.value.visibility = assignVisibility.value
-
-//   // ── GABUNGKAN contacts ke payload ──
-//   const payload = {
-//     ...formData.value,
-//     contacts: contactsForm.value.map(c => ({
-//       ...(c.id ? { id: c.id } : {}),
-//       name       : c.name,
-//       position   : c.position || null,
-//       email      : c.email || null,
-//       phone      : c.phone || null,
-//       is_primary : c.is_primary,
-//     })),
-//   }
-
-//   try {
-//     if (isEdit.value) {
-//       await store.updateCustomer(editId.value, payload)
-//       showToast('success', 'Customer berhasil diperbarui!')
-//     } else {
-//       await store.saveCustomer(payload)
-//       showToast(
-//           'success',
-//           'Customer berhasil diajukan dan sedang menunggu approval Manager.'
-//       )
-//     }
-//     closeAddModal()
-//   } catch {
-//     // error per-field tampil via getError()
-//   } finally {
-//     formLoading.value = false
-//   }
-// }
-
-
-// function isValidPhone(phone) {
-//   if (!phone || !phone.trim()) return true // nullable, boleh kosong
-//   return /^(\+62|62|0)8[0-9]{8,11}$/.test(phone.trim())
-// }
 
 async function handleSave() {
   // ── MODE: TAMBAH / EDIT CABANG (company sudah matched) ──
@@ -962,12 +865,12 @@ async function openDeleteBranchModal(item) {
               <div>
                   <small class="text-muted d-block">Sales</small>
                   <span class="fw-semibold">
-                      {{
-                          item.display_type === 'branch'
-                              ? item.branch.owner_name ?? '-'
-                              : item.owner_name ?? '-'
-                      }}
-                  </span>
+    {{
+        item.display_type === 'branch'
+            ? item.branch.assigned_name ?? '-'
+            : item.assigned_name ?? '-'
+    }}
+</span>
               </div>
           </div>
           </div>
@@ -1065,13 +968,14 @@ async function openDeleteBranchModal(item) {
             </td>
             <!-- PIC: kolom terpisah, sumber beda untuk head company vs branch -->
             <td class="td-name">
+              
               <template v-if="item.display_type === 'branch'">
-                <div class="td-sub">Sales Pemegang Cabang</div>
-                <div>{{ item.sales_name ?? '-' }}</div>
+                  <div class="td-sub">Sales Pemegang Cabang</div>
+                  <div>{{ item.assigned_name ?? '-' }}</div>
               </template>
               <template v-else>
-                <div class="td-sub">Sales Head Company</div>
-                <div>{{ item.owner_name ?? '-' }}</div>
+                  <div class="td-sub">Sales Head Company</div>
+                  <div>{{ item.assigned_name ?? '-' }}</div>
               </template>
             </td>
             <td class="td-name">
@@ -1565,7 +1469,7 @@ async function openDeleteBranchModal(item) {
               <!-- TIDAK mewarisi owner_name/assigned_name dari head company -->
               <div class="branch-item-row">
                 <font-awesome-icon icon="user-tie" class="cc-icon" />
-                PIC Cabang: {{ branch.assigned_name ?? branch.creator_name ?? 'Belum ditentukan' }}
+                Sales Pemegang Cabang: {{ branch.assigned_name ?? branch.creator_name ?? 'Belum ditentukan' }}
               </div>
               <div v-if="branch.creator_name && branch.assigned_name" class="branch-item-row">
                 <font-awesome-icon icon="user" class="cc-icon" />

@@ -113,24 +113,6 @@ const sortByLabel = () => {
 
 
 //────────────────────────────────────────────
-// CONTACTS HELPER
-//────────────────────────────────────────────
-// `contacts` datang sebagai array dari CostumersResources,
-// masing-masing punya flag is_primary. Ambil yang primary,
-// fallback ke kontak pertama kalau belum ada yang ditandai primary.
-
-function primaryContact(item) {
-
-    if (!item?.contacts?.length)
-        return null
-
-    return item.contacts.find(c => c.is_primary) || item.contacts[0]
-
-}
-
-
-
-//────────────────────────────────────────────
 // APPROVE
 //────────────────────────────────────────────
 
@@ -897,7 +879,7 @@ function getAvatarColor(name) {
 
             <div class="cc-body">
 
-                <div class="cc-row" v-if="item.contact_name">
+                <div class="cc-row">
 
                     <font-awesome-icon icon="user"/>
 
@@ -909,7 +891,7 @@ function getAvatarColor(name) {
 
                     <font-awesome-icon icon="envelope"/>
 
-                    {{ item.email || '-' }}
+                    {{ item.email }}
 
                 </div>
 
@@ -917,7 +899,7 @@ function getAvatarColor(name) {
 
                     <font-awesome-icon icon="phone"/>
 
-                    {{ item.phone || '-' }}
+                    {{ item.phone }}
 
                 </div>
 
@@ -925,81 +907,23 @@ function getAvatarColor(name) {
 
                     <font-awesome-icon icon="industry"/>
 
-                    {{ item.industry_name || '-' }}
+                    {{ item.industry_name }}
 
                 </div>
 
-                <!-- KONTAK UTAMA dari array contacts -->
-                <div class="cc-row" v-if="primaryContact(item)">
+              <div class="cc-row sales-row">
+    <font-awesome-icon icon="user-tie" class="sales-icon"/>
 
-                    <font-awesome-icon icon="address-card"/>
+    <div class="sales-info">
+        <span class="sales-label">
+            Sales
+        </span>
 
-                    {{ primaryContact(item).name }}
-
-                    <span
-                        v-if="primaryContact(item).position"
-                        class="td-sub"
-                    >
-                        ({{ primaryContact(item).position }})
-                    </span>
-
-                </div>
-
-                <!-- SALES MAINTENANCE -->
-                <!-- assigned_name = sales yang saat ini pegang maintenance.
-                     Kalau belum pernah di-assign/transfer, fallback ke owner_name
-                     (yang mengajukan customer ini). -->
-                <div class="cc-row sales-row">
-
-                    <font-awesome-icon icon="user-tie" class="sales-icon"/>
-
-                    <div class="sales-info">
-
-                        <span class="sales-label">
-
-                            Sales Pemegang
-
-                        </span>
-
-                        <strong>
-
-                            {{ item.assigned_name || item.owner_name || '-' }}
-
-                        </strong>
-
-                        <span
-                            v-if="!item.assigned_name && item.owner_name"
-                            class="td-sub"
-                        >
-                            (default, belum pernah di-assign)
-                        </span>
-
-                    </div>
-
-                </div>
-
-                <!-- DIAJUKAN OLEH -->
-                <div class="cc-row sales-row">
-
-                    <font-awesome-icon icon="user-plus" class="sales-icon"/>
-
-                    <div class="sales-info">
-
-                        <span class="sales-label">
-
-                            Diajukan Oleh
-
-                        </span>
-
-                        <strong>
-
-                            {{ item.owner_name || '-' }}
-
-                        </strong>
-
-                    </div>
-
-                </div>
+        <strong>
+            {{ item.owner_name }}
+        </strong>
+    </div>
+</div>
 
             </div>
 
@@ -1014,36 +938,80 @@ function getAvatarColor(name) {
 
                 </span>
 
-                <div class="cc-actions">
-
-                    <template v-if="item.approval_status === 'pending'">
-
-                        <button
-                            v-if="canApprove"
-                            class="act-btn act-approve"
-                            @click="openApproveModal(item)"
-                        >
-                            <font-awesome-icon icon="circle-check"/>
-                        </button>
-
-                        <button
-                            v-if="canApprove"
-                            class="act-btn act-reject"
-                            @click="openRejectModal(item)"
-                        >
-                            <font-awesome-icon icon="circle-xmark"/>
-                        </button>
-
-                    </template>
+                <!-- <div class="cc-actions">
 
                     <button
-                        class="act-btn act-info"
-                        @click="openDetail(item)"
+
+                        v-if="canApprove"
+
+                        class="act-btn act-approve"
+
+                        @click="openApproveModal(item)"
+
                     >
-                        <font-awesome-icon icon="circle-info"/>
+
+                        <font-awesome-icon icon="circle-check"/>
+
                     </button>
 
-                </div>
+                    <button
+
+                        v-if="canApprove"
+
+                        class="act-btn act-reject"
+
+                        @click="openRejectModal(item)"
+
+                    >
+
+                        <font-awesome-icon icon="circle-xmark"/>
+
+                    </button>
+
+                    <button
+
+                        class="act-btn act-info"
+
+                        @click="openDetail(item)"
+
+                    >
+
+                        <font-awesome-icon icon="circle-info"/>
+
+                    </button>
+
+                </div> -->
+
+                <div class="cc-actions">
+
+    <template v-if="item.approval_status === 'pending'">
+
+        <button
+            v-if="canApprove"
+            class="act-btn act-approve"
+            @click="openApproveModal(item)"
+        >
+            <font-awesome-icon icon="circle-check"/>
+        </button>
+
+        <button
+            v-if="canApprove"
+            class="act-btn act-reject"
+            @click="openRejectModal(item)"
+        >
+            <font-awesome-icon icon="circle-xmark"/>
+        </button>
+
+    </template>
+
+    <button
+        class="act-btn act-info"
+        @click="openDetail(item)"
+    >
+        <font-awesome-icon icon="circle-info"/>
+    </button>
+
+</div>
 
             </div>
 
@@ -1075,10 +1043,6 @@ function getAvatarColor(name) {
                 <th>Company</th>
 
                 <th>Contact</th>
-
-                <th>Sales Pemegang</th>
-
-                <th>Diajukan Oleh</th>
 
                 <th>Status</th>
 
@@ -1113,11 +1077,6 @@ function getAvatarColor(name) {
         }}
     </td>
 
-    <!-- CODE -->
-    <td>
-        <span class="mono-text">{{ item.customer_code }}</span>
-    </td>
-
     <!-- CUSTOMER -->
     <td>
 
@@ -1126,7 +1085,11 @@ function getAvatarColor(name) {
         </div>
 
         <div class="td-sub">
-            {{ item.industry_name || '-' }}
+            {{ item.customer_code }}
+        </div>
+
+        <div class="td-sub">
+            {{ item.industry_name }}
         </div>
 
     </td>
@@ -1135,7 +1098,7 @@ function getAvatarColor(name) {
     <td>
 
         <div class="fw-semibold">
-            {{ primaryContact(item)?.name || item.contact_name || '-' }}
+            {{ item.contact_name || '-' }}
         </div>
 
         <div class="td-sub">
@@ -1148,24 +1111,15 @@ function getAvatarColor(name) {
 
     </td>
 
-    <!-- SALES MAINTENANCE -->
+    <!-- SALES -->
     <td>
 
         <div class="fw-semibold">
-            {{ item.assigned_name || item.owner_name || '-' }}
+            {{ item.owner_name }}
         </div>
 
         <div class="td-sub">
-            {{ item.assigned_name ? 'Maintenance saat ini' : 'Default (belum di-assign)' }}
-        </div>
-
-    </td>
-
-    <!-- DIAJUKAN OLEH -->
-    <td>
-
-        <div class="fw-semibold">
-            {{ item.owner_name || '-' }}
+            Sales Owner
         </div>
 
     </td>
@@ -1493,7 +1447,7 @@ function getAvatarColor(name) {
 
                 <span class="detail-banner-industry">
 
-                    {{ detailCustomer.industry_name || '-' }}
+                    {{ detailCustomer.industry_name }}
 
                 </span>
 
@@ -1502,173 +1456,136 @@ function getAvatarColor(name) {
 
             <div class="detail-list">
 
-                <!-- =========================
-                     IDENTITAS CUSTOMER
-                ========================== -->
-
-                <div class="detail-section-label">
-
-                    Identitas Customer
-
-                </div>
-
                 <div class="detail-row">
-                    <span class="detail-label">Contact Person</span>
-                    <span class="detail-value">{{ detailCustomer.contact_name || '-' }}</span>
-                </div>
 
-                <div class="detail-row">
-                    <span class="detail-label">Email</span>
-                    <span class="detail-value">{{ detailCustomer.email || '-' }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Phone</span>
-                    <span class="detail-value">{{ detailCustomer.phone || '-' }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Address</span>
-                    <span class="detail-value">{{ detailCustomer.address || '-' }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Industry</span>
-                    <span class="detail-value">{{ detailCustomer.industry_name || '-' }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Lead Category</span>
-                    <span class="detail-value">{{ detailCustomer.lead_category_name || '-' }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Lead Source</span>
-                    <span class="detail-value">{{ detailCustomer.lead_source || '-' }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Customer Status</span>
-                    <span class="detail-value">{{ detailCustomer.customer_status || '-' }}</span>
-                </div>
-
-                <div class="detail-row" v-if="detailCustomer.branch_count">
-                    <span class="detail-label">Jumlah Cabang</span>
-                    <span class="detail-value">{{ detailCustomer.branch_count }}</span>
-                </div>
-
-
-                <!-- =========================
-                     KONTAK (dari array contacts)
-                ========================== -->
-
-                <div
-                    class="detail-section-label"
-                    v-if="detailCustomer.contacts?.length"
-                >
-                    Kontak
-                </div>
-
-                <div
-                    class="detail-row"
-                    v-for="c in detailCustomer.contacts"
-                    :key="c.id"
-                >
                     <span class="detail-label">
-                        {{ c.is_primary ? 'Kontak Utama' : (c.position || 'Kontak') }}
+
+                        Contact
+
                     </span>
+
                     <span class="detail-value">
-                        {{ c.name || '-' }}
-                        <template v-if="c.phone"> · {{ c.phone }}</template>
-                        <template v-if="c.email"> · {{ c.email }}</template>
+
+                        {{ detailCustomer.contact_name }}
+
                     </span>
-                </div>
-
-
-                <!-- =========================
-                     KEPEMILIKAN & MAINTENANCE
-                ========================== -->
-
-                <div class="detail-section-label">
-
-                    Kepemilikan & Maintenance
 
                 </div>
 
                 <div class="detail-row">
-                    <span class="detail-label">Sales Pemegang</span>
+
+                    <span class="detail-label">
+
+                        Email
+
+                    </span>
+
                     <span class="detail-value">
-                        {{ detailCustomer.assigned_name || detailCustomer.owner_name || '-' }}
-                        <span
-                            v-if="!detailCustomer.assigned_name && detailCustomer.owner_name"
-                            style="opacity:.6;font-size:.75rem;display:block"
-                        >
-                            (default, belum pernah di-assign)
-                        </span>
+
+                        {{ detailCustomer.email }}
+
                     </span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Diajukan Oleh</span>
-                    <span class="detail-value">{{ detailCustomer.owner_name || '-' }}</span>
-                </div>
-
-
-                <!-- =========================
-                     APPROVAL
-                ========================== -->
-
-                <div class="detail-section-label">
-
-                    Approval
 
                 </div>
 
                 <div class="detail-row">
-                    <span class="detail-label">Status</span>
+
+                    <span class="detail-label">
+
+                        Phone
+
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ detailCustomer.phone }}
+
+                    </span>
+
+                </div>
+
+                <div class="detail-row">
+
+                    <span class="detail-label">
+
+                        Industry
+
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ detailCustomer.industry_name }}
+
+                    </span>
+
+                </div>
+
+                <div class="detail-row">
+
+                    <span class="detail-label">
+
+                        Lead Category
+
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ detailCustomer.lead_category_name }}
+
+                    </span>
+
+                </div>
+
+                <div class="detail-row">
+
+                    <span class="detail-label">
+
+                        Sales
+
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ detailCustomer.owner_name }}
+
+                    </span>
+
+                </div>
+
+                <div class="detail-row">
+
+                    <span class="detail-label">
+
+                        Status
+
+                    </span>
+
                     <span
                         class="status-badge"
                         :class="approvalBadge(detailCustomer.approval_status)"
                     >
                         {{ detailCustomer.approval_status }}
                     </span>
+
                 </div>
 
                 <div
-                    class="detail-row"
-                    v-if="detailCustomer.approved_at"
-                >
-                    <span class="detail-label">Tanggal Approval</span>
-                    <span class="detail-value">{{ store.formatDate(detailCustomer.approved_at) }}</span>
-                </div>
-
-                <div
-                    class="detail-row"
-                    v-if="detailCustomer.approval_revision"
-                >
-                    <span class="detail-label">Revisi Ke</span>
-                    <span class="detail-value">{{ detailCustomer.approval_revision }}</span>
-                </div>
-
-                <div
-                    class="detail-row"
-                    v-if="detailCustomer.approval_status === 'rejected' && detailCustomer.approval_note"
-                >
-                    <span class="detail-label">Alasan Reject</span>
-                    <span class="detail-value">{{ detailCustomer.approval_note }}</span>
-                </div>
-
-                <div
-                    class="detail-row"
                     v-if="detailCustomer.notes"
+                    class="detail-row"
                 >
-                    <span class="detail-label">Notes</span>
-                    <span class="detail-value">{{ detailCustomer.notes }}</span>
-                </div>
 
-                <div class="detail-row">
-                    <span class="detail-label">Dibuat</span>
-                    <span class="detail-value">{{ store.formatDate(detailCustomer.created_at) }}</span>
+                    <span class="detail-label">
+
+                        Notes
+
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ detailCustomer.notes }}
+
+                    </span>
+
                 </div>
 
             </div>
