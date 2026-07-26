@@ -34,7 +34,6 @@ const showPerPageMenu = ref(false)
 const showSortByMenu  = ref(false)
 const showSortDirMenu = ref(false)
 const showModeMenu    = ref(false)
-const closingFollowUpId = ref(null)
 
 // ── VIEW MODE (Card / Table) ──
 const viewMode = ref('card') // default: card
@@ -374,14 +373,8 @@ const subjectTemplatesCustomers = [
   { label: 'Tidak Berminat Lanjut - Kendala Anggaran',           value: 'Tidak Berminat Lanjut - Kendala Anggaran'           },
 ]
 
-// HEAD_OFFICE_VALUE dipakai sebagai "pilihan pertama & default" di dropdown
-// branch, supaya sales SELALU melihat sesuatu yang sudah terpilih
-// (tidak pernah ada state "belum pilih apa-apa" yang bikin bingung).
-const HEAD_OFFICE_VALUE = '__HEAD_OFFICE__'
-
 const formDirectCustomer = reactive({
   customer_id               : null,
-  branch_id                 : HEAD_OFFICE_VALUE,
   follow_up_type            : 'CALL',
   follow_up_at              : '',
   subject                   : '',
@@ -391,65 +384,9 @@ const formDirectCustomer = reactive({
   next_follow_up_at         : null,
 })
 
-// Customer yang sedang dipilih (objek penuh, termasuk daftar branch-nya).
-// Diasumsikan followUpStore.customersDirectData sudah membawa field
-// `branches: [{ id, branch_name, is_main_branch, contact_name, phone }]`
-// dan `contact_name` / `phone` di level customer untuk head office.
-const selectedCustomer = computed(() =>
-  followUpStore.customersDirectData.find(c => c.customer_id === formDirectCustomer.customer_id) ?? null
-)
-
-// Opsi dropdown branch: selalu diawali "Head Office", baru diikuti
-// cabang-cabang aktual. Kalau customer tidak punya cabang sama sekali,
-// dropdown branch disembunyikan total (lihat hasBranches di bawah) —
-// jadi sales dengan customer sederhana tidak akan pernah lihat pilihan
-// yang tidak relevan buat mereka.
-const branchOptions = computed(() => {
-  const branches = selectedCustomer.value?.branches ?? []
-  return [
-    { value: HEAD_OFFICE_VALUE, label: 'Head Office (Kantor Pusat)' },
-    ...branches.map(b => ({
-      value: b.id,
-      label: b.is_main_branch ? `${b.branch_name} (Utama)` : b.branch_name,
-    })),
-  ]
-})
-
-const hasBranches = computed(() => (selectedCustomer.value?.branches ?? []).length > 0)
-
-// Preview kontak yang akan dihubungi — read-only, cuma buat konfirmasi
-// visual supaya sales yakin dia menghubungi orang yang benar sebelum submit.
-const contactPreview = computed(() => {
-  if (!selectedCustomer.value) return null
-
-  if (formDirectCustomer.branch_id !== HEAD_OFFICE_VALUE) {
-    const branch = (selectedCustomer.value.branches ?? [])
-      .find(b => b.id === formDirectCustomer.branch_id)
-    if (branch) {
-      return {
-        name : branch.contact_name || selectedCustomer.value.contact_name || '-',
-        phone: branch.phone || selectedCustomer.value.phone || null,
-        label: branch.branch_name,
-      }
-    }
-  }
-
-  return {
-    name : selectedCustomer.value.contact_name || '-',
-    phone: selectedCustomer.value.phone || null,
-    label: 'Head Office',
-  }
-})
-
-// Setiap kali customer diganti, reset pilihan branch balik ke Head Office
-// supaya tidak ada kondisi branch_id "nyangkut" dari customer sebelumnya.
-watch(() => formDirectCustomer.customer_id, () => {
-  formDirectCustomer.branch_id = HEAD_OFFICE_VALUE
-})
-
 const openDirectCustomerModal = async () => {
   Object.assign(formDirectCustomer, {
-    customer_id: null, branch_id: HEAD_OFFICE_VALUE, follow_up_type: 'CALL', follow_up_at: '',
+    customer_id: null, follow_up_type: 'CALL', follow_up_at: '',
     subject: '', subject_template_customer: '', notes: '',
     need_follow_up: false, next_follow_up_at: null,
   })
@@ -473,9 +410,6 @@ const submitDirectCustomer = async () => {
 
   const payload = {
     customer_id   : formDirectCustomer.customer_id,
-    branch_id     : formDirectCustomer.branch_id === HEAD_OFFICE_VALUE
-                      ? null
-                      : formDirectCustomer.branch_id,
     follow_up_type: formDirectCustomer.follow_up_type,
     subject       : formDirectCustomer.subject,
     notes         : formDirectCustomer.notes,
@@ -532,44 +466,6 @@ const openTimelineCustomerModal = async (item) => {
   await followUpStore.fetchTimelineCustomer(item.id)
 }
 
-const handleCloseFollowUp = async (fu) => {
-  const ok = await confirm({
-    type: 'warning',
-    title: 'Tutup Follow Up',
-    message: `Yakin ingin menutup "${fu.follow_up_code}"?`,
-    detail: 'Follow up ini akan ditandai CLOSED.',
-    confirmText: 'Ya, Tutup',
-    cancelText: 'Batal',
-  })
-
-  if (!ok) return
-
-  closingFollowUpId.value = fu.id
-
-  try {
-    await followUpStore.closeFollowUp(fu.id)
-
-    toast.success('Follow Up berhasil ditutup')
-
-    // refresh timeline customer
-    await followUpStore.fetchTimelineCustomer(
-      followUpStore.timelineCustomerId
-    )
-
-    // refresh list utama
-    await followUpStore.fetchFollowUps(followUpStore.mode)
-
-  } catch (err) {
-    toast.error(
-      err.response?.data?.message ||
-      'Gagal menutup Follow Up'
-    )
-  } finally {
-    closingFollowUpId.value = null
-  }
-}
-
-
 // ══════════════════════════════════════════════
 //  DELETE
 // ══════════════════════════════════════════════
@@ -595,6 +491,19 @@ const handleDelete = async (item) => {
 // ══════════════════════════════════════════════
 //  VISIT FROM FOLLOW UP
 // ══════════════════════════════════════════════
+// const createVisitFromFollowUp = (item) => {
+//   if (!item.customer_id) {
+//     return toast.warning('Customer tidak ditemukan untuk follow up ini')
+//   }
+//   router.push({
+//     path : '/sales-visit-customers',
+//     query: {
+//       customer_id  : item.customer_id,
+//       company_name : item.target_name,
+//       from_followup: item.follow_up_code,
+//     },
+//   })
+// }
 const createVisitFromFollowUp = (item) => {
   if (!item.customer_id) {
     return toast.warning('Customer tidak ditemukan untuk follow up ini')
@@ -618,17 +527,6 @@ const fuTypeIcon = (type) => {
     OTHER   : 'fa-solid fa-ellipsis',
   }
   return map[type] ?? 'fa-solid fa-ellipsis'
-}
-
-
-const getOpenFollowUp = (followUpId) => {
-    return followUpStore.openFollowUpsCustomer.find(
-        fu => fu.id === followUpId
-    )
-}
-
-const isOpenFollowUp = (followUpId) => {
-    return !!getOpenFollowUp(followUpId)
 }
 
 </script>
@@ -658,6 +556,11 @@ const isOpenFollowUp = (followUpId) => {
 
         <!-- ADD BUTTONS sesuai mode -->
         <template v-if="followUpStore.mode === 'leads'">
+
+          <!-- <button class="btn-toolbar btn-purple" @click="openSubmitLeadModal({ id: null, follow_up_type: '', subject: '' })">
+            <font-awesome-icon icon="plus" /> Add Follow Up Lead
+          </button> -->
+
           <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openDirectLeadModal">
             <font-awesome-icon icon="plus" /> Direct Lead Data
           </button>
@@ -788,7 +691,7 @@ const isOpenFollowUp = (followUpId) => {
     </div>
 
     <!-- ══════════════════════════════════════════
-         TABLE VIEW
+         TABLE VIEW (kode existing, tidak diubah, hanya dibungkus v-if)
     ══════════════════════════════════════════ -->
     <div v-if="viewMode === 'table'" class="table-card flex-grow-1 overflow-auto mb-3">
       <table class="data-table">
@@ -859,15 +762,10 @@ const isOpenFollowUp = (followUpId) => {
             <!-- SUBJECT -->
             <td class="td-subject">{{ item.subject }}</td>
 
-            <!-- TARGET: company + branch (jika ada) + kontak resolved -->
+            <!-- TARGET -->
             <td>
-              <div class="fw-600">{{ item.target_name ?? item.customer_company_name ?? item.lead_company_name }}</div>
-              <div v-if="item.branch" class="td-muted target-sub">
-                <font-awesome-icon icon="fa-solid fa-code-branch" /> {{ item.branch.branch_name }}
-              </div>
-              <div v-if="item.contact?.name && item.contact.name !== '-'" class="td-muted target-sub">
-                <font-awesome-icon icon="fa-solid fa-user" /> {{ item.contact.name }}
-              </div>
+              <div class="fw-600">{{ item.target_name }}</div>
+              <div class="td-muted">{{ item.target_source }}</div>
             </td>
 
             <!-- STATUS FOLLOW UP -->
@@ -986,7 +884,7 @@ const isOpenFollowUp = (followUpId) => {
     </div>
 
     <!-- ══════════════════════════════════════════
-         CARD VIEW — default tampilan
+         CARD VIEW (baru) — default tampilan
     ══════════════════════════════════════════ -->
     <div v-else class="card-view flex-grow-1 overflow-auto mb-3">
 
@@ -1038,18 +936,11 @@ const isOpenFollowUp = (followUpId) => {
 
             <div class="fu-card-subject">{{ item.subject }}</div>
 
-            <!-- TARGET: company + branch chip + kontak resolved -->
             <div class="fu-card-target">
               <font-awesome-icon icon="fa-solid fa-building" />
               <div>
-                <div class="fw-600">{{ item.target_name ?? item.customer_company_name ?? item.lead_company_name }}</div>
-                <div v-if="item.branch" class="td-muted target-sub">
-                  <font-awesome-icon icon="fa-solid fa-code-branch" /> {{ item.branch.branch_name }}
-                </div>
-                <div v-if="item.contact?.name && item.contact.name !== '-'" class="td-muted target-sub">
-                  <font-awesome-icon icon="fa-solid fa-user" /> {{ item.contact.name }}
-                  <span v-if="item.contact.phone"> · {{ item.contact.phone }}</span>
-                </div>
+                <div class="fw-600">{{ item.target_name }}</div>
+                <div class="td-muted">{{ item.target_source }}</div>
               </div>
             </div>
 
@@ -1518,10 +1409,6 @@ const isOpenFollowUp = (followUpId) => {
 
     <!-- ══════════════════════════════════════════
          MODAL: DIRECT FOLLOW UP CUSTOMER
-         UX: customer dulu -> branch (default Head Office,
-         disembunyikan kalau customer tidak punya cabang) ->
-         preview kontak read-only supaya sales yakin menghubungi
-         orang yang benar sebelum submit.
     ══════════════════════════════════════════ -->
     <AppModal
       :show="isDirectCustomerModalVisible"
@@ -1545,36 +1432,6 @@ const isOpenFollowUp = (followUpId) => {
             :loading="followUpStore.loadingCustomersDirect"
           />
         </div>
-
-        <!-- BRANCH: hanya muncul kalau customer punya cabang.
-             Kalau tidak punya, sales tidak perlu lihat pilihan ini sama sekali. -->
-        <transition name="fade">
-          <div v-if="formDirectCustomer.customer_id && hasBranches" class="form-group">
-            <label>Lokasi / Cabang <span class="req-label">*</span></label>
-            <Multiselect
-              v-model="formDirectCustomer.branch_id"
-              :options="branchOptions"
-              label="label"
-              valueProp="value"
-              :can-clear="false"
-              :searchable="true"
-            />
-          </div>
-        </transition>
-
-        <!-- CONTACT PREVIEW: read-only, biar sales yakin sebelum submit -->
-        <transition name="fade">
-          <div v-if="formDirectCustomer.customer_id && contactPreview" class="contact-preview">
-            <font-awesome-icon icon="fa-solid fa-address-card" />
-            <div>
-              <div class="contact-preview-title">Akan menghubungi ({{ contactPreview.label }})</div>
-              <div class="contact-preview-name">
-                {{ contactPreview.name }}
-                <span v-if="contactPreview.phone" class="td-muted"> · {{ contactPreview.phone }}</span>
-              </div>
-            </div>
-          </div>
-        </transition>
 
         <!-- TYPE RADIO BUTTON -->
         <div class="form-group">
@@ -1678,9 +1535,6 @@ const isOpenFollowUp = (followUpId) => {
             <strong>{{ followUpStore.followUpDetail.follow_up_code }}</strong>
             <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px">
               {{ followUpStore.followUpDetail?.customer_company_name ?? followUpStore.followUpDetail?.lead_company_name }}
-              <template v-if="followUpStore.followUpDetail?.branch_name">
-                — {{ followUpStore.followUpDetail.branch_name }}
-              </template>
             </div>
           </div>
           <span class="status-badge" :class="getFollowUpStatus(followUpStore.followUpDetail.computed_status).class">
@@ -1869,154 +1723,6 @@ const isOpenFollowUp = (followUpId) => {
           <span class="status-badge status-warning">{{ followUpStore.customerTimeline.filter(h => h.has_potential_order).length }} Potential Orders</span>
         </div>
 
-
-       <!-- start code baru -->
-        <div
-  v-if="followUpStore.openFollowUpsCustomer.length"
-  class="open-fu-container"
->
-  <div class="open-fu-header">
-    <div class="open-fu-title">
-      <font-awesome-icon icon="fa-solid fa-folder-open" />
-      <span>Follow Up Aktif</span>
-
-      <span class="open-fu-count">
-        ({{ followUpStore.openFollowUpsCustomer.length }})
-      </span>
-    </div>
-  </div>
-
-  <div
-    v-for="fu in followUpStore.openFollowUpsCustomer"
-    :key="fu.id"
-    class="open-fu-card"
-  >
-    <div class="open-fu-content">
-
-      <div class="fu-code">
-        <font-awesome-icon
-          icon="fa-solid fa-circle"
-          style="color:#f59e0b;font-size:9px"
-        />
-
-        {{ fu.follow_up_code }}
-      </div>
-
-      <div class="fu-subject">
-        {{ fu.subject }}
-      </div>
-
-      <div class="fu-footer">
-
-        <div class="fu-date">
-          <font-awesome-icon icon="fa-solid fa-calendar-days" />
-          {{ followUpStore.formatDate(fu.follow_up_at) }}
-        </div>
-
-        <button
-          class="btn-close-fu"
-          :disabled="closingFollowUpId === fu.id"
-          @click="handleCloseFollowUp(fu)"
-        >
-          <font-awesome-icon icon="fa-solid fa-lock" />
-
-          {{
-            closingFollowUpId === fu.id
-              ? 'Closing...'
-              : 'Close'
-          }}
-        </button>
-
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- <div class="timeline-wrapper" style="--line-color:#6366f1">
-
-  <div
-    v-for="(item, i) in followUpStore.customerTimeline"
-    :key="i"
-    class="timeline-step"
-  >
-    <div
-      class="timeline-dot"
-      :class="{
-        'dot-primary' : item.source === 'FOLLOW_UP',
-        'dot-success' : item.source === 'VISIT' && !item.has_complaint && !item.has_potential_order,
-        'dot-danger'  : item.has_complaint,
-        'dot-warning' : item.has_potential_order && !item.has_complaint,
-      }"
-    >
-      <font-awesome-icon
-        :icon="
-          item.has_complaint
-            ? 'triangle-exclamation'
-            : item.has_potential_order
-              ? 'sack-dollar'
-              : item.source === 'VISIT'
-                ? 'building'
-                : 'list-check'
-        "
-        style="color:#fff;font-size:.72rem"
-      />
-    </div>
-
-    <div class="timeline-card">
-
-      <div class="timeline-card-header">
-        <strong>{{ item.title }}</strong>
-        <small>{{ item.activity_at }}</small>
-      </div>
-
-      <div class="timeline-tags">
-
-        <span
-          class="status-badge"
-          :class="
-            item.source === 'VISIT'
-              ? 'status-success'
-              : 'status-primary'
-          "
-        >
-          {{ item.source === 'VISIT'
-              ? '🏢 Visit'
-              : '📋 Follow Up'
-          }}
-        </span>
-
-        <span
-          v-if="item.follow_up_code"
-          class="status-badge status-secondary"
-        >
-          {{ item.follow_up_code }}
-        </span>
-
-        <span
-          v-if="item.visit_code"
-          class="status-badge status-secondary"
-        >
-          {{ item.visit_code }}
-        </span>
-
-      </div>
-
-      <p class="timeline-description">
-        {{ item.description }}
-      </p>
-
-      
-
-    </div>
-
-  </div>
-
-</div> -->
-       <!-- end code baru -->
-
-
-
         <div class="timeline-wrapper" style="--line-color:#6366f1">
           <div v-for="(item, i) in followUpStore.customerTimeline" :key="i" class="timeline-step">
             <div class="timeline-dot"
@@ -2048,107 +1754,6 @@ const isOpenFollowUp = (followUpId) => {
                 <span v-if="item.visit_code" class="status-badge status-secondary">{{ item.visit_code }}</span>
               </div>
               <p class="td-muted" style="margin:0 0 8px">{{ item.description }}</p>
-
-              <div
-                  v-if="item.source === 'FOLLOW_UP'"
-                  class="timeline-followup-action"
-              >
-
-              <div
-    v-if="item.source === 'FOLLOW_UP'"
-    class="timeline-followup-footer"
->
-
-    <template v-if="isOpenFollowUp(item.follow_up_id)">
-
-        <div class="followup-info">
-
-            <div class="followup-date">
-
-                <font-awesome-icon icon="calendar-days"/>
-
-                {{
-                    followUpStore.formatDate(
-                        getOpenFollowUp(item.follow_up_id).follow_up_at
-                    )
-                }}
-
-            </div>
-
-        </div>
-
-        <button
-            class="btn-close-fu"
-            :disabled="closingFollowUpId === item.follow_up_id"
-            @click="handleCloseFollowUp(getOpenFollowUp(item.follow_up_id))"
-        >
-            <font-awesome-icon icon="lock"/>
-
-            {{
-                closingFollowUpId === item.follow_up_id
-                    ? 'Closing...'
-                    : 'Close'
-            }}
-        </button>
-
-    </template>
-
-    <template v-else>
-
-        <div class="followup-closed">
-
-            <font-awesome-icon
-                icon="circle-check"
-                style="color:#16a34a"
-            />
-
-            Follow Up Closed
-
-        </div>
-
-    </template>
-
-</div>
-              
-
-    <!-- <template v-if="item.follow_up_status === 'PENDING'">
-
-        <div class="followup-date">
-            <font-awesome-icon icon="calendar-days" />
-            {{ followUpStore.formatDate(item.follow_up_at) }}
-        </div>
-
-        <button
-            class="btn-close-fu"
-            :disabled="closingFollowUpId === item.follow_up_id"
-            @click="handleCloseFollowUp(item)"
-        >
-            <font-awesome-icon icon="lock" />
-            {{
-                closingFollowUpId === item.follow_up_id
-                    ? 'Closing...'
-                    : 'Close'
-            }}
-        </button>
-
-    </template> -->
-
-    <!-- <template v-else>
-
-        <div class="followup-closed">
-
-            <font-awesome-icon
-                icon="circle-check"
-                style="color:#16a34a"
-            />
-
-            Follow Up Closed
-
-        </div>
-
-    </template> -->
-
-</div>
 
               <template v-if="item.source === 'VISIT'">
                 <div style="font-size:0.75rem; display:flex; gap:16px; margin-bottom:6px">
@@ -2256,7 +1861,6 @@ const isOpenFollowUp = (followUpId) => {
 .td-actions { text-align: center; white-space: nowrap; }
 .td-subject { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fw-600 { font-weight: 600; }
-.target-sub { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 
 /* CODE BADGE */
 .code-badge { font-family: monospace; font-size: 0.78rem; font-weight: 700; background: rgba(99,102,241,0.1); color: #6366f1; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
@@ -2341,11 +1945,6 @@ const isOpenFollowUp = (followUpId) => {
 .toggle-switch-input { width: 36px; height: 20px; cursor: pointer; accent-color: #6366f1; }
 .toggle-switch-label { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 6px; }
 
-/* CONTACT PREVIEW (Direct Customer modal) */
-.contact-preview { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 8px; background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.2); color: #6366f1; font-size: 0.85rem; }
-.contact-preview-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 2px; }
-.contact-preview-name { font-weight: 600; color: var(--text-primary); }
-
 /* INFO ALERTS */
 .info-alert { padding: 10px 14px; border-radius: 8px; font-size: 0.83rem; display: flex; align-items: flex-start; gap: 8px; }
 .info-warning  { background: rgba(245,158,11,0.1);  color: #92400e; }
@@ -2409,7 +2008,7 @@ const isOpenFollowUp = (followUpId) => {
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* ══════════════════════════════════════════
-   CARD VIEW
+   CARD VIEW (baru)
 ══════════════════════════════════════════ */
 .card-view { background: transparent; }
 .card-grid {
@@ -2462,206 +2061,5 @@ const isOpenFollowUp = (followUpId) => {
 }
 .datetime-input::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
-}
-
-.open-fu-list{
-  margin-bottom:20px;
-  padding:15px;
-  border-radius:10px;
-  background:#fff8eb;
-  border:1px solid #fcd34d;
-}
-
-.open-fu-title{
-  font-weight:700;
-  margin-bottom:10px;
-  color:#92400e;
-}
-
-.open-fu-item{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:8px 0;
-  border-top:1px dashed #fbbf24;
-}
-
-.open-fu-item:first-child{
-  border-top:none;
-}
-
-.btn-close-fu{
-  background:#f59e0b;
-  color:white;
-  border:none;
-  padding:6px 12px;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-.btn-close-fu:hover{
-  background:#d97706;
-}
-
-.btn-close-fu:disabled{
-  opacity:.5;
-  cursor:not-allowed;
-}
-
-/* =======================================================
-   OPEN FOLLOW UP
-======================================================= */
-
-.open-fu-container{
-    margin:18px 0 24px;
-    border:1px solid #f8d8a7;
-    border-radius:14px;
-    background:#fffaf3;
-    overflow:hidden;
-}
-
-.open-fu-header{
-    background:#fff4df;
-    border-bottom:1px solid #f6dfb9;
-    padding:12px 18px;
-}
-
-.open-fu-title{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    font-weight:700;
-    color:#9a4d00;
-}
-
-.open-fu-count{
-    color:#f59e0b;
-    font-weight:700;
-}
-
-.open-fu-card{
-    padding:16px 18px;
-}
-
-.open-fu-card + .open-fu-card{
-    border-top:1px dashed #ecd8b5;
-}
-
-.fu-code{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    font-weight:700;
-    color:#374151;
-    margin-bottom:8px;
-    font-size:.88rem;
-}
-
-.fu-subject{
-    color:#6b7280;
-    line-height:1.6;
-    margin-bottom:14px;
-}
-
-.fu-footer{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.fu-date{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    color:#6b7280;
-    font-size:.82rem;
-}
-
-.btn-close-fu{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    border:none;
-    border-radius:8px;
-    background:#f59e0b;
-    color:#fff;
-    padding:8px 14px;
-    font-size:.82rem;
-    font-weight:600;
-    cursor:pointer;
-    transition:.25s;
-}
-
-.btn-close-fu:hover{
-    background:#d97706;
-}
-
-.btn-close-fu:disabled{
-    opacity:.65;
-    cursor:not-allowed;
-}
-
-/* =======================================================
-   TIMELINE
-======================================================= */
-
-.timeline-tags{
-    display:flex;
-    gap:6px;
-    flex-wrap:wrap;
-    margin-bottom:8px;
-}
-
-.timeline-description{
-    margin:0 0 10px;
-    color:#6b7280;
-    line-height:1.55;
-}
-
-.timeline-time{
-    display:flex;
-    gap:18px;
-    font-size:.78rem;
-    margin-bottom:10px;
-}
-
-.timeline-followup-action{
-
-    margin-top:12px;
-
-    padding-top:12px;
-
-    border-top:1px dashed #e5e7eb;
-
-    display:flex;
-
-    justify-content:space-between;
-
-    align-items:center;
-
-}
-
-.followup-date{
-
-    color:#6b7280;
-
-    font-size:.78rem;
-
-}
-
-.followup-closed{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:6px;
-
-    color:#16a34a;
-
-    font-weight:600;
-
-    font-size:.82rem;
-
 }
 </style>

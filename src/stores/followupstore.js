@@ -219,19 +219,71 @@ export const useFollowUpStore = defineStore('followUp', () => {
   const customerTimeline        = ref([])
   const loadingCustomerTimeline = ref(false)
 
-  const fetchTimelineCustomer = async (id) => {
+  // const fetchTimelineCustomer = async (id) => {
+  //   loadingCustomerTimeline.value = true
+  //   customerTimeline.value        = []
+  //   try {
+  //     const res = await followUpService.getTimelineCustomer(id)
+  //     customerTimeline.value = res.data.data.histories ?? []
+  //   } catch (err) {
+  //     console.error('Gagal fetch timeline customer:', err)
+  //     customerTimeline.value = []
+  //   } finally {
+  //     loadingCustomerTimeline.value = false
+  //   }
+  // }
+
+  const openFollowUpsCustomer = ref([])
+  const timelineCustomerId = ref(null)
+
+//   const fetchTimelineCustomer = async (id) => {
+//     loadingCustomerTimeline.value = true
+
+//     customerTimeline.value = []
+//     openFollowUpsCustomer.value = []
+
+//     timelineCustomerId.value = id
+
+//     try {
+//         const res = await followUpService.getTimelineCustomer(id)
+
+//         customerTimeline.value =
+//             res.data.data.histories ?? []
+
+//         openFollowUpsCustomer.value =
+//             res.data.data.open_follow_ups ?? []
+
+//     } finally {
+//         loadingCustomerTimeline.value = false
+//     }
+// }
+
+const fetchTimelineCustomer = async (id) => {
+
     loadingCustomerTimeline.value = true
-    customerTimeline.value        = []
+
+    customerTimeline.value = []
+    openFollowUpsCustomer.value = []
+
+    timelineCustomerId.value = id
+
     try {
-      const res = await followUpService.getTimelineCustomer(id)
-      customerTimeline.value = res.data.data.histories ?? []
-    } catch (err) {
-      console.error('Gagal fetch timeline customer:', err)
-      customerTimeline.value = []
+
+        const res = await followUpService.getTimelineCustomer(id)
+
+        customerTimeline.value =
+            res.data.data.histories ?? []
+
+        openFollowUpsCustomer.value =
+            res.data.data.open_follow_ups ?? []
+
     } finally {
-      loadingCustomerTimeline.value = false
+
+        loadingCustomerTimeline.value = false
+
     }
-  }
+
+}
 
 
   // ── SELECT: LEADS (form add follow up) ────────────
@@ -484,6 +536,20 @@ export const useFollowUpStore = defineStore('followUp', () => {
   ])
 
 
+  const closeFollowUp = async (followUpId, reason = null) => {
+  try {
+    const res = await followUpService.closeFollowUp(
+      followUpId,
+      reason
+    )
+
+    return res.data
+  } catch (err) {
+    throw err
+  }
+}
+
+
   // ── RETURN ─────────────────────────────────────────
   return {
     // state
@@ -534,5 +600,8 @@ export const useFollowUpStore = defineStore('followUp', () => {
     // helpers
     formatDate,
     formatDates,
+   openFollowUpsCustomer,
+   timelineCustomerId,
+    closeFollowUp,
   }
 })

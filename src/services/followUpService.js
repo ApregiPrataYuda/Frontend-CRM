@@ -80,4 +80,17 @@ export const followUpService = {
     return response
   },
 
+
+  // ── CLOSE FOLLOW UP ──────────────────────────
+async closeFollowUp(followUpId, reason = null) {
+  const response = await api.put(
+    `/follow-ups/${followUpId}/close`,
+    {
+      closed_reason: reason,
+    }
+  )
+
+  return response
+},
+
 }
