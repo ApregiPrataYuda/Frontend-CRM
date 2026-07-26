@@ -532,6 +532,11 @@ const openTimelineCustomerModal = async (item) => {
   await followUpStore.fetchTimelineCustomer(item.id)
 }
 
+// ══════════════════════════════════════════════
+//  CLOSE FOLLOW UP (MANUAL) — customer only
+//  Satu-satunya pemicu close ada di panel "Follow Up Aktif"
+//  (open-fu-container) di dalam modal Timeline Customer.
+// ══════════════════════════════════════════════
 const handleCloseFollowUp = async (fu) => {
   const ok = await confirm({
     type: 'warning',
@@ -618,17 +623,6 @@ const fuTypeIcon = (type) => {
     OTHER   : 'fa-solid fa-ellipsis',
   }
   return map[type] ?? 'fa-solid fa-ellipsis'
-}
-
-
-const getOpenFollowUp = (followUpId) => {
-    return followUpStore.openFollowUpsCustomer.find(
-        fu => fu.id === followUpId
-    )
-}
-
-const isOpenFollowUp = (followUpId) => {
-    return !!getOpenFollowUp(followUpId)
 }
 
 </script>
@@ -1010,6 +1004,19 @@ const isOpenFollowUp = (followUpId) => {
           class="fu-card"
           :class="{ 'card-overdue': item.is_overdue }"
         >
+
+
+        <!-- STAMP -->
+  <div
+    v-if="!isActionable(item)"
+    class="fu-stamp"
+    :class="item.status === 'CANCELLED' ? 'stamp-cancelled' : 'stamp-done'"
+  >
+    {{ item.status === 'CANCELLED' ? 'Cancelled' : 'Selesai' }}
+  </div>
+
+
+
           <!-- HEADER -->
           <div class="fu-card-header">
             <span class="code-badge">{{ item.follow_up_code }}</span>
@@ -1869,154 +1876,71 @@ const isOpenFollowUp = (followUpId) => {
           <span class="status-badge status-warning">{{ followUpStore.customerTimeline.filter(h => h.has_potential_order).length }} Potential Orders</span>
         </div>
 
-
-       <!-- start code baru -->
+        <!-- ══════════════════════════════════════
+             PANEL: FOLLOW UP AKTIF
+             Satu-satunya tempat menutup follow up secara
+             manual. Satu follow up = satu baris = satu
+             tombol Close, terlepas dari berapa banyak
+             activity log yang dimilikinya di timeline
+             bawah — jadi tidak ada tombol dobel.
+        ══════════════════════════════════════ -->
         <div
-  v-if="followUpStore.openFollowUpsCustomer.length"
-  class="open-fu-container"
->
-  <div class="open-fu-header">
-    <div class="open-fu-title">
-      <font-awesome-icon icon="fa-solid fa-folder-open" />
-      <span>Follow Up Aktif</span>
+          v-if="followUpStore.openFollowUpsCustomer.length"
+          class="open-fu-container"
+        >
+          <div class="open-fu-header">
+            <div class="open-fu-title">
+              <font-awesome-icon icon="fa-solid fa-folder-open" />
+              <span>Follow Up Aktif</span>
+              <span class="open-fu-count">
+                ({{ followUpStore.openFollowUpsCustomer.length }})
+              </span>
+            </div>
+          </div>
 
-      <span class="open-fu-count">
-        ({{ followUpStore.openFollowUpsCustomer.length }})
-      </span>
-    </div>
-  </div>
+          <div
+            v-for="fu in followUpStore.openFollowUpsCustomer"
+            :key="fu.id"
+            class="open-fu-card"
+          >
+            <div class="open-fu-content">
+              <div class="fu-code">
+                <font-awesome-icon
+                  icon="fa-solid fa-circle"
+                  style="color:#f59e0b;font-size:9px"
+                />
+                {{ fu.follow_up_code }}
+              </div>
 
-  <div
-    v-for="fu in followUpStore.openFollowUpsCustomer"
-    :key="fu.id"
-    class="open-fu-card"
-  >
-    <div class="open-fu-content">
+              <div class="fu-subject">
+                {{ fu.subject }}
+              </div>
 
-      <div class="fu-code">
-        <font-awesome-icon
-          icon="fa-solid fa-circle"
-          style="color:#f59e0b;font-size:9px"
-        />
+              <div class="fu-footer">
+                <div class="fu-date">
+                  <font-awesome-icon icon="fa-solid fa-calendar-days" />
+                  {{ followUpStore.formatDate(fu.follow_up_at) }}
+                </div>
 
-        {{ fu.follow_up_code }}
-      </div>
-
-      <div class="fu-subject">
-        {{ fu.subject }}
-      </div>
-
-      <div class="fu-footer">
-
-        <div class="fu-date">
-          <font-awesome-icon icon="fa-solid fa-calendar-days" />
-          {{ followUpStore.formatDate(fu.follow_up_at) }}
+                <button
+                  class="btn-close-fu"
+                  :disabled="closingFollowUpId === fu.id"
+                  @click="handleCloseFollowUp(fu)"
+                >
+                  <font-awesome-icon icon="fa-solid fa-lock" />
+                  {{ closingFollowUpId === fu.id ? 'Closing...' : 'Close' }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <button
-          class="btn-close-fu"
-          :disabled="closingFollowUpId === fu.id"
-          @click="handleCloseFollowUp(fu)"
-        >
-          <font-awesome-icon icon="fa-solid fa-lock" />
-
-          {{
-            closingFollowUpId === fu.id
-              ? 'Closing...'
-              : 'Close'
-          }}
-        </button>
-
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- <div class="timeline-wrapper" style="--line-color:#6366f1">
-
-  <div
-    v-for="(item, i) in followUpStore.customerTimeline"
-    :key="i"
-    class="timeline-step"
-  >
-    <div
-      class="timeline-dot"
-      :class="{
-        'dot-primary' : item.source === 'FOLLOW_UP',
-        'dot-success' : item.source === 'VISIT' && !item.has_complaint && !item.has_potential_order,
-        'dot-danger'  : item.has_complaint,
-        'dot-warning' : item.has_potential_order && !item.has_complaint,
-      }"
-    >
-      <font-awesome-icon
-        :icon="
-          item.has_complaint
-            ? 'triangle-exclamation'
-            : item.has_potential_order
-              ? 'sack-dollar'
-              : item.source === 'VISIT'
-                ? 'building'
-                : 'list-check'
-        "
-        style="color:#fff;font-size:.72rem"
-      />
-    </div>
-
-    <div class="timeline-card">
-
-      <div class="timeline-card-header">
-        <strong>{{ item.title }}</strong>
-        <small>{{ item.activity_at }}</small>
-      </div>
-
-      <div class="timeline-tags">
-
-        <span
-          class="status-badge"
-          :class="
-            item.source === 'VISIT'
-              ? 'status-success'
-              : 'status-primary'
-          "
-        >
-          {{ item.source === 'VISIT'
-              ? '🏢 Visit'
-              : '📋 Follow Up'
-          }}
-        </span>
-
-        <span
-          v-if="item.follow_up_code"
-          class="status-badge status-secondary"
-        >
-          {{ item.follow_up_code }}
-        </span>
-
-        <span
-          v-if="item.visit_code"
-          class="status-badge status-secondary"
-        >
-          {{ item.visit_code }}
-        </span>
-
-      </div>
-
-      <p class="timeline-description">
-        {{ item.description }}
-      </p>
-
-      
-
-    </div>
-
-  </div>
-
-</div> -->
-       <!-- end code baru -->
-
-
-
+        <!-- ══════════════════════════════════════
+             TIMELINE: murni histori/activity log.
+             Tidak ada aksi Close di sini — activity
+             adalah kejadian masa lalu (append-only),
+             bukan kontrol status saat ini.
+        ══════════════════════════════════════ -->
         <div class="timeline-wrapper" style="--line-color:#6366f1">
           <div v-for="(item, i) in followUpStore.customerTimeline" :key="i" class="timeline-step">
             <div class="timeline-dot"
@@ -2035,7 +1959,7 @@ const isOpenFollowUp = (followUpId) => {
                 style="color:#fff; font-size:0.7rem"
               />
             </div>
-            <div class="timeline-card">
+            <!-- <div class="timeline-card">
               <div class="timeline-card-header">
                 <strong>{{ item.title }}</strong>
                 <small>{{ item.activity_at }}</small>
@@ -2046,109 +1970,29 @@ const isOpenFollowUp = (followUpId) => {
                 </span>
                 <span v-if="item.follow_up_code" class="status-badge status-secondary">{{ item.follow_up_code }}</span>
                 <span v-if="item.visit_code" class="status-badge status-secondary">{{ item.visit_code }}</span>
-              </div>
+              </div> -->
+              <div class="timeline-card">
+  <div class="timeline-card-header">
+    <strong>{{ item.title }}</strong>
+    <span
+      v-if="/closed|selesai/i.test(item.title)"
+      class="fu-mini-stamp"
+      :class="/closed/i.test(item.title) ? 'stamp-cancelled' : 'stamp-done'"
+    >
+      <font-awesome-icon icon="fa-solid fa-stamp" />
+      {{ /closed/i.test(item.title) ? 'Closed' : 'Done' }}
+    </span>
+    <small>{{ item.activity_at }}</small>
+  </div>
+  <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap">
+    <span class="status-badge" :class="item.source === 'VISIT' ? 'status-success' : 'status-primary'">
+      {{ item.source === 'VISIT' ? '🏢 Visit' : '📋 Follow Up' }}
+    </span>
+    <span v-if="item.follow_up_code" class="status-badge status-secondary">{{ item.follow_up_code }}</span>
+    <span v-if="item.visit_code" class="status-badge status-secondary">{{ item.visit_code }}</span>
+  </div>
+  <!-- ...sisanya tetap sama... -->
               <p class="td-muted" style="margin:0 0 8px">{{ item.description }}</p>
-
-              <div
-                  v-if="item.source === 'FOLLOW_UP'"
-                  class="timeline-followup-action"
-              >
-
-              <div
-    v-if="item.source === 'FOLLOW_UP'"
-    class="timeline-followup-footer"
->
-
-    <template v-if="isOpenFollowUp(item.follow_up_id)">
-
-        <div class="followup-info">
-
-            <div class="followup-date">
-
-                <font-awesome-icon icon="calendar-days"/>
-
-                {{
-                    followUpStore.formatDate(
-                        getOpenFollowUp(item.follow_up_id).follow_up_at
-                    )
-                }}
-
-            </div>
-
-        </div>
-
-        <button
-            class="btn-close-fu"
-            :disabled="closingFollowUpId === item.follow_up_id"
-            @click="handleCloseFollowUp(getOpenFollowUp(item.follow_up_id))"
-        >
-            <font-awesome-icon icon="lock"/>
-
-            {{
-                closingFollowUpId === item.follow_up_id
-                    ? 'Closing...'
-                    : 'Close'
-            }}
-        </button>
-
-    </template>
-
-    <template v-else>
-
-        <div class="followup-closed">
-
-            <font-awesome-icon
-                icon="circle-check"
-                style="color:#16a34a"
-            />
-
-            Follow Up Closed
-
-        </div>
-
-    </template>
-
-</div>
-              
-
-    <!-- <template v-if="item.follow_up_status === 'PENDING'">
-
-        <div class="followup-date">
-            <font-awesome-icon icon="calendar-days" />
-            {{ followUpStore.formatDate(item.follow_up_at) }}
-        </div>
-
-        <button
-            class="btn-close-fu"
-            :disabled="closingFollowUpId === item.follow_up_id"
-            @click="handleCloseFollowUp(item)"
-        >
-            <font-awesome-icon icon="lock" />
-            {{
-                closingFollowUpId === item.follow_up_id
-                    ? 'Closing...'
-                    : 'Close'
-            }}
-        </button>
-
-    </template> -->
-
-    <!-- <template v-else>
-
-        <div class="followup-closed">
-
-            <font-awesome-icon
-                icon="circle-check"
-                style="color:#16a34a"
-            />
-
-            Follow Up Closed
-
-        </div>
-
-    </template> -->
-
-</div>
 
               <template v-if="item.source === 'VISIT'">
                 <div style="font-size:0.75rem; display:flex; gap:16px; margin-bottom:6px">
@@ -2386,6 +2230,30 @@ const isOpenFollowUp = (followUpId) => {
 .timeline-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
 .timeline-card-header small { color: var(--text-muted); font-size: 0.75rem; white-space: nowrap; margin-left: 8px; }
 
+.fu-card { position: relative; }
+
+.fu-stamp {
+  position: absolute;
+  top: 16px;
+  right: -8px;
+  padding: 4px 16px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 2px dashed currentColor;
+  border-radius: 4px;
+  transform: rotate(10deg);
+  pointer-events: none;
+  background: var(--bg-card);
+  z-index: 3;
+  opacity: 0.9;
+}
+
+.stamp-done      { color: #16a34a; }
+.stamp-cancelled { color: #dc2626; }
+
+
 /* ACTIVITY */
 .activity-item { padding: 12px 0; border-bottom: 1px solid var(--border-main); }
 .activity-item:last-child { border-bottom: none; }
@@ -2464,52 +2332,27 @@ const isOpenFollowUp = (followUpId) => {
   opacity: 1;
 }
 
-.open-fu-list{
-  margin-bottom:20px;
-  padding:15px;
-  border-radius:10px;
-  background:#fff8eb;
-  border:1px solid #fcd34d;
+.fu-mini-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 10px;
+  border: 1.5px dashed currentColor;
+  border-radius: 4px;
+  transform: rotate(-6deg);
+  margin-left: 8px;
+  opacity: 0.9;
+  white-space: nowrap;
 }
-
-.open-fu-title{
-  font-weight:700;
-  margin-bottom:10px;
-  color:#92400e;
-}
-
-.open-fu-item{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:8px 0;
-  border-top:1px dashed #fbbf24;
-}
-
-.open-fu-item:first-child{
-  border-top:none;
-}
-
-.btn-close-fu{
-  background:#f59e0b;
-  color:white;
-  border:none;
-  padding:6px 12px;
-  border-radius:6px;
-  cursor:pointer;
-}
-
-.btn-close-fu:hover{
-  background:#d97706;
-}
-
-.btn-close-fu:disabled{
-  opacity:.5;
-  cursor:not-allowed;
-}
+.fu-mini-stamp.stamp-done      { color: #16a34a; }
+.fu-mini-stamp.stamp-cancelled { color: #dc2626; }
 
 /* =======================================================
-   OPEN FOLLOW UP
+   PANEL: FOLLOW UP AKTIF (satu-satunya sumber tombol Close)
 ======================================================= */
 
 .open-fu-container{
@@ -2602,7 +2445,7 @@ const isOpenFollowUp = (followUpId) => {
 }
 
 /* =======================================================
-   TIMELINE
+   TIMELINE (activity log, murni display)
 ======================================================= */
 
 .timeline-tags{
@@ -2623,45 +2466,5 @@ const isOpenFollowUp = (followUpId) => {
     gap:18px;
     font-size:.78rem;
     margin-bottom:10px;
-}
-
-.timeline-followup-action{
-
-    margin-top:12px;
-
-    padding-top:12px;
-
-    border-top:1px dashed #e5e7eb;
-
-    display:flex;
-
-    justify-content:space-between;
-
-    align-items:center;
-
-}
-
-.followup-date{
-
-    color:#6b7280;
-
-    font-size:.78rem;
-
-}
-
-.followup-closed{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:6px;
-
-    color:#16a34a;
-
-    font-weight:600;
-
-    font-size:.82rem;
-
 }
 </style>
