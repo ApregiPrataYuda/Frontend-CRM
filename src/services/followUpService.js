@@ -80,6 +80,11 @@ export const followUpService = {
     return response
   },
 
+  async getCustomersDirectSelectNew() {
+  const response = await api.get('/follow-up/get-customers-direct')
+  return response
+},
+
 
   // ── CLOSE FOLLOW UP ──────────────────────────
 async closeFollowUp(followUpId, reason = null) {

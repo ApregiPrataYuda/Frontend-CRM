@@ -309,9 +309,9 @@ export const useCustomersStore = defineStore('customers', () => {
   const statusStatis = ref([
     { value: 'Active',    label: 'Active'    },
     { value: 'Inactive',  label: 'Inactive'  },
-    { value: 'Dormant',   label: 'Dormant'   },
-    { value: 'Lost',      label: 'Lost'      },
-    { value: 'Blacklist', label: 'Blacklist' },
+    // { value: 'Dormant',   label: 'Dormant'   },
+    // { value: 'Lost',      label: 'Lost'      },
+    // { value: 'Blacklist', label: 'Blacklist' },
   ])
 
 

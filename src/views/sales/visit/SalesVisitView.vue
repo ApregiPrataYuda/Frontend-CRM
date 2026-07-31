@@ -564,13 +564,14 @@ const loadingCustomerCheckOut   = ref(false)
 const selectedCheckOutFile      = ref(null)
 
 const customerResponses = [
-  { value: 'maintained',        label: 'Relationship Maintained', desc: 'Routine visit / engagement',       icon: 'fa-solid fa-handshake'           },
-  { value: 'improved',          label: 'Relationship Improved',   desc: 'Positive development',             icon: 'fa-solid fa-arrow-trend-up'      },
-  { value: 'upsell_identified', label: 'Upsell Identified',       desc: 'Additional opportunity found',    icon: 'fa-solid fa-sack-dollar'          },
-  { value: 'renewal_discussed', label: 'Renewal Discussed',       desc: 'Contract renewal / continuation', icon: 'fa-solid fa-file-signature'       },
-  { value: 'complaint_handled', label: 'Complaint Handled',       desc: 'Issue addressed / resolved',      icon: 'fa-solid fa-triangle-exclamation' },
-  { value: 'at_risk',           label: 'Customer At Risk',        desc: 'Low usage / negative signal',     icon: 'fa-solid fa-circle-exclamation'   },
-  { value: 'no_progress',       label: 'No Progress',             desc: 'No significant outcome',          icon: 'fa-solid fa-minus'                },
+  { value: 'maintained',        label: 'Relationship Maintained / ', desc: 'Regular Visit',       icon: 'fa-solid fa-handshake'           },
+  { value: 'upsell_identified', label: 'growth potential /',       desc: 'Upsell Identified Additional, increase potential has been identified.',    icon: 'fa-solid fa-arrow-trend-up'          },
+  { value: 'complaint_handled', label: 'Outstanding Issue / ',       desc: 'Issue requires further attention',      icon: 'fa-solid fa-triangle-exclamation' },
+  { value: 'no_progress',           label: 'No Progress',        desc: 'Low engagement, negative feedback, or no significant progress',     icon: 'fa-solid fa-circle-exclamation'   },
+  // ini kode lama di comment saja siapa tau kedepanya berubah lagi
+  // { value: 'improved',          label: 'Relationship Improved',   desc: 'Positive development',             icon: 'fa-solid fa-arrow-trend-up'      },
+  // { value: 'renewal_discussed', label: 'Renewal Discussed',       desc: 'Contract renewal / continuation', icon: 'fa-solid fa-file-signature'       },
+  // { value: 'no_progress',       label: 'Customer At Risk',             desc: 'No significant outcome',          icon: 'fa-solid fa-minus'                },
 ]
 const followUpTypes = ['CALL', 'VISIT', 'WHATSAPP', 'EMAIL', 'MEETING']
 
@@ -585,7 +586,7 @@ const tomorrow = computed(() => {
   const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]
 })
 
-const showCustomerComplaintSection      = computed(() => ['complaint_handled', 'at_risk'].includes(customerCheckOutForm.value.customer_response))
+const showCustomerComplaintSection      = computed(() => ['complaint_handled', 'at_risk','no_progress'].includes(customerCheckOutForm.value.customer_response))
 const showCustomerPotentialOrderSection = computed(() => ['upsell_identified', 'improved'].includes(customerCheckOutForm.value.customer_response))
 const isCustomerCheckOutValid           = computed(() => {
   const f = customerCheckOutForm.value
@@ -1868,7 +1869,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 
         <!-- No. Reference -->
         <div class="form-group">
-          <label>No. Reference <span style="color:#ef4444">*</span></label>
+          <label>No. Reference <span style="color:#ef4444"></span></label>
           <input
             v-model.trim="customerCheckOutForm.no_reference"
             type="text"
@@ -1923,19 +1924,19 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 
         <!-- Complaint (conditional) -->
         <div v-if="showCustomerComplaintSection" class="form-group">
-          <label style="color:#ef4444">Complaint Detail <span>*</span></label>
-          <textarea v-model="customerCheckOutForm.complaint_detail" rows="3" placeholder="Describe customer complaint..." class="form-input form-textarea" style="border-color:#fca5a5"></textarea>
+          <label style="color:#ef4444">Complaint, Noted, Issue, Or etc Noted <span>*</span></label>
+          <textarea v-model="customerCheckOutForm.complaint_detail" rows="3" placeholder="Describe customer complaint or detail Issue requires further attention and etc..." class="form-input form-textarea" style="border-color:#fca5a5"></textarea>
         </div>
 
-        <!-- Potential Order (conditional) -->
+        <!-- Write additional notes (conditional) -->
         <div v-if="showCustomerPotentialOrderSection" class="form-group">
-          <label style="color:#d97706">Potential Order Detail <span>*</span></label>
-          <textarea v-model="customerCheckOutForm.potential_order_detail" rows="3" placeholder="Describe potential order..." class="form-input form-textarea" style="border-color:#fcd34d"></textarea>
+          <label style="color:#d97706">Write Additional Notes Detail <span>*</span></label>
+          <textarea v-model="customerCheckOutForm.potential_order_detail" rows="3" placeholder="Explain. Write additional notes. Detail examples (potential orders or future plans)" class="form-input form-textarea" style="border-color:#fcd34d"></textarea>
         </div>
 
         <!-- Follow Up -->
         <div class="form-group">
-          <label>Follow Up Date <span style="color:#ef4444">*</span></label>
+          <label>Follow Up Date / Next Action Plan Date<span style="color:#ef4444">*</span></label>
           <input v-model="customerCheckOutForm.follow_up_at" type="date" :min="tomorrow" class="form-input" />
         </div>
 

@@ -363,15 +363,97 @@ const followUpTypes = [
   { value: 'MEETING',  label: 'Meeting',   icon: 'fa-solid fa-handshake'      },
 ]
 
+// const subjectTemplatesCustomers = [
+//   { label: 'Check-in Rutin - Memastikan Kepuasan Layanan',       value: 'Check-in Rutin - Memastikan Kepuasan Layanan : NO REF ='       },
+//   { label: 'Penawaran Repeat Order - Produk/Layanan Sebelumnya', value: 'Penawaran Repeat Order - Produk/Layanan Sebelumnya : NO REF =' },
+//   { label: 'Perpanjangan Kontrak / Renewal Layanan',             value: 'Perpanjangan Kontrak / Renewal Layanan : NO REF ='             },
+//   { label: 'Tindak Lanjut Setelah Pembelian - Evaluasi Kepuasan',value: 'Tindak Lanjut Setelah Pembelian - Evaluasi Kepuasan : NO REF ='},
+//   { label: 'Penanganan Keluhan / Komplain Customer',             value: 'Penanganan Keluhan / Komplain Customer : NO REF = '             },
+//   { label: 'Diskusi Lanjutan Negosiasi Harga / Kontrak',         value: 'Diskusi Lanjutan Negosiasi Harga / Kontrak : NO REF = '         },
+//   { label: 'Re-aktivasi Customer - Sudah Lama Tidak Bertransaksi',value:'Re-aktivasi Customer - Sudah Lama Tidak Bertransaksi : NO REF = '},
+//   { label: 'Tidak Berminat Lanjut - Kendala Anggaran',           value: 'Tidak Berminat Lanjut - Kendala Anggaran : NO REF = '           },
+// ]
 const subjectTemplatesCustomers = [
-  { label: 'Check-in Rutin - Memastikan Kepuasan Layanan',       value: 'Check-in Rutin - Memastikan Kepuasan Layanan'       },
-  { label: 'Penawaran Repeat Order - Produk/Layanan Sebelumnya', value: 'Penawaran Repeat Order - Produk/Layanan Sebelumnya' },
-  { label: 'Perpanjangan Kontrak / Renewal Layanan',             value: 'Perpanjangan Kontrak / Renewal Layanan'             },
-  { label: 'Tindak Lanjut Setelah Pembelian - Evaluasi Kepuasan',value: 'Tindak Lanjut Setelah Pembelian - Evaluasi Kepuasan'},
-  { label: 'Penanganan Keluhan / Komplain Customer',             value: 'Penanganan Keluhan / Komplain Customer'             },
-  { label: 'Diskusi Lanjutan Negosiasi Harga / Kontrak',         value: 'Diskusi Lanjutan Negosiasi Harga / Kontrak'         },
-  { label: 'Re-aktivasi Customer - Sudah Lama Tidak Bertransaksi',value:'Re-aktivasi Customer - Sudah Lama Tidak Bertransaksi'},
-  { label: 'Tidak Berminat Lanjut - Kendala Anggaran',           value: 'Tidak Berminat Lanjut - Kendala Anggaran'           },
+  {
+    label: 'Follow Up Rutin - Menjaga Hubungan dengan Customer',
+    value: 'Follow Up Rutin - Menjaga Hubungan dengan Customer : NO REF ='
+  },
+  {
+    label: 'Evaluasi Kepuasan Customer',
+    value: 'Evaluasi Kepuasan Customer : NO REF ='
+  },
+  {
+    label: 'Tindak Lanjut Penawaran',
+    value: 'Tindak Lanjut Penawaran : NO REF ='
+  },
+  {
+    label: 'Penawaran Repeat Order',
+    value: 'Penawaran Repeat Order : NO REF ='
+  },
+  {
+    label: 'Penawaran Produk atau Layanan Baru',
+    value: 'Penawaran Produk atau Layanan Baru : NO REF ='
+  },
+  {
+    label: 'Peluang Upselling',
+    value: 'Peluang Upselling : NO REF ='
+  },
+  {
+    label: 'Peluang Cross Selling',
+    value: 'Peluang Cross Selling : NO REF ='
+  },
+  {
+    label: 'Negosiasi Harga atau Kontrak',
+    value: 'Negosiasi Harga atau Kontrak : NO REF ='
+  },
+  {
+    label: 'Perpanjangan Kontrak atau Kerja Sama',
+    value: 'Perpanjangan Kontrak atau Kerja Sama : NO REF ='
+  },
+  {
+    label: 'Pendampingan Implementasi Produk/Layanan',
+    value: 'Pendampingan Implementasi Produk/Layanan : NO REF ='
+  },
+  {
+    label: 'Tindak Lanjut Setelah Pembelian',
+    value: 'Tindak Lanjut Setelah Pembelian : NO REF ='
+  },
+  {
+    label: 'Penanganan Keluhan Customer',
+    value: 'Penanganan Keluhan Customer : NO REF ='
+  },
+  {
+    label: 'Tindak Lanjut Penyelesaian Keluhan',
+    value: 'Tindak Lanjut Penyelesaian Keluhan : NO REF ='
+  },
+  {
+    label: 'Pengingat Pembayaran',
+    value: 'Pengingat Pembayaran : NO REF ='
+  },
+  {
+    label: 'Permintaan Dokumen atau Data',
+    value: 'Permintaan Dokumen atau Data : NO REF ='
+  },
+  {
+    label: 'Pembaruan Data Customer',
+    value: 'Pembaruan Data Customer : NO REF ='
+  },
+  {
+    label: 'Reaktivasi Customer Tidak Aktif',
+    value: 'Reaktivasi Customer Tidak Aktif : NO REF ='
+  },
+  {
+    label: 'Diskusi Pengembangan Kerja Sama',
+    value: 'Diskusi Pengembangan Kerja Sama : NO REF ='
+  },
+  {
+    label: 'Rapat Evaluasi Kinerja Layanan',
+    value: 'Rapat Evaluasi Kinerja Layanan : NO REF ='
+  },
+  {
+    label: 'Pembahasan Lainnya',
+    value: 'Pembahasan Lainnya : NO REF ='
+  },
 ]
 
 // HEAD_OFFICE_VALUE dipakai sebagai "pilihan pertama & default" di dropdown
@@ -379,11 +461,24 @@ const subjectTemplatesCustomers = [
 // (tidak pernah ada state "belum pilih apa-apa" yang bikin bingung).
 const HEAD_OFFICE_VALUE = '__HEAD_OFFICE__'
 
+// const formDirectCustomer = reactive({
+//   customer_id               : null,
+//   branch_id                 : HEAD_OFFICE_VALUE,
+//   follow_up_type            : 'CALL',
+//   follow_up_at              : '',
+//   subject                   : '',
+//   subject_template_customer : '',
+//   notes                     : '',
+//   need_follow_up            : false,
+//   next_follow_up_at         : null,
+// })
+
 const formDirectCustomer = reactive({
   customer_id               : null,
   branch_id                 : HEAD_OFFICE_VALUE,
   follow_up_type            : 'CALL',
   follow_up_at              : '',
+  ref_number                 : '',
   subject                   : '',
   subject_template_customer : '',
   notes                     : '',
@@ -404,15 +499,32 @@ const selectedCustomer = computed(() =>
 // dropdown branch disembunyikan total (lihat hasBranches di bawah) —
 // jadi sales dengan customer sederhana tidak akan pernah lihat pilihan
 // yang tidak relevan buat mereka.
+// const branchOptions = computed(() => {
+//   const branches = selectedCustomer.value?.branches ?? []
+//   return [
+//     { value: HEAD_OFFICE_VALUE, label: 'Head Office (Kantor Pusat)' },
+//     ...branches.map(b => ({
+//       value: b.id,
+//       label: b.is_main_branch ? `${b.branch_name} (Utama)` : b.branch_name,
+//     })),
+//   ]
+// })
+
 const branchOptions = computed(() => {
   const branches = selectedCustomer.value?.branches ?? []
-  return [
-    { value: HEAD_OFFICE_VALUE, label: 'Head Office (Kantor Pusat)' },
-    ...branches.map(b => ({
-      value: b.id,
-      label: b.is_main_branch ? `${b.branch_name} (Utama)` : b.branch_name,
-    })),
-  ]
+  const opts = []
+
+  // "Head Office" cuma jadi opsi kalau user ini benar-benar owns head-nya
+  if (selectedCustomer.value?.owns_head) {
+    opts.push({ value: HEAD_OFFICE_VALUE, label: 'Head Office (Kantor Pusat)' })
+  }
+
+  opts.push(...branches.map(b => ({
+    value: b.id,
+    label: b.is_main_branch ? `${b.branch_name} (Utama)` : b.branch_name,
+  })))
+
+  return opts
 })
 
 const hasBranches = computed(() => (selectedCustomer.value?.branches ?? []).length > 0)
@@ -444,13 +556,28 @@ const contactPreview = computed(() => {
 // Setiap kali customer diganti, reset pilihan branch balik ke Head Office
 // supaya tidak ada kondisi branch_id "nyangkut" dari customer sebelumnya.
 watch(() => formDirectCustomer.customer_id, () => {
-  formDirectCustomer.branch_id = HEAD_OFFICE_VALUE
+  const c = selectedCustomer.value
+  if (c?.owns_head) {
+    formDirectCustomer.branch_id = HEAD_OFFICE_VALUE
+  } else {
+    formDirectCustomer.branch_id = c?.branches?.[0]?.id ?? HEAD_OFFICE_VALUE
+  }
 })
+
+// const openDirectCustomerModal = async () => {
+//   Object.assign(formDirectCustomer, {
+//     customer_id: null, branch_id: HEAD_OFFICE_VALUE, follow_up_type: 'CALL', follow_up_at: '',
+//     subject: '', subject_template_customer: '', notes: '',
+//     need_follow_up: false, next_follow_up_at: null,
+//   })
+//   await followUpStore.fetchCustomersDirectSelect()
+//   isDirectCustomerModalVisible.value = true
+// }
 
 const openDirectCustomerModal = async () => {
   Object.assign(formDirectCustomer, {
     customer_id: null, branch_id: HEAD_OFFICE_VALUE, follow_up_type: 'CALL', follow_up_at: '',
-    subject: '', subject_template_customer: '', notes: '',
+    ref_number: '', subject: '', subject_template_customer: '', notes: '',
     need_follow_up: false, next_follow_up_at: null,
   })
   await followUpStore.fetchCustomersDirectSelect()
@@ -465,11 +592,41 @@ watch(() => formDirectCustomer.subject_template_customer, (val) => {
   if (val) formDirectCustomer.subject = val
 })
 
+// const submitDirectCustomer = async () => {
+//   if (!formDirectCustomer.customer_id)   return toast.warning('Customer wajib dipilih')
+//   if (!formDirectCustomer.follow_up_type) return toast.warning('Type follow up wajib dipilih')
+//   if (!formDirectCustomer.subject)        return toast.warning('Subject wajib diisi')
+//   if (!formDirectCustomer.notes)          return toast.warning('Notes wajib diisi')
+
+//   const payload = {
+//     customer_id   : formDirectCustomer.customer_id,
+//     branch_id     : formDirectCustomer.branch_id === HEAD_OFFICE_VALUE
+//                       ? null
+//                       : formDirectCustomer.branch_id,
+//     follow_up_type: formDirectCustomer.follow_up_type,
+//     subject       : formDirectCustomer.subject,
+//     notes         : formDirectCustomer.notes,
+//     follow_up_at  : formDirectCustomer.follow_up_at,
+//   }
+
+//   try {
+//     await followUpStore.storeDirectCustomer(payload)
+//     closeDirectCustomerModal()
+//     toast.success('Direct Follow Up customer berhasil dibuat!')
+//   } catch (err) {
+//     toast.error(err.response?.data?.message || 'Gagal membuat follow up')
+//   }
+// }
+
 const submitDirectCustomer = async () => {
   if (!formDirectCustomer.customer_id)   return toast.warning('Customer wajib dipilih')
   if (!formDirectCustomer.follow_up_type) return toast.warning('Type follow up wajib dipilih')
   if (!formDirectCustomer.subject)        return toast.warning('Subject wajib diisi')
   if (!formDirectCustomer.notes)          return toast.warning('Notes wajib diisi')
+
+  const finalSubject = formDirectCustomer.ref_number
+    ? `${formDirectCustomer.ref_number} - ${formDirectCustomer.subject}`
+    : formDirectCustomer.subject
 
   const payload = {
     customer_id   : formDirectCustomer.customer_id,
@@ -477,19 +634,13 @@ const submitDirectCustomer = async () => {
                       ? null
                       : formDirectCustomer.branch_id,
     follow_up_type: formDirectCustomer.follow_up_type,
-    subject       : formDirectCustomer.subject,
+    subject       : finalSubject,
     notes         : formDirectCustomer.notes,
     follow_up_at  : formDirectCustomer.follow_up_at,
   }
-
-  try {
-    await followUpStore.storeDirectCustomer(payload)
-    closeDirectCustomerModal()
-    toast.success('Direct Follow Up customer berhasil dibuat!')
-  } catch (err) {
-    toast.error(err.response?.data?.message || 'Gagal membuat follow up')
-  }
 }
+
+
 
 // ══════════════════════════════════════════════
 //  MODAL: DETAIL FOLLOW UP
@@ -1540,7 +1691,7 @@ const fuTypeIcon = (type) => {
       <div class="form-container-gap">
 
         <div class="form-group">
-          <label>Customer <span class="req-label">*</span></label>
+          <label>Customerx <span class="req-label">*</span></label>
           <Multiselect
             v-model="formDirectCustomer.customer_id"
             :options="followUpStore.customersDirectData"
@@ -1583,6 +1734,10 @@ const fuTypeIcon = (type) => {
           </div>
         </transition>
 
+
+        
+
+
         <!-- TYPE RADIO BUTTON -->
         <div class="form-group">
           <label>Type Follow Up <span class="req-label">*</span></label>
@@ -1596,6 +1751,8 @@ const fuTypeIcon = (type) => {
             </template>
           </div>
         </div>
+
+
 
         <div class="form-group">
           <label>Template Subject <span class="opt-label">(opsional)</span></label>

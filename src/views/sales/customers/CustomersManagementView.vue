@@ -111,9 +111,14 @@ function getContactError(index, field) {
   return errorCustomers.value[`contacts.${index}.${field}`]?.[0] ?? null
 }
 
+// function isValidPhone(phone) {
+//   if (!phone || !phone.trim()) return true // nullable, boleh kosong
+//   return /^(\+62|62|0)8[0-9]{8,11}$/.test(phone.trim())
+// }
+
 function isValidPhone(phone) {
   if (!phone || !phone.trim()) return true // nullable, boleh kosong
-  return /^(\+62|62|0)8[0-9]{8,11}$/.test(phone.trim())
+  return /^[\+]?[0-9\-\s()]{8,20}$/.test(phone.trim())
 }
 
 // ── TOAST ─────────────────────────────────────────────
@@ -254,6 +259,25 @@ function closeDetailModal() {
 }
 
 // ── DELETE ────────────────────────────────────────────
+// async function openDeleteModal(item) {
+//   const isConfirmed = await confirm({
+//     type       : 'danger',
+//     title      : 'Hapus Data Customer',
+//     message    : `Yakin ingin menghapus "${item.company_name}"?`,
+//     detail     : 'Tindakan ini tidak bisa dibatalkan dan akan menghapus data secara permanen.',
+//     confirmText: 'Yes, Delete',
+//     cancelText : 'Cancel',
+//   })
+//   if (isConfirmed) {
+//     try {
+//       await store.deleteCustomer(item.id)
+//       showToast('success', 'Customer berhasil dihapus!')
+//     } catch {
+//       showToast('error', 'Gagal menghapus, coba lagi.')
+//     }
+//   }
+// }
+
 async function openDeleteModal(item) {
   const isConfirmed = await confirm({
     type       : 'danger',
@@ -267,8 +291,9 @@ async function openDeleteModal(item) {
     try {
       await store.deleteCustomer(item.id)
       showToast('success', 'Customer berhasil dihapus!')
-    } catch {
-      showToast('error', 'Gagal menghapus, coba lagi.')
+    } catch (err) {
+      const message = err.response?.data?.message || 'Gagal menghapus, coba lagi.'
+      showToast('error', message)
     }
   }
 }
@@ -437,11 +462,16 @@ async function handleSave() {
     }
 
     // ── VALIDASI FORMAT PHONE ──
+    // const hasInvalidPhone = contactsForm.value.some(contact => !isValidPhone(contact.phone))
+    // if (hasInvalidPhone) {
+    //   showToast('error', 'Format nomor telepon tidak valid. Gunakan 08xx, +628xx, atau 628xx.')
+    //   return
+    // }
     const hasInvalidPhone = contactsForm.value.some(contact => !isValidPhone(contact.phone))
-    if (hasInvalidPhone) {
-      showToast('error', 'Format nomor telepon tidak valid. Gunakan 08xx, +628xx, atau 628xx.')
-      return
-    }
+      if (hasInvalidPhone) {
+        showToast('error', 'Format nomor telepon tidak valid. Gunakan angka (boleh diawali +, mengandung strip, spasi, atau tanda kurung).')
+        return
+      }
 
     if (!contactsForm.value.some(contact => contact.is_primary)) {
       contactsForm.value[0].is_primary = true
@@ -593,6 +623,29 @@ async function openEditBranch(item) {
   isAddModalVisible.value = true
 }
 
+// async function openDeleteBranchModal(item) {
+//   const branch = item.branch ?? item
+//   const isConfirmed = await confirm({
+//     type       : 'danger',
+//     title      : 'Hapus Cabang Customer',
+//     message    : `Yakin ingin menghapus cabang "${branch.branch_name}"?`,
+//     detail     : 'Tindakan ini tidak bisa dibatalkan dan akan menghapus cabang secara permanen.',
+//     confirmText: 'Yes, Delete',
+//     cancelText : 'Cancel',
+//   })
+
+//   if (!isConfirmed) return
+
+//   try {
+//     await store.deleteBranch(branch.id)
+//     await store.fetchSubmissions()
+//     showToast('success', 'Cabang customer berhasil dihapus!')
+//   } catch {
+//     showToast('error', 'Gagal menghapus cabang, coba lagi.')
+//   }
+// }
+
+
 async function openDeleteBranchModal(item) {
   const branch = item.branch ?? item
   const isConfirmed = await confirm({
@@ -610,11 +663,11 @@ async function openDeleteBranchModal(item) {
     await store.deleteBranch(branch.id)
     await store.fetchSubmissions()
     showToast('success', 'Cabang customer berhasil dihapus!')
-  } catch {
-    showToast('error', 'Gagal menghapus cabang, coba lagi.')
+  } catch (err) {
+    const message = err.response?.data?.message || 'Gagal menghapus cabang, coba lagi.'
+    showToast('error', message)
   }
 }
-
 
 </script>
 
@@ -1266,7 +1319,7 @@ async function openDeleteBranchModal(item) {
         </div>
 
         <div v-if="!store.matchedCompany" class="form-row-2">
-          <div class="form-group">
+          <!-- <div class="form-group">
             <label>Visibility</label>
             <div class="segment-group">
               <button type="button" class="segment-btn" :class="{ active: assignVisibility === 'PUBLIC' }"
@@ -1278,9 +1331,9 @@ async function openDeleteBranchModal(item) {
                 <font-awesome-icon icon="lock" /> PRIVATE
               </button>
             </div>
-          </div>
+          </div> -->
 
-          <div class="form-group">
+          <div class="form-group full-width">
             <label>Customer Status <span class="required">*</span></label>
             <div class="cs-wrap" ref="statusStatisRef">
               <div class="custom-select"
@@ -2093,6 +2146,10 @@ async function openDeleteBranchModal(item) {
   .sort-wrap { width: 100%; }
   .sort-wrap .drop-wrap { flex: 1; }
   .sort-wrap .btn-select { width: 100%; justify-content: space-between; }
+}
+
+.full-width{
+    grid-column: 1 / -1;
 }
 
 @media (max-width: 576px) {

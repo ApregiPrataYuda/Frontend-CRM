@@ -338,23 +338,49 @@ const fetchTimelineCustomer = async (id) => {
   const customersDirectData    = ref([])
   const loadingCustomersDirect = ref(false)
 
+  // const fetchCustomersDirectSelect = async () => {
+  //   loadingCustomersDirect.value = true
+  //   try {
+  //     const res = await followUpService.getCustomersDirectSelect()
+  //     customersDirectData.value = (res.data.data ?? []).map(item => ({
+  //       customer_id   : Number(item.id),
+  //       company_name  : item.company_name,
+  //       contact_name  : item.contact_name,
+  //       customer_code : item.customer_code ?? null,
+  //     }))
+  //   } catch (err) {
+  //     console.error('Gagal fetch customers direct select:', err)
+  //     customersDirectData.value = []
+  //   } finally {
+  //     loadingCustomersDirect.value = false
+  //   }
+  // }
+
   const fetchCustomersDirectSelect = async () => {
-    loadingCustomersDirect.value = true
-    try {
-      const res = await followUpService.getCustomersDirectSelect()
-      customersDirectData.value = (res.data.data ?? []).map(item => ({
-        customer_id   : Number(item.id),
-        company_name  : item.company_name,
-        contact_name  : item.contact_name,
-        customer_code : item.customer_code ?? null,
-      }))
-    } catch (err) {
-      console.error('Gagal fetch customers direct select:', err)
-      customersDirectData.value = []
-    } finally {
-      loadingCustomersDirect.value = false
-    }
+  loadingCustomersDirect.value = true
+  try {
+    const res = await followUpService.getCustomersDirectSelectNew()
+    customersDirectData.value = (res.data.data ?? []).map(item => ({
+      customer_id  : Number(item.id),
+      company_name : item.company_name,
+      contact_name : item.contact_name ?? null,
+      phone        : item.phone ?? null,
+      branches     : (item.branches ?? []).map(b => ({
+        id            : Number(b.id),
+        branch_name   : b.branch_name,
+        is_main_branch: b.is_main_branch,
+        city          : b.city ?? null,
+        contact_name  : b.contact_name ?? null,
+        phone         : b.phone ?? null,
+      })),
+    }))
+  } catch (err) {
+    console.error('Gagal fetch customers direct select:', err)
+    customersDirectData.value = []
+  } finally {
+    loadingCustomersDirect.value = false
   }
+}
 
 
   // ── STORE DIRECT LEAD ──────────────────────────────
