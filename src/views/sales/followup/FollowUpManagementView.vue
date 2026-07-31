@@ -363,96 +363,88 @@ const followUpTypes = [
   { value: 'MEETING',  label: 'Meeting',   icon: 'fa-solid fa-handshake'      },
 ]
 
-// const subjectTemplatesCustomers = [
-//   { label: 'Check-in Rutin - Memastikan Kepuasan Layanan',       value: 'Check-in Rutin - Memastikan Kepuasan Layanan : NO REF ='       },
-//   { label: 'Penawaran Repeat Order - Produk/Layanan Sebelumnya', value: 'Penawaran Repeat Order - Produk/Layanan Sebelumnya : NO REF =' },
-//   { label: 'Perpanjangan Kontrak / Renewal Layanan',             value: 'Perpanjangan Kontrak / Renewal Layanan : NO REF ='             },
-//   { label: 'Tindak Lanjut Setelah Pembelian - Evaluasi Kepuasan',value: 'Tindak Lanjut Setelah Pembelian - Evaluasi Kepuasan : NO REF ='},
-//   { label: 'Penanganan Keluhan / Komplain Customer',             value: 'Penanganan Keluhan / Komplain Customer : NO REF = '             },
-//   { label: 'Diskusi Lanjutan Negosiasi Harga / Kontrak',         value: 'Diskusi Lanjutan Negosiasi Harga / Kontrak : NO REF = '         },
-//   { label: 'Re-aktivasi Customer - Sudah Lama Tidak Bertransaksi',value:'Re-aktivasi Customer - Sudah Lama Tidak Bertransaksi : NO REF = '},
-//   { label: 'Tidak Berminat Lanjut - Kendala Anggaran',           value: 'Tidak Berminat Lanjut - Kendala Anggaran : NO REF = '           },
-// ]
+
+
 const subjectTemplatesCustomers = [
   {
     label: 'Follow Up Rutin - Menjaga Hubungan dengan Customer',
-    value: 'Follow Up Rutin - Menjaga Hubungan dengan Customer : NO REF ='
+    value: 'Follow Up Rutin - Menjaga Hubungan dengan Customer Dengan Nomor REF = '
   },
   {
     label: 'Evaluasi Kepuasan Customer',
-    value: 'Evaluasi Kepuasan Customer : NO REF ='
+    value: 'Evaluasi Kepuasan Customer Dengan Nomor REF = '
   },
   {
     label: 'Tindak Lanjut Penawaran',
-    value: 'Tindak Lanjut Penawaran : NO REF ='
+    value: 'Tindak Lanjut Penawaran Dengan Nomor REF = '
   },
   {
     label: 'Penawaran Repeat Order',
-    value: 'Penawaran Repeat Order : NO REF ='
+    value: 'Penawaran Repeat Order Dengan Nomor REF = '
   },
   {
     label: 'Penawaran Produk atau Layanan Baru',
-    value: 'Penawaran Produk atau Layanan Baru : NO REF ='
+    value: 'Penawaran Produk atau Layanan Baru Dengan Nomor REF = '
   },
   {
     label: 'Peluang Upselling',
-    value: 'Peluang Upselling : NO REF ='
+    value: 'Peluang Upselling Dengan Nomor REF = '
   },
   {
     label: 'Peluang Cross Selling',
-    value: 'Peluang Cross Selling : NO REF ='
+    value: 'Peluang Cross Selling Dengan Nomor REF = '
   },
   {
     label: 'Negosiasi Harga atau Kontrak',
-    value: 'Negosiasi Harga atau Kontrak : NO REF ='
+    value: 'Negosiasi Harga atau Kontrak Dengan Nomor REF = '
   },
   {
     label: 'Perpanjangan Kontrak atau Kerja Sama',
-    value: 'Perpanjangan Kontrak atau Kerja Sama : NO REF ='
+    value: 'Perpanjangan Kontrak atau Kerja Sama Dengan Nomor REF = '
   },
   {
     label: 'Pendampingan Implementasi Produk/Layanan',
-    value: 'Pendampingan Implementasi Produk/Layanan : NO REF ='
+    value: 'Pendampingan Implementasi Produk/Layanan Dengan Nomor REF = '
   },
   {
     label: 'Tindak Lanjut Setelah Pembelian',
-    value: 'Tindak Lanjut Setelah Pembelian : NO REF ='
+    value: 'Tindak Lanjut Setelah Pembelian Dengan Nomor REF = '
   },
   {
     label: 'Penanganan Keluhan Customer',
-    value: 'Penanganan Keluhan Customer : NO REF ='
+    value: 'Penanganan Keluhan Customer Dengan Nomor REF = '
   },
   {
     label: 'Tindak Lanjut Penyelesaian Keluhan',
-    value: 'Tindak Lanjut Penyelesaian Keluhan : NO REF ='
+    value: 'Tindak Lanjut Penyelesaian Keluhan Dengan Nomor REF = '
   },
   {
     label: 'Pengingat Pembayaran',
-    value: 'Pengingat Pembayaran : NO REF ='
+    value: 'Pengingat Pembayaran Dengan Nomor REF = '
   },
   {
     label: 'Permintaan Dokumen atau Data',
-    value: 'Permintaan Dokumen atau Data : NO REF ='
+    value: 'Permintaan Dokumen atau Data Dengan Nomor REF = '
   },
   {
     label: 'Pembaruan Data Customer',
-    value: 'Pembaruan Data Customer : NO REF ='
+    value: 'Pembaruan Data Customer Dengan Nomor REF = '
   },
   {
     label: 'Reaktivasi Customer Tidak Aktif',
-    value: 'Reaktivasi Customer Tidak Aktif : NO REF ='
+    value: 'Reaktivasi Customer Tidak Aktif Dengan Nomor REF = '
   },
   {
     label: 'Diskusi Pengembangan Kerja Sama',
-    value: 'Diskusi Pengembangan Kerja Sama : NO REF ='
+    value: 'Diskusi Pengembangan Kerja Sama Dengan Nomor REF = '
   },
   {
     label: 'Rapat Evaluasi Kinerja Layanan',
-    value: 'Rapat Evaluasi Kinerja Layanan : NO REF ='
+    value: 'Rapat Evaluasi Kinerja Layanan Dengan Nomor REF = '
   },
   {
     label: 'Pembahasan Lainnya',
-    value: 'Pembahasan Lainnya : NO REF ='
+    value: 'Pembahasan Lainnya Dengan Nomor REF = '
   },
 ]
 
@@ -461,30 +453,19 @@ const subjectTemplatesCustomers = [
 // (tidak pernah ada state "belum pilih apa-apa" yang bikin bingung).
 const HEAD_OFFICE_VALUE = '__HEAD_OFFICE__'
 
-// const formDirectCustomer = reactive({
-//   customer_id               : null,
-//   branch_id                 : HEAD_OFFICE_VALUE,
-//   follow_up_type            : 'CALL',
-//   follow_up_at              : '',
-//   subject                   : '',
-//   subject_template_customer : '',
-//   notes                     : '',
-//   need_follow_up            : false,
-//   next_follow_up_at         : null,
-// })
-
 const formDirectCustomer = reactive({
   customer_id               : null,
   branch_id                 : HEAD_OFFICE_VALUE,
   follow_up_type            : 'CALL',
   follow_up_at              : '',
-  ref_number                 : '',
   subject                   : '',
   subject_template_customer : '',
   notes                     : '',
   need_follow_up            : false,
   next_follow_up_at         : null,
 })
+
+
 
 // Customer yang sedang dipilih (objek penuh, termasuk daftar branch-nya).
 // Diasumsikan followUpStore.customersDirectData sudah membawa field
@@ -499,16 +480,7 @@ const selectedCustomer = computed(() =>
 // dropdown branch disembunyikan total (lihat hasBranches di bawah) —
 // jadi sales dengan customer sederhana tidak akan pernah lihat pilihan
 // yang tidak relevan buat mereka.
-// const branchOptions = computed(() => {
-//   const branches = selectedCustomer.value?.branches ?? []
-//   return [
-//     { value: HEAD_OFFICE_VALUE, label: 'Head Office (Kantor Pusat)' },
-//     ...branches.map(b => ({
-//       value: b.id,
-//       label: b.is_main_branch ? `${b.branch_name} (Utama)` : b.branch_name,
-//     })),
-//   ]
-// })
+
 
 const branchOptions = computed(() => {
   const branches = selectedCustomer.value?.branches ?? []
@@ -564,25 +536,17 @@ watch(() => formDirectCustomer.customer_id, () => {
   }
 })
 
-// const openDirectCustomerModal = async () => {
-//   Object.assign(formDirectCustomer, {
-//     customer_id: null, branch_id: HEAD_OFFICE_VALUE, follow_up_type: 'CALL', follow_up_at: '',
-//     subject: '', subject_template_customer: '', notes: '',
-//     need_follow_up: false, next_follow_up_at: null,
-//   })
-//   await followUpStore.fetchCustomersDirectSelect()
-//   isDirectCustomerModalVisible.value = true
-// }
-
 const openDirectCustomerModal = async () => {
   Object.assign(formDirectCustomer, {
     customer_id: null, branch_id: HEAD_OFFICE_VALUE, follow_up_type: 'CALL', follow_up_at: '',
-    ref_number: '', subject: '', subject_template_customer: '', notes: '',
+    subject: '', subject_template_customer: '', notes: '',
     need_follow_up: false, next_follow_up_at: null,
   })
   await followUpStore.fetchCustomersDirectSelect()
   isDirectCustomerModalVisible.value = true
 }
+
+
 
 const closeDirectCustomerModal = () => {
   isDirectCustomerModalVisible.value = false
@@ -592,41 +556,11 @@ watch(() => formDirectCustomer.subject_template_customer, (val) => {
   if (val) formDirectCustomer.subject = val
 })
 
-// const submitDirectCustomer = async () => {
-//   if (!formDirectCustomer.customer_id)   return toast.warning('Customer wajib dipilih')
-//   if (!formDirectCustomer.follow_up_type) return toast.warning('Type follow up wajib dipilih')
-//   if (!formDirectCustomer.subject)        return toast.warning('Subject wajib diisi')
-//   if (!formDirectCustomer.notes)          return toast.warning('Notes wajib diisi')
-
-//   const payload = {
-//     customer_id   : formDirectCustomer.customer_id,
-//     branch_id     : formDirectCustomer.branch_id === HEAD_OFFICE_VALUE
-//                       ? null
-//                       : formDirectCustomer.branch_id,
-//     follow_up_type: formDirectCustomer.follow_up_type,
-//     subject       : formDirectCustomer.subject,
-//     notes         : formDirectCustomer.notes,
-//     follow_up_at  : formDirectCustomer.follow_up_at,
-//   }
-
-//   try {
-//     await followUpStore.storeDirectCustomer(payload)
-//     closeDirectCustomerModal()
-//     toast.success('Direct Follow Up customer berhasil dibuat!')
-//   } catch (err) {
-//     toast.error(err.response?.data?.message || 'Gagal membuat follow up')
-//   }
-// }
-
 const submitDirectCustomer = async () => {
   if (!formDirectCustomer.customer_id)   return toast.warning('Customer wajib dipilih')
   if (!formDirectCustomer.follow_up_type) return toast.warning('Type follow up wajib dipilih')
   if (!formDirectCustomer.subject)        return toast.warning('Subject wajib diisi')
   if (!formDirectCustomer.notes)          return toast.warning('Notes wajib diisi')
-
-  const finalSubject = formDirectCustomer.ref_number
-    ? `${formDirectCustomer.ref_number} - ${formDirectCustomer.subject}`
-    : formDirectCustomer.subject
 
   const payload = {
     customer_id   : formDirectCustomer.customer_id,
@@ -634,11 +568,21 @@ const submitDirectCustomer = async () => {
                       ? null
                       : formDirectCustomer.branch_id,
     follow_up_type: formDirectCustomer.follow_up_type,
-    subject       : finalSubject,
+    subject       : formDirectCustomer.subject,
     notes         : formDirectCustomer.notes,
     follow_up_at  : formDirectCustomer.follow_up_at,
   }
+
+  try {
+    await followUpStore.storeDirectCustomer(payload)
+    closeDirectCustomerModal()
+    toast.success('Direct Follow Up customer berhasil dibuat!')
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Gagal membuat follow up')
+  }
 }
+
+
 
 
 
@@ -947,7 +891,7 @@ const fuTypeIcon = (type) => {
             <th>Status Follow Up</th>
             <th v-if="showVisitColumn">Status From Lead</th>
             <th>Tgl Dibuat</th>
-            <th>Est. Follow Up</th>
+            <th>Estimasi Follow-up</th>
             <th style="width:160px; text-align:center">ACTIONS</th>
           </tr>
         </thead>
@@ -1050,25 +994,27 @@ const fuTypeIcon = (type) => {
 
             <!-- ACTIONS -->
             <td class="td-actions">
+              <!-- saat ini dimatikan tapi jika suatu saat akan di pake uncomment saja -->
               <!-- Edit (hanya PENDING) -->
-              <button
+              <!-- <button
                  v-if="canUpdate && item.status === 'PENDING'"
                 class="act-btn act-edit"
                 title="Reschedule"
                 @click="openEditModal(item)"
               >
                 <font-awesome-icon icon="fa-pen-to-square" />
-              </button>
+              </button> -->
 
+                <!-- saat ini dimatikan tapi jika suatu saat akan di pake uncomment saja -->
               <!-- Delete (hanya PENDING) -->
-              <button
+              <!-- <button
                  v-if="canDelete && item.status === 'PENDING'"
                 class="act-btn act-delete"
                 title="Hapus"
                 @click="handleDelete(item)"
               >
                 <font-awesome-icon icon="fa-trash-can" />
-              </button>
+              </button> -->
 
               <!-- Done badge -->
               <span v-if="!['PENDING'].includes(item.status)" class="status-badge status-success me-1">
@@ -1217,7 +1163,7 @@ const fuTypeIcon = (type) => {
                 <div class="td-muted">{{ followUpStore.formatDate(item.created_at) }}</div>
               </div>
               <div>
-                <span class="detail-label">Est. Follow Up</span>
+                <span class="detail-label">Estimasi Follow-up</span>
                 <div :class="item.is_overdue ? 'text-danger fw-600' : ''">
                   {{ followUpStore.formatDate(item.follow_up_at) }}
                 </div>
@@ -1231,24 +1177,26 @@ const fuTypeIcon = (type) => {
           <!-- FOOTER / ACTIONS -->
           <div class="fu-card-footer">
             <!-- Edit (hanya PENDING) -->
-            <button
+               <!-- saat ini dimatikan tapi jika suatu saat akan di pake uncomment saja -->
+            <!-- <button
               v-if="canUpdate && item.status === 'PENDING'"
               class="act-btn act-edit"
               title="Reschedule"
               @click="openEditModal(item)"
             >
               <font-awesome-icon icon="fa-pen-to-square" />
-            </button>
+            </button> -->
 
             <!-- Delete (hanya PENDING) -->
-            <button
+               <!-- saat ini dimatikan tapi jika suatu saat akan di pake uncomment saja -->
+            <!-- <button
               v-if="canDelete && item.status === 'PENDING'"
               class="act-btn act-delete"
               title="Hapus"
               @click="handleDelete(item)"
             >
               <font-awesome-icon icon="fa-trash-can" />
-            </button>
+            </button> -->
 
             <!-- Done badge -->
             <span v-if="!['PENDING'].includes(item.status)" class="status-badge status-success me-1">
@@ -1691,7 +1639,7 @@ const fuTypeIcon = (type) => {
       <div class="form-container-gap">
 
         <div class="form-group">
-          <label>Customerx <span class="req-label">*</span></label>
+          <label>Customer <span class="req-label">*</span></label>
           <Multiselect
             v-model="formDirectCustomer.customer_id"
             :options="followUpStore.customersDirectData"
@@ -1772,7 +1720,7 @@ const fuTypeIcon = (type) => {
         </div>
 
         <div class="form-group">
-          <label>Follow Up Date <span class="req-label">*</span></label>
+          <label>(Date) Schedule Next Follow Up (Next Action Plan) <span class="req-label">*</span></label>
           <input
                 type="datetime-local"
                 class="form-input datetime-input"

@@ -6,8 +6,9 @@ import AppConfirm from '@/components/AppConfirm.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useIdleTimer } from '@/composables/useIdleTimer'
 import { useToast } from 'vue-toastification'
+import ChatbotWidget from '@/components/ChatbotWidget.vue'
 
-const auth = useAuthStore() // ✅ BENAR
+const auth = useAuthStore() 
 const toast = useToast()
 
 const settingStore = useSettingAppStore()
@@ -73,6 +74,7 @@ onMounted(async () => {
 </script>
 <template>
   <router-view />
+   <ChatbotWidget />
 
   <AppConfirm
     :show="state.show"

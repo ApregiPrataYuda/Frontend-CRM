@@ -565,7 +565,7 @@ const selectedCheckOutFile      = ref(null)
 
 const customerResponses = [
   { value: 'maintained',        label: 'Relationship Maintained / ', desc: 'Regular Visit',       icon: 'fa-solid fa-handshake'           },
-  { value: 'upsell_identified', label: 'growth potential /',       desc: 'Upsell Identified Additional, increase potential has been identified.',    icon: 'fa-solid fa-arrow-trend-up'          },
+  { value: 'improved', label: 'growth potential /',       desc: 'Upsell Identified Additional, increase potential has been identified.',    icon: 'fa-solid fa-arrow-trend-up'          },
   { value: 'complaint_handled', label: 'Outstanding Issue / ',       desc: 'Issue requires further attention',      icon: 'fa-solid fa-triangle-exclamation' },
   { value: 'no_progress',           label: 'No Progress',        desc: 'Low engagement, negative feedback, or no significant progress',     icon: 'fa-solid fa-circle-exclamation'   },
   // ini kode lama di comment saja siapa tau kedepanya berubah lagi

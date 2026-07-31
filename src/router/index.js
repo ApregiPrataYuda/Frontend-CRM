@@ -349,6 +349,18 @@ const routes = [
       },
 
 
+      {
+        path: 'customer-population',
+        name: 'Population Cust',
+
+        component: () =>
+        import('@/views/sales/customers/CustomersPopulationView.vue'),
+        meta: {
+          role: [2], title: 'Sales Follow Up'
+        }
+      },
+
+
 
       {
         path: 'reports-sales',
@@ -362,6 +374,8 @@ const routes = [
           role: [2]
         }
       },
+
+      
 
       /* ========================================
          MANAGER
