@@ -1,154 +1,87 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { usecustomersPopulationStore } from '@/stores/customersPopulationStore'
 
-const menus = ref([
-  { id: 1, name: 'administrators', role: 'admin', created: '24 Maret 2026' },
-  { id: 2, name: 'sales',          role: 'sales', created: '24 Maret 2026' },
-  { id: 3, name: 'manager',        role: 'manager', created: '24 Maret 2026' },
-])
-const loading = ref(false)
+const store = usecustomersPopulationStore()
 
-// State untuk opsi role
-const roleOptions = [
-  { label: 'Administrator', value: 'admin' },
-  { label: 'Manager', value: 'manager' },
-  { label: 'Sales', value: 'sales' },
-  { label: 'HR', value: 'hr' },
-  { label: 'Staff', value: 'staff' }
-]
+const {
+  customersData, loadingCustomers, searchCustomers,
+  filterPurchased, pagination, sort,
+  customerDetail, purchaseItems, loadingDetail,
+  syncingCustomers, syncingPurchases,
+} = storeToRefs(store)
 
-const searchQuery = ref('')
-const filteredRows = computed(() => {
-  if (!searchQuery.value) return menus.value
-  const q = searchQuery.value.toLowerCase()
-  return menus.value.filter(m =>
-    Object.values(m).some(v => String(v).toLowerCase().includes(q))
-  )
+onMounted(() => {
+  store.fetchCustomers()
 })
 
-const sortBy  = ref('created')
-const sortDir = ref('Desc')
+// ── FILTER OPTIONS ──
+const filterOptions = [
+  { label: 'All Customer', value: 'all' },
+  { label: 'Has Purchased', value: 'has_purchased' },
+]
+const filterLabel = () =>
+  filterOptions.find(o => o.value === filterPurchased.value)?.label ?? 'All Customer'
+
+// ── SORT OPTIONS ──
 const sortByOptions = [
-  { label: 'Created Date', value: 'created' },
-  { label: 'Menu Name',    value: 'name' },
+  { label: 'Created Date', value: 'created_at' },
+  { label: 'Customer Name', value: 'name' },
+  { label: 'Total Transaksi', value: 'total_transaksi' },
 ]
-const sortByLabel = computed(() =>
-  sortByOptions.find(o => o.value === sortBy.value)?.label ?? 'Created Date'
-)
-const sortedRows = computed(() => {
-  return [...filteredRows.value].sort((a, b) => {
-    const cmp = String(a[sortBy.value]).localeCompare(String(b[sortBy.value]))
-    return sortDir.value === 'Asc' ? cmp : -cmp
-  }) // <-- Sudah diperbaiki menjadi }) bukan )
-})
+const sortByLabel = () =>
+  sortByOptions.find(o => o.value === sort.value.column)?.label ?? 'Created Date'
 
-const perPage     = ref(10)
-const currentPage = ref(1)
-const totalPages  = computed(() =>
-  Math.max(1, Math.ceil(sortedRows.value.length / perPage.value))
-)
-const paginatedRows = computed(() => {
-  const start = (currentPage.value - 1) * perPage.value
-  return sortedRows.value.slice(start, start + perPage.value)
-})
-
-const showExportMenu  = ref(false)
-const showImportMenu  = ref(false)
-const showPerPageMenu = ref(false)
-const showSortByMenu  = ref(false)
-const showSortDirMenu = ref(false)
+// ── DROPDOWN STATE ──
+import { ref } from 'vue'
+const showFilterMenu   = ref(false)
+const showPerPageMenu  = ref(false)
+const showSortByMenu   = ref(false)
+const showSortDirMenu  = ref(false)
 
 function handleReset() {
-  searchQuery.value = ''
-  sortBy.value      = 'created'
-  sortDir.value     = 'Desc'
-  perPage.value     = 10
-  currentPage.value = 1
+  store.resetFilters()
 }
 
-function exportCSV() {
-  const header = 'ID,Name,Role,Created\n'
-  const rows   = menus.value.map(m => `${m.id},"${m.name}","${m.role}","${m.created}"`).join('\n')
-  const blob   = new Blob([header + rows], { type: 'text/csv' })
-  const url    = URL.createObjectURL(blob)
-  const a      = document.createElement('a')
-  a.href = url; a.download = 'menus.csv'; a.click()
-  URL.revokeObjectURL(url)
-  showExportMenu.value = false
-}
-function exportExcel() { showExportMenu.value = false }
-function exportPDF()   { showExportMenu.value = false }
-
-// State Form Modal
-const isAddModalVisible    = ref(false)
-const isEdit               = ref(false)
-const selectedEditMenu     = ref(null)
-const newMenuName          = ref('')
-const selectedRole         = ref('admin') // State penampung role yang dipilih
-
-const isDeleteModalVisible = ref(false)
-const selectedMenu         = ref(null)
+// ── DETAIL MODAL ──
 const isDetailModalVisible = ref(false)
-const detailMenu           = ref(null)
 
-function openAddModal() {
-  isEdit.value = false; 
-  newMenuName.value = ''; 
-  selectedRole.value = 'admin'; 
-  selectedEditMenu.value = null
-  selectedFileName.value = 'No file chosen'; 
-  isAddModalVisible.value = true
+async function openDetailModal(customer) {
+  isDetailModalVisible.value = true
+  await store.detailCustomer(customer.odoo_partner_id)
 }
-function openEditModal(menu) {
-  isEdit.value = true; selectedEditMenu.value = menu; newMenuName.value = menu.name
-  selectedRole.value = menu.role || 'admin' // Ambil role lama atau fallback ke admin
-  isAddModalVisible.value = true
+function closeDetailModal() {
+  isDetailModalVisible.value = false
+  customerDetail.value = null
+  purchaseItems.value = []
 }
-function closeAddModal() { isAddModalVisible.value = false }
 
-function submitAddData() {
-  if (!newMenuName.value.trim()) return alert('Menu name wajib diisi!')
-  
-  if (isEdit.value && selectedEditMenu.value) {
-    const idx = menus.value.findIndex(m => m.id === selectedEditMenu.value.id)
-    if (idx > -1) {
-      menus.value[idx].name = newMenuName.value.toLowerCase()
-      menus.value[idx].role = selectedRole.value // Simpan perubahan role
-    }
-  } else {
-    menus.value.push({
-      id: menus.value.length + 1,
-      name: newMenuName.value.toLowerCase(),
-      role: selectedRole.value, // Simpan data role baru
-      created: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-    })
+// ── SYNC ──
+async function handleSyncCustomers() {
+  try {
+    await store.syncCustomers()
+  } catch (e) {
+    alert('Gagal sync customer, coba lagi.')
   }
-  closeAddModal()
+}
+async function handleSyncPurchases() {
+  try {
+    await store.syncCustomerPurchases()
+  } catch (e) {
+    alert('Gagal sync data pembelian, coba lagi.')
+  }
 }
 
-function openDeleteModal(menu) { selectedMenu.value = menu; isDeleteModalVisible.value = true }
-function closeDeleteModal()    { isDeleteModalVisible.value = false; selectedMenu.value = null }
-function submitDeleteData()    { menus.value = menus.value.filter(m => m.id !== selectedMenu.value.id); closeDeleteModal() }
-
-function openDetailModal(menu) { detailMenu.value = menu; isDetailModalVisible.value = true }
-function closeDetailModal()    { isDetailModalVisible.value = false; detailMenu.value = null }
-
-// Helper untuk dapetin text label role yang rapi saat di detail modal
-const getRoleLabel = (roleValue) => {
-  return roleOptions.find(o => o.value === roleValue)?.label ?? roleValue
+// ── PAGINATION NAV ──
+function goPrev() {
+  if (pagination.value.prev_page_url) {
+    store.fetchCustomers(pagination.value.prev_page_url.replace(/^.*\/api/, ''))
+  }
 }
-
-const selectedFileName = ref('No file chosen') // State untuk nama file
-
-
-
-// Handle perubahan file pas user milih file
-function handleFileChange(event) {
-  const file = event.target.files[0]
-  if (file) {
-    selectedFileName.value = file.name
-  } else {
-    selectedFileName.value = 'No file chosen'
+function goNext() {
+  if (pagination.value.next_page_url) {
+    store.fetchCustomers(pagination.value.next_page_url.replace(/^.*\/api/, ''))
   }
 }
 </script>
@@ -164,18 +97,26 @@ function handleFileChange(event) {
         </h4>
 
         <div class="breadcrumb-path">
-         
-
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
-
           <span class="breadcrumb-item active">
-             Customer Population
+            Customer Population
           </span>
         </div>
       </div>
     </div>
 
-    
+    <div class="toolbar-top">
+      <div class="toolbar-left">
+        <button class="btn-toolbar btn-purple" :disabled="syncingCustomers" @click="handleSyncCustomers">
+          <font-awesome-icon :icon="syncingCustomers ? 'spinner' : 'rotate'" :spin="syncingCustomers" />
+          {{ syncingCustomers ? 'Syncing...' : 'Sync Customer' }}
+        </button>
+        <button class="btn-toolbar btn-orange" :disabled="syncingPurchases" @click="handleSyncPurchases">
+          <font-awesome-icon :icon="syncingPurchases ? 'spinner' : 'rotate'" :spin="syncingPurchases" />
+          {{ syncingPurchases ? 'Syncing...' : 'Sync Purchases' }}
+        </button>
+      </div>
+    </div>
 
     <div class="controls-card">
       <div class="controls-row">
@@ -185,49 +126,68 @@ function handleFileChange(event) {
             <span class="showing-label">Showing:</span>
             <div class="drop-wrap">
               <button class="btn-select" @click="showPerPageMenu = !showPerPageMenu">
-                {{ perPage }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+                {{ pagination.per_page }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu" :class="{ show: showPerPageMenu }">
                 <div class="drop-label">Per halaman</div>
                 <div class="perpage-grid">
                   <button
                     v-for="opt in [5,10,25,50]" :key="opt"
-                    class="perpage-opt" :class="{ active: perPage === opt }"
-                    @click="perPage = opt; showPerPageMenu = false; currentPage = 1"
+                    class="perpage-opt" :class="{ active: pagination.per_page === opt }"
+                    @click="pagination.per_page = opt; showPerPageMenu = false; store.changePageSize()"
                   >{{ opt }}</button>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div class="drop-wrap">
+            <button class="btn-select" @click="showFilterMenu = !showFilterMenu">
+              <font-awesome-icon icon="filter" />
+              {{ filterLabel() }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+            </button>
+            <div class="drop-menu" :class="{ show: showFilterMenu }">
+              <div class="drop-label">Filter Customer</div>
+              <button v-for="opt in filterOptions" :key="opt.value" class="drop-item"
+                :class="{ active: filterPurchased === opt.value }"
+                @click="store.changeFilter(opt.value); showFilterMenu = false">{{ opt.label }}</button>
             </div>
           </div>
         </div>
 
         <div class="controls-right">
           <div class="search-wrap">
-            <input v-model="searchQuery" type="text" placeholder="Searching...." class="search-input" @input="currentPage = 1" />
+            <input
+              :value="searchCustomers"
+              type="text"
+              placeholder="Cari nama, email, telepon..."
+              class="search-input"
+              @input="store.searchWithDelay($event.target.value)"
+            />
             <button class="search-btn"><font-awesome-icon icon="magnifying-glass" /></button>
           </div>
           <div class="sort-wrap">
             <span class="showing-label">Sort:</span>
             <div class="drop-wrap">
               <button class="btn-select" @click="showSortByMenu = !showSortByMenu">
-                {{ sortByLabel }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+                {{ sortByLabel() }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu" :class="{ show: showSortByMenu }">
                 <div class="drop-label">Sort By</div>
                 <button v-for="opt in sortByOptions" :key="opt.value" class="drop-item"
-                  :class="{ active: sortBy === opt.value }"
-                  @click="sortBy = opt.value; showSortByMenu = false">{{ opt.label }}</button>
+                  :class="{ active: sort.column === opt.value }"
+                  @click="sort.column = opt.value; showSortByMenu = false; store.changeSorting()">{{ opt.label }}</button>
               </div>
             </div>
             <div class="drop-wrap">
               <button class="btn-select" @click="showSortDirMenu = !showSortDirMenu">
-                {{ sortDir }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+                {{ sort.direction === 'asc' ? 'Asc' : 'Desc' }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu drop-right" :class="{ show: showSortDirMenu }">
                 <div class="drop-label">Urutan</div>
-                <button v-for="opt in ['Desc', 'Asc']" :key="opt" class="drop-item"
-                  :class="{ active: sortDir === opt }"
-                  @click="sortDir = opt; showSortDirMenu = false">{{ opt }}</button>
+                <button v-for="opt in [{l:'Desc',v:'desc'},{l:'Asc',v:'asc'}]" :key="opt.v" class="drop-item"
+                  :class="{ active: sort.direction === opt.v }"
+                  @click="sort.direction = opt.v; showSortDirMenu = false; store.changeSorting()">{{ opt.l }}</button>
               </div>
             </div>
           </div>
@@ -239,42 +199,41 @@ function handleFileChange(event) {
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width:70px">NO.</th>
-            <th>MENU NAME</th>
-            <th style="width:180px">ROLE</th>
-            <th style="width:200px">CREATED</th>
-            <th style="width:160px; text-align:center">ACTIONS</th>
+            <th style="width:60px">NO.</th>
+            <th>CUSTOMER NAME</th>
+            <th style="width:180px">EMAIL</th>
+            <th style="width:160px">PHONE</th>
+            <th style="width:140px">STATUS</th>
+            <th style="width:120px">TRANSAKSI</th>
+            <th style="width:100px; text-align:center">ACTIONS</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loading">
-            <td colspan="5" class="td-center">
+          <tr v-if="loadingCustomers">
+            <td colspan="7" class="td-center">
               <font-awesome-icon icon="spinner" spin /> Memuat data...
             </td>
           </tr>
-          <tr v-else-if="paginatedRows.length === 0">
-            <td colspan="5" class="td-center">
+          <tr v-else-if="customersData.length === 0">
+            <td colspan="7" class="td-center">
               <div class="empty-state">
                 <font-awesome-icon icon="inbox" class="empty-icon" />
                 <div>Tidak ada data ditemukan</div>
               </div>
             </td>
           </tr>
-          <tr v-else v-for="(menu, index) in paginatedRows" :key="menu.id" class="data-row">
-            <td class="td-no">{{ (currentPage - 1) * perPage + index + 1 }}.</td>
-            <td class="td-name">{{ menu.name }}</td>
+          <tr v-else v-for="(customer, index) in customersData" :key="customer.id" class="data-row">
+            <td class="td-no">{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}.</td>
+            <td class="td-name">{{ customer.name }}</td>
+            <td class="td-muted">{{ customer.email && customer.email !== '0' ? customer.email : '-' }}</td>
+            <td class="td-muted">{{ customer.phone && customer.phone !== '0' ? customer.phone : '-' }}</td>
             <td>
-              <span class="table-role-badge">{{ getRoleLabel(menu.role) }}</span>
+              <span v-if="customer.has_purchased" class="badge-active">Sudah Beli</span>
+              <span v-else class="table-role-badge">Belum Beli</span>
             </td>
-            <td class="td-muted">{{ menu.created }}</td>
+            <td class="td-muted">{{ customer.total_transaksi }}x</td>
             <td class="td-actions">
-              <button class="act-btn act-edit"   @click="openEditModal(menu)"   title="Edit">
-                <font-awesome-icon icon="pen-to-square" />
-              </button>
-              <button class="act-btn act-delete" @click="openDeleteModal(menu)" title="Hapus">
-                <font-awesome-icon icon="trash-can" />
-              </button>
-              <button class="act-btn act-info"   @click="openDetailModal(menu)" title="Detail">
+              <button class="act-btn act-info" @click="openDetailModal(customer)" title="Detail">
                 <font-awesome-icon icon="circle-info" />
               </button>
             </td>
@@ -285,156 +244,78 @@ function handleFileChange(event) {
 
     <div class="pagination-card">
       <div class="pagination-nav">
-        <button class="btn-prev-next" :disabled="currentPage === 1" @click="currentPage--">
+        <button class="btn-prev-next" :disabled="!pagination.prev_page_url" @click="goPrev">
           <font-awesome-icon icon="circle-left" /> Prev
         </button>
-        <button class="btn-prev-next" :disabled="currentPage === totalPages" @click="currentPage++">
+        <button class="btn-prev-next" :disabled="!pagination.next_page_url" @click="goNext">
           Next <font-awesome-icon icon="circle-right" />
         </button>
       </div>
       <div class="page-badges">
-        <span class="page-badge">{{ paginatedRows.length }} DATA | ON PAGE {{ currentPage }}</span>
-        <span class="page-badge">TOTAL: {{ sortedRows.length }}</span>
+        <span class="page-badge">{{ customersData.length }} DATA | ON PAGE {{ pagination.current_page }}</span>
+        <span class="page-badge">TOTAL: {{ pagination.total }}</span>
       </div>
     </div>
 
     <Teleport to="body">
-
-      <div v-if="isAddModalVisible" class="modal-overlay" @click.self="closeAddModal">
-        <div class="modal-box">
-          <div class="modal-header">
-            <h5 class="modal-title">
-              <font-awesome-icon :icon="isEdit ? 'pen' : 'plus'" />
-              {{ isEdit ? 'Edit Menu' : 'Add New Menu' }}
-            </h5>
-            <button class="modal-close" @click="closeAddModal">
-              <font-awesome-icon icon="xmark" />
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="form-container-gap">
-              
-              <div class="form-group">
-                <label>Menu Name</label>
-                <input v-model="newMenuName" class="form-input" placeholder="e.g. supervisor, content manager" />
-              </div>
-
-              <div class="form-group">
-                <label>Menu Role (Select Biasa)</label>
-                <select v-model="selectedRole" class="form-input form-select">
-                  <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label>Menu Role (Segmented)</label>
-                <div class="segment-group">
-                  <button
-                    v-for="role in roleOptions"
-                    :key="role.value"
-                    type="button"
-                    class="segment-btn"
-                    :class="{ active: selectedRole === role.value }"
-                    @click="selectedRole = role.value"
-                  >
-                    {{ role.label }}
-                  </button>
-                </div>
-              </div>
-
-              <div class="form-group">
-  <label>Upload File</label>
-  <div class="file-upload-wrapper">
-    <input 
-      type="file" 
-      id="manual-file-input" 
-      class="file-hidden-input" 
-      @change="handleFileChange" 
-    />
-    <label for="manual-file-input" class="file-custom-label">
-      <span class="btn-browse">Browse</span>
-      <span class="file-name-text">{{ selectedFileName }}</span>
-    </label>
-  </div>
-</div>
-
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn-cancel" @click="closeAddModal">Cancel</button>
-            <button class="btn-save" @click="submitAddData">
-              <font-awesome-icon icon="check" />
-              {{ isEdit ? 'Update' : 'Save Data' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="isDeleteModalVisible" class="modal-overlay" @click.self="closeDeleteModal">
-        <div class="modal-box modal-sm">
-          <div class="modal-body text-center py-4">
-            <div class="delete-icon-wrap">
-              <font-awesome-icon icon="triangle-exclamation" />
-            </div>
-            <h5 class="modal-danger-title">Delete Menu Data?</h5>
-            <p class="modal-danger-text">
-              Yakin ingin menghapus menu <strong>"{{ selectedMenu?.name }}"</strong>?
-              Tindakan ini tidak bisa dibatalkan.
-            </p>
-          </div>
-          <div class="modal-footer justify-content-center">
-            <button class="btn-cancel" @click="closeDeleteModal">Cancel</button>
-            <button class="btn-danger" @click="submitDeleteData">
-              <font-awesome-icon icon="trash-can" /> Yes, Delete
-            </button>
-          </div>
-        </div>
-      </div>
-
       <div v-if="isDetailModalVisible" class="modal-overlay" @click.self="closeDetailModal">
         <div class="modal-box">
           <div class="modal-header">
             <h5 class="modal-title">
-              <font-awesome-icon icon="circle-info" /> Menu Details
+              <font-awesome-icon icon="circle-info" /> Customer Purchase Detail
             </h5>
             <button class="modal-close" @click="closeDetailModal">
               <font-awesome-icon icon="xmark" />
             </button>
           </div>
           <div class="modal-body">
-            <div class="detail-list">
-              <div class="detail-row">
-                <span class="detail-label">Menu ID</span>
-                <span class="detail-value mono">#{{ detailMenu?.id }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Menu Name</span>
-                <span class="detail-badge">{{ detailMenu?.name }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Assigned Role</span>
-                <span class="detail-value font-semibold">{{ getRoleLabel(detailMenu?.role) }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Created At</span>
-                <span class="detail-value">{{ detailMenu?.created }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Status</span>
-                <span class="badge-active">Active</span>
-              </div>
+            <div v-if="loadingDetail" class="td-center py-4">
+              <font-awesome-icon icon="spinner" spin /> Memuat detail...
             </div>
+            <template v-else>
+              <div class="detail-list mb-3">
+                <div class="detail-row">
+                  <span class="detail-label">Customer Name</span>
+                  <span class="detail-value font-semibold">{{ customerDetail?.name }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Total Transaksi</span>
+                  <span class="detail-badge">{{ customerDetail?.total_transaksi }}x</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Status</span>
+                  <span v-if="customerDetail?.has_purchased" class="badge-active">Sudah Beli</span>
+                  <span v-else class="table-role-badge">Belum Beli</span>
+                </div>
+              </div>
+
+              <div v-if="purchaseItems.length === 0" class="empty-state py-3">
+                <font-awesome-icon icon="inbox" class="empty-icon" />
+                <div>Belum ada riwayat pembelian</div>
+              </div>
+
+              <div v-else class="purchase-list">
+                <div v-for="(item, idx) in purchaseItems" :key="idx" class="purchase-item">
+                  <div class="purchase-item-header">
+                    <span class="purchase-order-name">{{ item.order_name }}</span>
+                    <span class="purchase-date">{{ store.formatDate(item.order_date) }}</span>
+                  </div>
+                  <div class="purchase-product-name">{{ item.product_name }}</div>
+                  <div class="purchase-meta">
+                    <span>Qty: {{ item.qty }}</span>
+                    <span>Harga: {{ store.formatCurrency(item.price_unit) }}</span>
+                  </div>
+                </div>
+              </div>
+            </template>
           </div>
           <div class="modal-footer">
             <button class="btn-cancel" @click="closeDetailModal">Close</button>
           </div>
         </div>
       </div>
-
     </Teleport>
-    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -1098,5 +979,40 @@ function handleFileChange(event) {
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
+}
+
+
+.purchase-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.purchase-item {
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+}
+.purchase-item-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.purchase-order-name { font-weight: 700; color: #6366f1; }
+.purchase-product-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.purchase-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 </style>
