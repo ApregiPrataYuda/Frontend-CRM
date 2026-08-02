@@ -19,6 +19,10 @@ export const usecustomersPopulationStore = defineStore('customers', () => {
   const syncingCustomers = ref(false)
   const syncingPurchases = ref(false)
 
+  // ── DASHBOARD / SUMMARY ──
+  const summaryData = ref(null)
+  const loadingSummary = ref(false)
+
   const pagination = reactive({
     current_page: 1,
     per_page: 10,
@@ -76,6 +80,20 @@ export const usecustomersPopulationStore = defineStore('customers', () => {
       console.error('Gagal fetch customers:', error)
     } finally {
       loadingCustomers.value = false
+    }
+  }
+
+  // ── FETCH SUMMARY (untuk dashboard) ──
+  const fetchSummary = async () => {
+    loadingSummary.value = true
+    try {
+      const response = await customersPopulationServices.summaryPopulationCustomer()
+      // response shape: { success, message, data: { total_customers, total_purchased, total_not_purchased, total_transaksi, top_customers } }
+      summaryData.value = response.data.data
+    } catch (error) {
+      console.error('Gagal fetch summary:', error)
+    } finally {
+      loadingSummary.value = false
     }
   }
 
@@ -203,9 +221,11 @@ export const usecustomersPopulationStore = defineStore('customers', () => {
     pagination, sort,
     customerDetail, purchaseItems, loadingDetail,
     syncingCustomers, syncingPurchases,
+    summaryData, loadingSummary,
     // actions
     buildUrl,
     fetchCustomers,
+    fetchSummary,
     searchWithDelay, changeFilter, changePageSize,
     changeSorting, toggleSort, resetFilters,
     formatDate, formatCurrency,

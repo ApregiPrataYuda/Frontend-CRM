@@ -20,16 +20,21 @@ export const customersPopulationServices = {
     return response          // store expects: res.data.data
   },
 
+  // ── SUMMARY / DASHBOARD ──
+  async summaryPopulationCustomer() {
+    const response = await api.get('/customers/population/summary')
+    return response          // store expects: response.data.data
+  },
+
   // ── SYNC CUSTOMERS ──
   async syncCustomers(payload) {
     const response = await api.post('/odoo/sync-customers', payload)
     return response
   },
 
-   async syncCustomerPurchases(payload) {
+  async syncCustomerPurchases(payload) {
     const response = await api.post('/odoo/sync-customer-purchases', payload)
     return response
   },
-
 
 }

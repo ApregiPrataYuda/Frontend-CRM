@@ -295,7 +295,7 @@ const routes = [
           import('@/views/sales/leads/LeadsManagementView.vue'),
 
         meta: {
-          role: [2], title: 'Leads Management'
+          role: [2], title: 'Leads'
         }
       },
 
@@ -319,7 +319,7 @@ const routes = [
           import('@/views/sales/customers/CustomersManagementView.vue'),
 
         meta: {
-          role: [2], title: 'Customers Management'
+          role: [2], title: 'Customers'
         }
       },
 
@@ -331,7 +331,7 @@ const routes = [
           import('@/views/sales/visit/SalesVisitView.vue'),
 
         meta: {
-          role: [2], title: 'Sales Visit Data'
+          role: [2], title: 'Sales Visit'
         }
       },
 
@@ -344,7 +344,7 @@ const routes = [
           import('@/views/sales/followup/FollowUpManagementView.vue'),
 
         meta: {
-          role: [2], title: 'Sales Follow Up'
+          role: [2], title: 'Follow UP'
         }
       },
 

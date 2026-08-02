@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usecustomersPopulationStore } from '@/stores/customersPopulationStore'
 
@@ -10,10 +10,34 @@ const {
   filterPurchased, pagination, sort,
   customerDetail, purchaseItems, loadingDetail,
   syncingCustomers, syncingPurchases,
+  summaryData, loadingSummary,
 } = storeToRefs(store)
 
 onMounted(() => {
   store.fetchCustomers()
+  store.fetchSummary()
+})
+
+// ── DASHBOARD: COMPUTED ──
+const totalCustomers   = computed(() => summaryData.value?.total_customers ?? 0)
+const totalPurchased   = computed(() => summaryData.value?.total_purchased ?? 0)
+const totalNotPurchase = computed(() => summaryData.value?.total_not_purchased ?? 0)
+const totalTransaksi   = computed(() => summaryData.value?.total_transaksi ?? 0)
+const topCustomers     = computed(() => summaryData.value?.top_customers ?? [])
+
+const purchasedPercent = computed(() => {
+  if (!totalCustomers.value) return 0
+  return Math.round((totalPurchased.value / totalCustomers.value) * 100)
+})
+
+const donutGradient = computed(() => {
+  const p = purchasedPercent.value
+  return `conic-gradient(#6366f1 0% ${p}%, #e2e8f0 ${p}% 100%)`
+})
+
+const maxTopTransaksi = computed(() => {
+  if (!topCustomers.value.length) return 1
+  return Math.max(...topCustomers.value.map(c => c.total_transaksi || 0), 1)
 })
 
 // ── FILTER OPTIONS ──
@@ -34,7 +58,6 @@ const sortByLabel = () =>
   sortByOptions.find(o => o.value === sort.value.column)?.label ?? 'Created Date'
 
 // ── DROPDOWN STATE ──
-import { ref } from 'vue'
 const showFilterMenu   = ref(false)
 const showPerPageMenu  = ref(false)
 const showSortByMenu   = ref(false)
@@ -42,6 +65,28 @@ const showSortDirMenu  = ref(false)
 
 function handleReset() {
   store.resetFilters()
+}
+
+// ── VIEW MODE (CARD / TABLE) ──
+const VIEW_MODE_KEY = 'customers_population_view_mode'
+const viewMode = ref(localStorage.getItem(VIEW_MODE_KEY) || 'card')
+
+function setViewMode(mode) {
+  viewMode.value = mode
+  localStorage.setItem(VIEW_MODE_KEY, mode)
+}
+
+const avatarPalette = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6', '#8b5cf6']
+function getInitials(name) {
+  if (!name) return '?'
+  const parts = name.trim().split(/\s+/)
+  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase()
+}
+function getAvatarColor(name) {
+  if (!name) return avatarPalette[0]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return avatarPalette[Math.abs(hash) % avatarPalette.length]
 }
 
 // ── DETAIL MODAL ──
@@ -105,6 +150,115 @@ function goNext() {
       </div>
     </div>
 
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="dashboard-wrap mb-2">
+
+      <!-- KARTU RINGKASAN -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-indigo">
+            <font-awesome-icon icon="users" />
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">
+              <template v-if="loadingSummary">...</template>
+              <template v-else>{{ totalCustomers.toLocaleString('id-ID') }}</template>
+            </div>
+            <div class="stat-label">Total Customer</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-green">
+            <font-awesome-icon icon="circle-check" />
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">
+              <template v-if="loadingSummary">...</template>
+              <template v-else>{{ totalPurchased.toLocaleString('id-ID') }}</template>
+            </div>
+            <div class="stat-label">Sudah Beli</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-amber">
+            <font-awesome-icon icon="circle-xmark" />
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">
+              <template v-if="loadingSummary">...</template>
+              <template v-else>{{ totalNotPurchase.toLocaleString('id-ID') }}</template>
+            </div>
+            <div class="stat-label">Belum Beli</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-pink">
+            <font-awesome-icon icon="cart-shopping" />
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">
+              <template v-if="loadingSummary">...</template>
+              <template v-else>{{ totalTransaksi.toLocaleString('id-ID') }}</template>
+            </div>
+            <div class="stat-label">Total Transaksi</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHART -->
+      <div class="chart-grid">
+
+        <!-- DONUT: Sudah Beli vs Belum Beli -->
+        <div class="chart-card">
+          <div class="chart-card-title">Proporsi Customer</div>
+          <div v-if="loadingSummary" class="state-wrap"><div class="spinner-custom"></div></div>
+          <div v-else class="donut-wrap">
+            <div class="donut" :style="{ background: donutGradient }">
+              <div class="donut-hole">
+                <span class="donut-percent">{{ purchasedPercent }}%</span>
+                <span class="donut-caption">Sudah Beli</span>
+              </div>
+            </div>
+            <div class="donut-legend">
+              <div class="legend-item">
+                <span class="legend-dot" style="background:#6366f1"></span>
+                Sudah Beli ({{ totalPurchased.toLocaleString('id-ID') }})
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot" style="background:#e2e8f0"></span>
+                Belum Beli ({{ totalNotPurchase.toLocaleString('id-ID') }})
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BAR: Top 5 Customer -->
+        <div class="chart-card chart-card-wide">
+          <div class="chart-card-title">Top Customer by Transaksi</div>
+          <div v-if="loadingSummary" class="state-wrap"><div class="spinner-custom"></div></div>
+          <div v-else-if="!topCustomers.length" class="state-wrap">
+            <span class="text-muted-color">Belum ada data</span>
+          </div>
+          <div v-else class="bar-list">
+            <div v-for="(c, idx) in topCustomers" :key="idx" class="bar-row">
+              <div class="bar-label" :title="c.name">{{ c.name }}</div>
+              <div class="bar-track">
+                <div
+                  class="bar-fill"
+                  :style="{ width: (c.total_transaksi / maxTopTransaksi * 100) + '%' }"
+                ></div>
+              </div>
+              <div class="bar-value">{{ c.total_transaksi }}x</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <div class="toolbar-top">
       <div class="toolbar-left">
         <button class="btn-toolbar btn-purple" :disabled="syncingCustomers" @click="handleSyncCustomers">
@@ -139,6 +293,26 @@ function goNext() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- ═══ VIEW MODE TOGGLE (CARD / TABLE) ═══ -->
+          <div class="view-toggle">
+            <button
+              class="view-toggle-btn"
+              :class="{ active: viewMode === 'card' }"
+              title="Tampilan Card"
+              @click="setViewMode('card')"
+            >
+              <font-awesome-icon icon="table-cells" /> Card
+            </button>
+            <button
+              class="view-toggle-btn"
+              :class="{ active: viewMode === 'table' }"
+              title="Tampilan Tabel"
+              @click="setViewMode('table')"
+            >
+              <font-awesome-icon icon="list" /> Table
+            </button>
           </div>
 
           <div class="drop-wrap">
@@ -195,8 +369,68 @@ function goNext() {
       </div>
     </div>
 
-    <div class="table-card flex-grow-1 overflow-auto mb-3">
-      <table class="data-table">
+    <div class="content-card flex-grow-1 overflow-auto mb-3">
+
+      <!-- LOADING (shared) -->
+      <div v-if="loadingCustomers" class="state-wrap">
+        <div class="spinner-custom"></div>
+      </div>
+
+      <!-- EMPTY (shared) -->
+      <div v-else-if="customersData.length === 0" class="state-wrap">
+        <div class="empty-state">
+          <font-awesome-icon icon="inbox" class="empty-icon" />
+          <div>Tidak ada data ditemukan</div>
+        </div>
+      </div>
+
+      <!-- ═══ CARD VIEW (DEFAULT) ═══ -->
+      <div v-else-if="viewMode === 'card'" class="customer-grid">
+        <div v-for="(customer, index) in customersData" :key="customer.id" class="customer-card">
+          <div class="cc-top">
+            <div class="cc-avatar" :style="{ background: getAvatarColor(customer.name) }">
+              {{ getInitials(customer.name) }}
+            </div>
+            <div class="cc-headinfo">
+              <div class="cc-name" :title="customer.name">{{ customer.name }}</div>
+              <div class="cc-code">
+                No. {{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}
+              </div>
+            </div>
+            <div class="cc-break"></div>
+            <span v-if="customer.has_purchased" class="badge-active cc-status">Sudah Beli</span>
+            <span v-else class="table-role-badge cc-status">Belum Beli</span>
+          </div>
+
+          <div class="cc-body">
+            <div class="cc-row">
+              <font-awesome-icon icon="envelope" class="cc-icon" />
+              <span>{{ customer.email && customer.email !== '0' ? customer.email : '-' }}</span>
+            </div>
+            <div class="cc-row">
+              <font-awesome-icon icon="phone" class="cc-icon" />
+              <span>{{ customer.phone && customer.phone !== '0' ? customer.phone : '-' }}</span>
+            </div>
+          </div>
+
+          <div class="cc-transaksi">
+            <font-awesome-icon icon="cart-shopping" />
+            <span>{{ customer.total_transaksi }}x Transaksi</span>
+          </div>
+
+          <div class="cc-footer">
+            <span class="cc-date">&nbsp;</span>
+            <div class="cc-actions">
+              <button class="act-btn act-info" @click="openDetailModal(customer)" title="Detail">
+                <font-awesome-icon icon="circle-info" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TABLE VIEW ═══ -->
+      <table v-else class="data-table">
         <thead>
           <tr>
             <th style="width:60px">NO.</th>
@@ -209,20 +443,7 @@ function goNext() {
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loadingCustomers">
-            <td colspan="7" class="td-center">
-              <font-awesome-icon icon="spinner" spin /> Memuat data...
-            </td>
-          </tr>
-          <tr v-else-if="customersData.length === 0">
-            <td colspan="7" class="td-center">
-              <div class="empty-state">
-                <font-awesome-icon icon="inbox" class="empty-icon" />
-                <div>Tidak ada data ditemukan</div>
-              </div>
-            </td>
-          </tr>
-          <tr v-else v-for="(customer, index) in customersData" :key="customer.id" class="data-row">
+          <tr v-for="(customer, index) in customersData" :key="customer.id" class="data-row">
             <td class="td-no">{{ (pagination.current_page - 1) * pagination.per_page + index + 1 }}.</td>
             <td class="td-name">{{ customer.name }}</td>
             <td class="td-muted">{{ customer.email && customer.email !== '0' ? customer.email : '-' }}</td>
@@ -373,6 +594,118 @@ function goNext() {
   font-size: 0.7rem;
   color: var(--text-muted);
   opacity: 0.6;
+}
+
+/* ===== DASHBOARD ===== */
+.dashboard-wrap { display: flex; flex-direction: column; gap: 12px; }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px var(--shadow-color);
+}
+.stat-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.stat-icon-indigo { background: rgba(99,102,241,0.12); color: #6366f1; }
+.stat-icon-green  { background: rgba(34,197,94,0.12);  color: #16a34a; }
+.stat-icon-amber  { background: rgba(245,158,11,0.12); color: #d97706; }
+.stat-icon-pink   { background: rgba(236,72,153,0.12); color: #db2777; }
+.stat-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat-value { font-size: 1.35rem; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
+.stat-label { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 12px;
+}
+.chart-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px var(--shadow-color);
+}
+.chart-card-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── DONUT ── */
+.donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.donut {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease;
+}
+.donut-hole {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.donut-percent { font-size: 1.3rem; font-weight: 800; color: var(--text-primary); }
+.donut-caption { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; }
+.donut-legend { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-primary); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── BAR CHART ── */
+.bar-list { display: flex; flex-direction: column; gap: 12px; }
+.bar-row { display: grid; grid-template-columns: 140px 1fr 50px; align-items: center; gap: 10px; }
+.bar-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bar-track {
+  height: 10px;
+  border-radius: 6px;
+  background: var(--bg-input);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #6366f1, #818cf8);
+  transition: width 0.4s ease;
+}
+.bar-value { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-align: right; }
+
+@media (max-width: 768px) {
+  .chart-grid { grid-template-columns: 1fr; }
+  .bar-row { grid-template-columns: 90px 1fr 40px; }
 }
 
 .toolbar-top {
@@ -536,6 +869,134 @@ function goNext() {
 }
 .perpage-opt:hover  { border-color: #6366f1; color: #6366f1; }
 .perpage-opt.active { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 700; }
+
+/* ── VIEW TOGGLE (CARD / TABLE) ── */
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-input);
+}
+.view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.view-toggle-btn + .view-toggle-btn { border-left: 1px solid var(--border-main); }
+.view-toggle-btn:hover:not(.active) { color: #6366f1; }
+.view-toggle-btn.active { background: #6366f1; color: #fff; }
+
+/* ── CONTENT WRAPPER (CARD / TABLE) ── */
+.content-card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px var(--shadow-color);
+  overflow: auto;
+}
+.state-wrap { display: flex; justify-content: center; padding: 40px 0; }
+.spinner-custom {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid rgba(99,102,241,0.2);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── CARD VIEW ── */
+.customer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  padding: 16px;
+}
+.customer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--border-main);
+  border-radius: 12px;
+  background: var(--bg-card);
+  padding: 14px;
+  transition: all 0.18s ease;
+}
+.customer-card:hover {
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  border-color: #6366f1;
+  transform: translateY(-2px);
+}
+.cc-top { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.cc-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.cc-headinfo { flex: 1; min-width: 0; }
+.cc-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.3;
+}
+.cc-code { font-family: monospace; font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+.cc-status { flex-shrink: 0; }
+.cc-break { display: none; }
+.cc-body { display: flex; flex-direction: column; gap: 6px; }
+.cc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cc-icon { color: var(--text-muted); width: 14px; flex-shrink: 0; }
+.cc-transaksi {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: rgba(99,102,241,0.12);
+  border: 1px solid rgba(99,102,241,0.25);
+  color: #6366f1;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.cc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-main);
+}
+.cc-date { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
+.cc-actions { display: flex; gap: 4px; }
+
 .table-card {
   background: var(--bg-card);
   border-radius: 10px;
@@ -569,7 +1030,7 @@ function goNext() {
 .td-muted  { color: var(--text-muted); font-size: 0.84rem; }
 .td-center { text-align: center; padding: 40px; color: var(--text-muted); }
 .td-actions { text-align: center; }
-.empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-muted); }
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-muted); padding: 24px 0; }
 .empty-icon  { font-size: 2rem; opacity: 0.3; }
 .act-btn {
   width: 30px;
@@ -653,6 +1114,15 @@ function goNext() {
 
 /* ===== TAMPILAN MOBILE RESPONSIVE (Layar HP) ===== */
 @media (max-width: 576px) {
+  .customer-grid { grid-template-columns: 1fr; padding: 10px; gap: 10px; }
+  .customer-card { padding: 12px; gap: 8px; }
+  .cc-avatar { width: 38px; height: 38px; font-size: 0.78rem; }
+  .cc-name { white-space: normal; overflow: visible; text-overflow: unset; line-height: 1.3; font-size: 0.88rem; }
+  .cc-status { flex-basis: auto; margin-left: 48px; }
+  .cc-break { display: block; flex-basis: 100%; width: 0; height: 0; }
+  .cc-row { white-space: normal; }
+  .act-btn { width: 34px; height: 34px; }
+
   .pagination-card {
     flex-direction: column;
     padding: 12px;
@@ -677,6 +1147,19 @@ function goNext() {
     text-align: center;
     font-size: 0.7rem;
   }
+}
+
+@media (max-width: 768px) {
+  .controls-row { flex-direction: column; align-items: stretch; gap: 10px; }
+  .controls-left, .controls-right { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+  .showing-wrap { flex: 1 1 auto; }
+  .view-toggle { flex: 1 1 auto; }
+  .view-toggle-btn { flex: 1; justify-content: center; }
+  .search-wrap { width: 100%; }
+  .search-input { width: 100%; }
+  .sort-wrap { width: 100%; }
+  .sort-wrap .drop-wrap { flex: 1; }
+  .sort-wrap .btn-select { width: 100%; justify-content: space-between; }
 }
 
 /* ===== MODAL BASE & COMPONENT RENDER ===== */
@@ -744,88 +1227,6 @@ function goNext() {
 }
 .justify-content-center { justify-content: center !important; }
 
-/* Custom Form Stack Gap Alignment */
-.form-container-gap {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-group label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.form-input {
-  padding: 9px 12px;
-  border: 1px solid var(--border-main);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  background: var(--bg-input);
-  color: var(--text-primary);
-  outline: none;
-  transition: border 0.18s;
-  width: 100%;
-}
-.form-input:focus { border-color: #6366f1; }
-
-/* Styling Dropdown Select Custom Arrow */
-.form-select {
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image:
-    linear-gradient(45deg, transparent 50%, #64748b 50%),
-    linear-gradient(135deg, #64748b 50%, transparent 50%);
-  background-position:
-    calc(100% - 20px) calc(50% - 2px),
-    calc(100% - 14px) calc(50% - 2px);
-  background-size: 6px 6px;
-  background-repeat: no-repeat;
-  padding-right: 40px;
-}
-.form-select:focus {
-  background-image:
-    linear-gradient(45deg, transparent 50%, #6366f1 50%),
-    linear-gradient(135deg, #6366f1 50%, transparent 50%);
-}
-
-/* ===== STYLING SEGMENTED CONTROL PILL ===== */
-.segment-group {
-  display: flex;
-  background: var(--bg-input);
-  border: 1px solid var(--border-main);
-  padding: 4px;
-  border-radius: 30px; /* Membuat base melengkung penuh kapsul */
-  width: 100%;
-  overflow-x: auto;
-}
-.segment-btn {
-  flex: 1;
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 24px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  white-space: nowrap;
-  text-align: center;
-}
-.segment-btn:hover:not(.active) {
-  background: var(--bg-nav-hover);
-}
-.segment-btn.active {
-  background: #6366f1; /* Menggunakan warna ungu serasi tema dashboard-mu */
-  color: #ffffff;
-  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.35);
-}
-
 .btn-cancel {
   padding: 8px 18px;
   background: var(--bg-main);
@@ -837,48 +1238,7 @@ function goNext() {
   cursor: pointer;
 }
 .btn-cancel:hover { background: var(--border-main); }
-.btn-save {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 18px;
-  background: #6366f1;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn-save:hover { background: #4f46e5; }
-.btn-danger {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 18px;
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn-danger:hover { background: #dc2626; }
-.delete-icon-wrap {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: rgba(239,68,68,0.1);
-  color: #ef4444;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.6rem;
-  margin: 0 auto 14px;
-}
-.modal-danger-title { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
-.modal-danger-text  { font-size: 0.84rem; color: var(--text-muted); padding: 0 10px; line-height: 1.6; }
+
 .detail-list { display: flex; flex-direction: column; }
 .detail-row {
   display: flex;
@@ -916,71 +1276,6 @@ function goNext() {
   background: rgba(34,197,94,0.1);
   color: #16a34a;
 }
-
-/* ===== STYLING CUSTOM FILE UPLOAD ===== */
-.file-upload-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-/* Sembunyikan input file bawaan HTML yang jelek */
-.file-hidden-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
-}
-
-/* Label pengganti sebagai container luar */
-.file-custom-label {
-  display: flex;
-  align-items: center;
-  border: 1.5px dashed var(--border-main);
-  border-radius: 8px;
-  padding: 4px;
-  background: var(--bg-input);
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-  width: 100%;
-}
-
-.file-custom-label:hover {
-  border-color: #6366f1;
-}
-
-/* Tombol Browse Ungu di bagian kiri */
-.btn-browse {
-  background: #6366f1;
-  color: #ffffff;
-  padding: 6px 14px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  border-radius: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  transition: background 0.15s;
-  user-select: none;
-}
-
-.file-custom-label:hover .btn-browse {
-  background: #4f46e5;
-}
-
-/* Teks nama file di sebelah tombol */
-.file-name-text {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  padding-left: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-
 
 .purchase-list {
   display: flex;
