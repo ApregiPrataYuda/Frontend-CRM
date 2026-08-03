@@ -9,7 +9,8 @@ const authStore = useAuthStore()
 
 const isEditing = ref(false)
 
-const IMAGE_BASE_URL = 'http://127.0.0.1:8000/storage/users/'
+// const IMAGE_BASE_URL = 'http://127.0.0.1:8000/storage/users/'
+const IMAGE_BASE_URL = import.meta.env.VITE_STORAGE_URL + '/users/'
 
 /* =========================
    PROFILE DATA

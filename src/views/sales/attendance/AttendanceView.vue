@@ -257,7 +257,8 @@ const formatDateID = (dateStr) => {
   }).format(new Date(dateStr))
 }
 
-const photoBaseUrl = 'http://localhost:8000/storage/attendance/photos/'
+// const photoBaseUrl = 'http://localhost:8000/storage/attendance/photos/'
+const photoBaseUrl = import.meta.env.VITE_STORAGE_URL + '/attendance/photos/'
 
 const groupedAttendance = computed(() => {
   const groups = {}

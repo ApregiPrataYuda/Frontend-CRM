@@ -20,6 +20,7 @@ const authStore    = useAuthStore()
 
 const storageUrl = import.meta.env.VITE_STORAGE_URL ?? ''
 
+
 defineProps({
   visible:    Boolean,
   unfoldable: Boolean,
@@ -48,7 +49,8 @@ function isActive(path)                { return route.path === path }
 function isParentActive(children = []) { return children.some(c => route.path.startsWith(c.to)) }
 
 /* ── USER INFO ── */
-const IMAGE_BASE_URL = 'http://127.0.0.1:8000/storage/users/'
+// const IMAGE_BASE_URL = 'http://127.0.0.1:8000/storage/users/'
+const IMAGE_BASE_URL = import.meta.env.VITE_STORAGE_URL + '/users/'
 
 const photoUrl   = computed(() => authStore.user?.image ? IMAGE_BASE_URL + authStore.user.image : null)
 const userAvatar = computed(() => authStore.user?.fullname?.substring(0, 2).toUpperCase() || 'AD')

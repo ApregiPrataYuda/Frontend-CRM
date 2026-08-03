@@ -45,9 +45,14 @@
             class="msg-row"
             :class="msg.from === 'user' ? 'msg-row--user' : 'msg-row--bot'"
           >
-            <div class="msg-bubble" :class="msg.from === 'user' ? 'msg-bubble--user' : 'msg-bubble--bot'">
+            <!-- <div class="msg-bubble" :class="msg.from === 'user' ? 'msg-bubble--user' : 'msg-bubble--bot'">
               {{ msg.text }}
-            </div>
+            </div> -->
+            <div
+              class="msg-bubble"
+              :class="msg.from === 'user' ? 'msg-bubble--user' : 'msg-bubble--bot'"
+              v-html="renderMarkdown(msg.text)"
+            ></div>
           </div>
 
           <div v-if="isTyping" class="msg-row msg-row--bot">
@@ -96,7 +101,8 @@
 
 <script setup>
 import { ref, nextTick, onMounted } from 'vue'
-
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 /**
  * DIM Chatbot Widget — floating launcher (bottom-right) + chat panel.
  *
@@ -170,17 +176,42 @@ async function sendMessage(text) {
 }
 
 // --- Calls the n8n webhook and returns the bot's reply text ---
+// async function getBotReply(userText) {
+//   try {
+//     const res = await fetch(N8N_WEBHOOK_URL, {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({
+//         message: userText,
+//         sessionId,
+//         // sisipkan info tambahan kalau perlu, misal:
+//         // userId: currentUser?.id_user,
+//         // source: 'crm-dim',
+//       }),
+//     })
+
+//     if (!res.ok) {
+//       console.error('n8n webhook error:', res.status, res.statusText)
+//       return 'Maaf, terjadi kendala saat menghubungi asisten. Coba lagi dalam beberapa saat ya.'
+//     }
+
+//     const data = await res.json()
+//     return data?.reply ?? 'Maaf, saya belum punya jawaban untuk itu.'
+//   } catch (err) {
+//     console.error('Gagal menghubungi n8n webhook:', err)
+//     return 'Sepertinya koneksi ke asisten sedang bermasalah. Coba lagi sebentar lagi ya.'
+//   }
+// }
+
 async function getBotReply(userText) {
   try {
     const res = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: userText,
+        action: 'sendMessage',   // 🆕 tambahkan ini
+        chatInput: userText,      // 🔄 ganti dari "message" jadi "chatInput"
         sessionId,
-        // sisipkan info tambahan kalau perlu, misal:
-        // userId: currentUser?.id_user,
-        // source: 'crm-dim',
       }),
     })
 
@@ -190,7 +221,7 @@ async function getBotReply(userText) {
     }
 
     const data = await res.json()
-    return data?.reply ?? 'Maaf, saya belum punya jawaban untuk itu.'
+    return data?.reply ?? data?.output ?? 'Maaf, saya belum punya jawaban untuk itu.'
   } catch (err) {
     console.error('Gagal menghubungi n8n webhook:', err)
     return 'Sepertinya koneksi ke asisten sedang bermasalah. Coba lagi sebentar lagi ya.'
@@ -207,6 +238,14 @@ async function scrollToBottom() {
 onMounted(() => {
   // e.g. fetch initial greeting / connection status from backend here
 })
+
+// function renderMarkdown(text) {
+//   return marked.parse(text, { breaks: true })
+// }
+function renderMarkdown(text) {
+  const html = marked.parse(text, { breaks: true })
+  return DOMPurify.sanitize(html)
+}
 </script>
 
 <style scoped>
@@ -229,6 +268,17 @@ onMounted(() => {
   flex-direction: column;
   align-items: flex-end;
 }
+
+.msg-bubble :deep(strong) { font-weight: 700; }
+.msg-bubble :deep(a) {
+  color: var(--dim-primary);
+  text-decoration: underline;
+  word-break: break-all;
+}
+.msg-bubble :deep(a:hover) { color: var(--dim-primary-dark); }
+.msg-bubble :deep(p) { margin: 0 0 6px; }
+.msg-bubble :deep(p:last-child) { margin-bottom: 0; }
+.msg-bubble :deep(ul), .msg-bubble :deep(ol) { margin: 4px 0; padding-left: 18px; }
 
 /* ---------- Launcher button ---------- */
 .launcher {

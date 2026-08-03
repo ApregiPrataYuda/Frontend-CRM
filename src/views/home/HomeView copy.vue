@@ -106,32 +106,31 @@ onMounted(async () => {
         </button>
 
         <div class="lp-nav-links" :class="{ open: mobileMenu }">
+          <a href="#" class="lp-link active">
+            <font-awesome-icon icon="house" /> Home
+          </a>
+          
+          <RouterLink to="/maps-tracking" class="lp-link">
+            <font-awesome-icon icon="map-location-dot" /> Realtime Maps Activity
+          </RouterLink>
 
-          <div class="lp-nav-menu">
-            <a href="#" class="lp-link active">
-              <font-awesome-icon icon="house" /> Home
-            </a>
+          <a href="https://dutaindomandiri.com/products" target="_blank" class="lp-link">
+            <font-awesome-icon icon="cart-shopping" /> List Products
+          </a>
 
-            <RouterLink to="/maps-tracking" class="lp-link">
-              <font-awesome-icon icon="map-location-dot" /> Realtime Maps Activity
-            </RouterLink>
+           <!-- <RouterLink to="/history/monitoring/sales/data" class="lp-link">
+            <font-awesome-icon icon="chart-bar" /> Visit & Monitoring
+          </RouterLink> -->
+          
+          <!-- <RouterLink to="/dashboard/all-data" class="lp-link">
+             <font-awesome-icon icon="chart-bar" /> Dashboard
+          </RouterLink> -->
+         
+          <!-- <RouterLink to="/activity/feed" class="lp-link">
+             <font-awesome-icon icon="bell" /> Activity Feed
+          </RouterLink> -->
 
-            <a href="https://dutaindomandiri.com/products" target="_blank" class="lp-link">
-              <font-awesome-icon icon="cart-shopping" /> List Products
-            </a>
-
-            <!-- <RouterLink to="/history/monitoring/sales/data" class="lp-link">
-              <font-awesome-icon icon="chart-bar" /> Visit & Monitoring
-            </RouterLink> -->
-
-            <!-- <RouterLink to="/dashboard/all-data" class="lp-link">
-               <font-awesome-icon icon="chart-bar" /> Dashboard
-            </RouterLink> -->
-
-            <!-- <RouterLink to="/activity/feed" class="lp-link">
-               <font-awesome-icon icon="bell" /> Activity Feed
-            </RouterLink> -->
-          </div>
+          
 
           <div class="lp-nav-right">
             <div class="lp-search">
@@ -142,7 +141,6 @@ onMounted(async () => {
               <font-awesome-icon icon="right-to-bracket" /> Login
             </button>
           </div>
-
         </div>
       </div>
     </nav>
@@ -241,19 +239,11 @@ onMounted(async () => {
 .logo-img{ width:42px; height:42px; object-fit:contain; border-radius:10px; }
 .lp-brand-name{ font-weight:800; font-size:.95rem; letter-spacing:.05em; white-space:nowrap; }
 .lp-mobile-toggle{ display:none; width:42px; height:42px; border:none; border-radius:10px; background:#f3f4f6; cursor:pointer; font-size:1rem; color:#111827; align-items:center; justify-content:center; }
-
-/* Wrapper utama nav links (menu + search/login) */
-.lp-nav-links{ display:flex; align-items:center; flex:1; gap:20px; }
-
-/* Grup menu link (Home, Maps, Products) — dibuat rapat */
-.lp-nav-menu{ display:flex; align-items:center; gap:4px; }
-
-.lp-link{ display:inline-flex; align-items:center; gap:6px; padding:9px 14px; border-radius:10px; text-decoration:none; color:#4b5563; font-size:.9rem; font-weight:500; transition:.2s; white-space:nowrap; }
+.lp-nav-links{ display:flex; align-items:center; justify-content:space-between; flex:1; gap:20px; }
+.lp-link{ display:inline-flex; align-items:center; gap:6px; padding:9px 14px; border-radius:10px; text-decoration:none; color:#4b5563; font-size:.9rem; font-weight:500; transition:.2s; }
 .lp-link:hover{ background:#f3f4f6; }
 .lp-link.active{ background:rgba(99,102,241,.1); color:#6366f1; font-weight:700; }
-
-/* Grup search + login — didorong ke kanan */
-.lp-nav-right{ display:flex; align-items:center; gap:12px; margin-left:auto; }
+.lp-nav-right{ display:flex; align-items:center; gap:12px; }
 .lp-search{ position:relative; }
 .lp-search-icon{ position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9ca3af; font-size:.8rem; }
 .lp-search-input{ padding:10px 14px 10px 34px; border:1px solid #e5e7eb; border-radius:10px; outline:none; width:200px; background:#f9fafb; }
@@ -310,9 +300,8 @@ onMounted(async () => {
   .lp-mobile-toggle{ display:flex; }
   .lp-nav-links{ width:100%; display:none; flex-direction:column; align-items:stretch; gap:10px; padding-top:14px; }
   .lp-nav-links.open{ display:flex; }
-  .lp-nav-menu{ flex-direction:column; align-items:stretch; gap:8px; width:100%; }
   .lp-link{ width:100%; background:#f9fafb; }
-  .lp-nav-right{ width:100%; flex-direction:column; align-items:stretch; margin-left:0; }
+  .lp-nav-right{ width:100%; flex-direction:column; align-items:stretch; }
   .lp-search{ width:100%; }
   .lp-search-input{ width:100%; }
   .lp-btn-login{ width:100%; justify-content:center; }

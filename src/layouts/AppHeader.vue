@@ -66,7 +66,8 @@ onUnmounted(() =>
 
 
 // Tambah computed untuk photo
-const IMAGE_BASE_URL = 'http://127.0.0.1:8000/storage/users/'
+// const IMAGE_BASE_URL = 'http://127.0.0.1:8000/storage/users/'
+const IMAGE_BASE_URL = import.meta.env.VITE_STORAGE_URL + '/users/'
 
 const photoUrl = computed(() =>
   authStore.user?.image
@@ -179,19 +180,19 @@ const pageTitle = computed(() => {
               Profile Saya
             </button>
 
-            <button class="dropdown-item" @click="goTo('/app/settings')">
+            <!-- <button class="dropdown-item" @click="goTo('/app/settings')">
               <span class="dropdown-item-icon" style="color: #f59e0b; background: rgba(245,158,11,0.1)">
                 <font-awesome-icon icon="gear" />
               </span>
               Settings
-            </button>
+            </button> -->
 
-            <button class="dropdown-item" @click="goTo('/app/dashboard')">
+            <!-- <button class="dropdown-item" @click="goTo('/app/dashboard')">
               <span class="dropdown-item-icon" style="color: #38bdf8; background: rgba(56,189,248,0.1)">
                 <font-awesome-icon icon="gauge" />
               </span>
               Dashboard
-            </button>
+            </button> -->
 
             <div class="dropdown-divider" />
 

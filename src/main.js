@@ -190,7 +190,7 @@ import {
   faUserShield,
   faAddressCard,
   faStamp,
-  faCartShopping
+  faCartShopping,
 
 } from '@fortawesome/free-solid-svg-icons'
 

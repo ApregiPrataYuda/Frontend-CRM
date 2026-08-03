@@ -144,10 +144,10 @@ async function handleLogin() {
           </form>
         </div>
 
-        <div class="login-footer">
+        <!-- <div class="login-footer">
           Belum punya akun? 
           <router-link to="/register" class="auth-link">Daftar sekarang</router-link>
-        </div>
+        </div> -->
 
         <div class="login-footer copyright">
           © 2026 PT. Duta Indomandiri.
