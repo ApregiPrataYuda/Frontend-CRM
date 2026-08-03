@@ -7,7 +7,7 @@ import { usePermissionStore } from '@/stores/PermissionStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
-import { useFollowUpStore } from '@/stores/followUpStore'
+import { useFollowUpStore } from '@/stores/followUpStores'
 import Multiselect from '@vueform/multiselect'
 import '@vueform/multiselect/themes/default.css' 
 
