@@ -143,7 +143,7 @@ const messages = ref([
   {
     id: crypto.randomUUID(),
     from: 'bot',
-    text: 'Halo! Saya Asisten DIM. Ada yang bisa saya bantu terkait pencarian informasi Product Mechanical Seals Dan Pump',
+    text: 'Halo! Saya Asisten DIM. Anda Bisa Ajukan Pertanyaan seputar produk dan layanan kami. Misal: "produk apa saja yang termasuk dalam kategori vertical" atau "berikan informasi terkait kontak sales"',
   },
 ])
 
