@@ -84,17 +84,11 @@ export const useHomeFrontendStore = defineStore('homeFrontend', () => {
   }
 
   // ── ACTIONS: Map ───────────────────────────────────────────────────────
-  // Diupdate: sekarang bisa terima dateFrom & dateTo untuk filter di backend.
-  // Kalau tidak dikasih, backend otomatis default ke hari ini (lihat controller).
-  const fetchMapData = async (dateFrom = null, dateTo = null) => {
+  const fetchMapData = async () => {
     loadingMap.value = true
     errorMap.value   = null
     try {
-      const params = {}
-      if (dateFrom) params.date_from = dateFrom
-      if (dateTo)   params.date_to   = dateTo
-
-      const response = await homeFrontendServices.getDataMapsRealtime(params)
+      const response = await homeFrontendServices.getDataMapsRealtime()
       mapData.value  = response.data.data ?? []
     } catch (err) {
       console.error('Gagal fetch map data:', err)

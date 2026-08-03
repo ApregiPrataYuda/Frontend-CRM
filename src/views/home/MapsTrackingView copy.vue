@@ -25,7 +25,6 @@ const sidebarCollapsed = ref(false)
 const search           = ref('')
 const selectedSalesId  = ref('')
 const selectedStatus   = ref('')
-const selectedType     = ref('') // ⬅️ BARU: filter type LEAD / HEAD_OFFICE / BRANCH
 
 const today    = new Date().toISOString().split('T')[0]
 const dateFrom = ref(today)
@@ -34,7 +33,6 @@ const dateTo   = ref(today)
 const showDateFilter   = ref(false)
 const showSalesFilter  = ref(false)
 const showStatusFilter = ref(false)
-const showTypeFilter   = ref(false) // ⬅️ BARU
 
 // ── COMPUTED — dari store ──
 const visits = computed(() => store.visibleMapMarkers)
@@ -54,8 +52,7 @@ const filteredVisits = computed(() => {
     const matchSearch = v.sales_name?.toLowerCase().includes(q) || v.target_name?.toLowerCase().includes(q)
     const matchSales  = selectedSalesId.value === '' || v.sales_id == selectedSalesId.value
     const matchStatus = selectedStatus.value  === '' || v.visit_status_label === selectedStatus.value
-    const matchType    = selectedType.value    === '' || v.target_type === selectedType.value
-    return matchSearch && matchSales && matchStatus && matchType
+    return matchSearch && matchSales && matchStatus
   })
 })
 
@@ -70,7 +67,7 @@ const statusSummary = computed(() => {
   ]
 })
 
-// ── HELPERS: STATUS ──
+// ── HELPERS ──
 const statusClass = (label) => {
   if (label === 'BELUM_CHECK_IN')  return 'status-planned'
   if (label === 'SEDANG_CHECK_IN') return 'status-ongoing'
@@ -83,31 +80,6 @@ const statusLabel = (label) => {
   if (label === 'SELESAI')         return 'Done'
   return label
 }
-
-// ── HELPERS: TYPE (LEAD / HEAD_OFFICE / BRANCH) ──
-// target_type dari backend sekarang: 'LEAD' | 'HEAD_OFFICE' | 'BRANCH'
-// Fallback 'CUSTOMER' tetap dihandle untuk kompatibilitas data lama.
-const typeBadgeClass = (type) => {
-  if (type === 'LEAD')   return 'badge-lead'
-  if (type === 'BRANCH') return 'badge-branch'
-  return 'badge-customer' // HEAD_OFFICE / CUSTOMER (lama)
-}
-// const typeLabel = (type) => {
-//   if (type === 'HEAD_OFFICE') return 'HEAD OFFICE'
-//   return type
-// }
-const typeLabel = (type) => {
-  if (type === 'HEAD_OFFICE') return 'HEAD OFFICE CUSTOMER'
-  if (type === 'BRANCH')      return 'BRANCH CUSTOMER'
-  return type
-}
-// dipakai di marker (innerHTML string), karena marker dirender manual bukan lewat template
-const typeColor = (type) => {
-  if (type === 'LEAD')   return { bg: 'rgba(99,102,241,0.1)', text: '#6366f1', border: '#6366f144' }
-  if (type === 'BRANCH') return { bg: 'rgba(249,115,22,0.1)', text: '#f97316', border: '#f9731644' }
-  return { bg: 'rgba(34,197,94,0.1)', text: '#16a34a', border: '#16a34a44' } // HEAD_OFFICE / CUSTOMER
-}
-
 const formatTime = (dt) => {
   if (!dt) return '-'
   return new Date(dt).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })
@@ -138,21 +110,19 @@ const salesColor = (salesId) => {
 const handleReset = async () => {
   selectedSalesId.value = ''
   selectedStatus.value  = ''
-  selectedType.value    = ''
   search.value          = ''
   dateFrom.value        = today
   dateTo.value          = today
   showDateFilter.value  = false
   showSalesFilter.value = false
   showStatusFilter.value = false
-  showTypeFilter.value  = false
   await store.fetchMapData()
   lastUpdated.value = new Date().toLocaleTimeString('id-ID')
 }
 
 // ── LIFECYCLE ──
 onMounted(async () => {
-  await store.fetchMapData(dateFrom.value, dateTo.value)
+  await store.fetchMapData()
   lastUpdated.value = new Date().toLocaleTimeString('id-ID')
   initGoogleMaps()
   startPolling()
@@ -233,10 +203,6 @@ const renderMarkers = () => {
     const lat    = parseFloat(visit.latitude)
     const lng    = parseFloat(visit.longitude)
     const color  = markerColor(visit.visit_status_label)
-    const tc     = typeColor(visit.target_type)
-
-    // Label target: kalau BRANCH, tampilkan nama cabang di badge company juga
-    const companyLabel = visit.target_name
 
     const markerEl = document.createElement('div')
     markerEl.style.cssText = 'display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:transform 0.2s ease;'
@@ -251,10 +217,10 @@ const renderMarkers = () => {
       </div>
       <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid ${color};margin-top:-1px;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.15));"></div>
       <div style="margin-top:3px;background:#fff;color:#334155;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;white-space:nowrap;border:1px solid ${color}44;box-shadow:0 2px 6px rgba(0,0,0,0.08);max-width:120px;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;">
-        <span style="font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;flex-shrink:0;background:${tc.bg};color:${tc.text};border:1px solid ${tc.border};">${typeLabel(visit.target_type)}</span>
+        <span style="font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;flex-shrink:0;background:${visit.target_type === 'LEAD' ? 'rgba(99,102,241,0.1)' : 'rgba(34,197,94,0.1)'};color:${visit.target_type === 'LEAD' ? '#6366f1' : '#16a34a'};border:1px solid ${visit.target_type === 'LEAD' ? '#6366f144' : '#16a34a44'};">${visit.target_type}</span>
         ${visit.sales_name.split(' ')[0]}
       </div>
-      <div style="margin-top:2px;background:rgba(255,255,255,0.9);color:#64748b;font-size:9px;padding:1px 6px;border-radius:8px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;text-align:center;">${companyLabel}</div>
+      <div style="margin-top:2px;background:rgba(255,255,255,0.9);color:#64748b;font-size:9px;padding:1px 6px;border-radius:8px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;text-align:center;">${visit.target_name}</div>
     `
 
     markerEl.addEventListener('click', () => selectVisit(visit))
@@ -328,8 +294,8 @@ watch(visits, () => {
   if (mapInstance.value) nextTick(() => renderMarkers())
 }, { deep: true })
 
-// Watch filter — trigger langsung saat selectedSalesId, selectedStatus, selectedType, atau search berubah
-watch([selectedSalesId, selectedStatus, selectedType, search], () => {
+// Watch filter — trigger langsung saat selectedSalesId, selectedStatus, atau search berubah
+watch([selectedSalesId, selectedStatus, search], () => {
   if (mapInstance.value) nextTick(() => renderMarkers())
 })
 
@@ -343,7 +309,7 @@ watch(sidebarCollapsed, () => {
 // ── POLLING ──
 const startPolling = () => {
   pollingInterval.value = setInterval(async () => {
-    await store.fetchMapData(dateFrom.value, dateTo.value)
+    await store.fetchMapData()
     lastUpdated.value = new Date().toLocaleTimeString('id-ID')
   }, 30000)
 }
@@ -490,42 +456,6 @@ const legends = [
           </div>
         </div>
 
-        <!-- Type Filter (BARU: LEAD / HEAD_OFFICE / BRANCH) -->
-        <div class="drop-wrap">
-          <button class="btn-toolbar btn-purple" @click="showTypeFilter = !showTypeFilter">
-            <font-awesome-icon icon="tags" />
-            {{ selectedType ? typeLabel(selectedType) : 'All Type' }}
-            <font-awesome-icon icon="chevron-down" class="btn-arrow" />
-          </button>
-          <div class="drop-menu" :class="{ show: showTypeFilter }">
-            <div class="drop-label">Filter Type</div>
-            <button class="drop-item" :class="{ active: selectedType === '' }"
-              @click="selectedType = ''; showTypeFilter = false">
-              <font-awesome-icon icon="layer-group" /> All Type
-            </button>
-            <button class="drop-item" :class="{ active: selectedType === 'LEAD' }"
-              @click="selectedType = 'LEAD'; showTypeFilter = false">
-              <span class="type-badge badge-lead">LEAD</span>
-            </button>
-            <!-- <button class="drop-item" :class="{ active: selectedType === 'HEAD_OFFICE' }"
-              @click="selectedType = 'HEAD_OFFICE'; showTypeFilter = false">
-              <span class="type-badge badge-customer">HEAD OFFICE</span>
-            </button>
-            <button class="drop-item" :class="{ active: selectedType === 'BRANCH' }"
-              @click="selectedType = 'BRANCH'; showTypeFilter = false">
-              <span class="type-badge badge-branch">BRANCH</span>
-            </button> -->
-            <button class="drop-item" :class="{ active: selectedType === 'HEAD_OFFICE' }"
-              @click="selectedType = 'HEAD_OFFICE'; showTypeFilter = false">
-              <span class="type-badge badge-customer">{{ typeLabel('HEAD_OFFICE') }}</span>
-            </button>
-            <button class="drop-item" :class="{ active: selectedType === 'BRANCH' }"
-              @click="selectedType = 'BRANCH'; showTypeFilter = false">
-              <span class="type-badge badge-branch">{{ typeLabel('BRANCH') }}</span>
-            </button>
-          </div>
-        </div>
-
       </div>
 
       <button class="btn-toolbar btn-orange" @click="handleReset">
@@ -587,8 +517,8 @@ const legends = [
               <div class="visit-info">
                 <div class="visit-sales-name">{{ visit.sales_name }}</div>
                 <div class="visit-company">
-                  <span class="type-badge" :class="typeBadgeClass(visit.target_type)">
-                    {{ typeLabel(visit.target_type) }}
+                  <span class="type-badge" :class="visit.target_type === 'LEAD' ? 'badge-lead' : 'badge-customer'">
+                    {{ visit.target_type }}
                   </span>
                   {{ visit.target_name }}
                 </div>
@@ -622,7 +552,7 @@ const legends = [
         <div class="map-loading-overlay" v-else-if="store.errorMap">
           <font-awesome-icon icon="circle-exclamation" class="error-icon" />
           <span>Failed to load visit data</span>
-          <button class="btn-toolbar btn-purple" @click="store.fetchMapData(dateFrom, dateTo)">
+          <button class="btn-toolbar btn-purple" @click="store.fetchMapData()">
             <font-awesome-icon icon="rotate-right" /> Try Again
           </button>
         </div>
@@ -636,8 +566,7 @@ const legends = [
           <div class="legend-divider"></div>
           <div class="drop-label">Type</div>
           <div class="legend-row"><span class="type-badge badge-lead">LEAD</span></div>
-         <div class="legend-row"><span class="type-badge badge-customer">{{ typeLabel('HEAD_OFFICE') }}</span></div>
-<div class="legend-row"><span class="type-badge badge-branch">{{ typeLabel('BRANCH') }}</span></div>
+          <div class="legend-row"><span class="type-badge badge-customer">CUSTOMER</span></div>
         </div>
       </div>
 
@@ -677,41 +606,15 @@ const legends = [
                 <span class="detail-label">Visit Code</span>
                 <span class="detail-value mono">{{ selectedVisit.visit_code }}</span>
               </div>
-
-              <div class="detail-row" v-if="selectedVisit.no_reference">
-                <span class="detail-label">No. Ref</span>
-                <span class="detail-value mono">{{ selectedVisit.no_reference }}</span>
-              </div>
-
-
               <div class="detail-row">
                 <span class="detail-label">Target</span>
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-                  <span class="type-badge" :class="typeBadgeClass(selectedVisit.target_type)">
-                    {{ typeLabel(selectedVisit.target_type) }}
+                  <span class="type-badge" :class="selectedVisit.target_type === 'LEAD' ? 'badge-lead' : 'badge-customer'">
+                    {{ selectedVisit.target_type }}
                   </span>
                   <span class="detail-value">{{ selectedVisit.target_name }}</span>
                 </div>
               </div>
-
-              <!-- BARU: info induk company, khusus kalau visit ke BRANCH -->
-              <div class="detail-row" v-if="selectedVisit.target_type === 'BRANCH' && selectedVisit.parent_company_name">
-                <span class="detail-label">Induk Company</span>
-                <span class="detail-value">{{ selectedVisit.parent_company_name }}</span>
-              </div>
-
-              <!-- BARU: kode cabang, kalau ada -->
-              <div class="detail-row" v-if="selectedVisit.branch_code">
-                <span class="detail-label">Kode Cabang</span>
-                <span class="detail-value mono">{{ selectedVisit.branch_code }}</span>
-              </div>
-
-              <!-- BARU: kota cabang, kalau ada -->
-              <div class="detail-row" v-if="selectedVisit.branch_city">
-                <span class="detail-label">Kota Cabang</span>
-                <span class="detail-value">{{ selectedVisit.branch_city }}</span>
-              </div>
-
               <div class="detail-row" v-if="selectedVisit.target_contact">
                 <span class="detail-label">Contact</span>
                 <span class="detail-value">{{ selectedVisit.target_contact }}</span>
@@ -967,8 +870,6 @@ const legends = [
 .type-badge { font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
 .badge-lead     { background: rgba(99,102,241,0.1); color: #6366f1; border: 1px solid rgba(99,102,241,0.2); }
 .badge-customer { background: rgba(34,197,94,0.1);  color: #16a34a; border: 1px solid rgba(34,197,94,0.2); }
-/* BARU: badge khusus BRANCH (oranye, biar beda dari HEAD_OFFICE hijau) */
-.badge-branch   { background: rgba(249,115,22,0.1); color: #f97316; border: 1px solid rgba(249,115,22,0.2); }
 
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 40px 20px; color: var(--text-muted); font-size: 0.84rem; }
 .empty-icon { font-size: 2rem; opacity: 0.35; }
