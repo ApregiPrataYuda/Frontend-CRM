@@ -6,7 +6,7 @@ import { useToast }    from 'vue-toastification'
 import AppModal        from '@/components/AppModal.vue'
 
 
-import { useVisitDataStore }      from '@/stores/VisitSalesStore'
+import { useVisitDataStore }      from '@/stores/visitSalesStore'
 import { useLeadsVisitStore }     from '@/stores/leadsVisitStore'
 import { useCustomersVisitStore } from '@/stores/customersVisitStore'
 import { usePermissionStore } from '@/stores/PermissionStore'

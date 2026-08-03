@@ -426,7 +426,7 @@ const routes = [
         name: 'Sales Performance',
 
         component: () =>
-          import('@/views/manager/salesPerformance/SalesPerformanceView.vue'),
+          import('@/views/manager/salesPerformance/salesPerformanceView.vue'),
 
         meta: {
           role: [3]
