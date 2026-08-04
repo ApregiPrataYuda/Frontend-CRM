@@ -117,7 +117,11 @@ onMounted(async () => {
               <font-awesome-icon icon="map-location-dot" /> Realtime Maps Activity
             </RouterLink>
 
-            <a href="https://dutaindomandiri.com/products" target="_blank" class="lp-link">
+            <!-- <a href="https://dutaindomandiri.com/products" target="_blank" class="lp-link">
+              <font-awesome-icon icon="cart-shopping" /> List Products
+            </a> -->
+
+            <a href="http://72.60.76.201:8089/shop/" target="_blank" class="lp-link">
               <font-awesome-icon icon="cart-shopping" /> List Products
             </a>
 
