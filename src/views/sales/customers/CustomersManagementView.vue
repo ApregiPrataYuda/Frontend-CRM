@@ -693,7 +693,7 @@ async function openDeleteBranchModal(item) {
     <!-- ═══ TOOLBAR TOP ═══ -->
     <div class="toolbar-top">
       <div class="toolbar-left">
-        <div class="drop-wrap">
+        <!-- <div class="drop-wrap">
           <button class="btn-toolbar btn-purple" @click="showExportCustomers = !showExportCustomers">
             <font-awesome-icon icon="upload" /> Exports
             <font-awesome-icon icon="chevron-down" class="btn-arrow" />
@@ -710,8 +710,8 @@ async function openDeleteBranchModal(item) {
               <font-awesome-icon icon="file-pdf" style="color:#ef4444" /> Export PDF
             </button>
           </div>
-        </div>
-        <div class="drop-wrap">
+        </div> -->
+        <!-- <div class="drop-wrap">
           <button class="btn-toolbar btn-purple" @click="showImportCustomers = !showImportCustomers">
             <font-awesome-icon icon="download" /> Imports
             <font-awesome-icon icon="chevron-down" class="btn-arrow" />
@@ -722,7 +722,7 @@ async function openDeleteBranchModal(item) {
               <font-awesome-icon icon="file-csv" style="color:#22c55e" /> Import CSV
             </button>
           </div>
-        </div>
+        </div> -->
       </div>
       <button class="btn-toolbar btn-orange" @click="store.resetFilters()">
         <font-awesome-icon icon="rotate-left" /> Reset

@@ -42,7 +42,8 @@ export const useHomeFrontendStore = defineStore('homeFrontend', () => {
   const totalLeads     = computed(() => homeStats.value.total_leads     ?? 0)
   const totalCustomers = computed(() => homeStats.value.total_customers ?? 0)
   const visitsToday    = computed(() => homeStats.value.visits_today    ?? 0)
-  const dealsClosed    = computed(() => homeStats.value.deals_closed    ?? 0)
+  // ── GANTI: dealsClosed → totalBranches (backend sudah kirim 'total_branches') ──
+  const totalBranches  = computed(() => homeStats.value.total_branches  ?? 0)
 
   // ── GETTERS: Map ───────────────────────────────────────────────────────
   const visibleMapMarkers = computed(() => mapData.value)
@@ -226,7 +227,7 @@ export const useHomeFrontendStore = defineStore('homeFrontend', () => {
     loadingVisitAll, errorVisitAll,
 
     // ── getters ──
-    totalLeads, totalCustomers, visitsToday, dealsClosed,
+    totalLeads, totalCustomers, visitsToday, totalBranches,
     visibleMapMarkers,
     visitStats,
     visitPaginationFrom,

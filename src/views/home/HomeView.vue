@@ -32,11 +32,12 @@ const stats = computed(() => [
     bg: 'rgba(56,189,248,0.1)',
   },
   {
-    label: 'Deals Closed',
-    value: store.dealsClosed,
-    icon: 'handshake',
-    color: '#f59e0b',
-    bg: 'rgba(245,158,11,0.1)',
+    // ── GANTI: 'Deals Closed' (store.dealsClosed) → 'Total Branches' (store.totalBranches) ──
+    label: 'Total Branches',
+    value: store.totalBranches,
+    icon: 'code-branch',
+    color: '#f97316',
+    bg: 'rgba(249,115,22,0.1)',
   },
 ])
 

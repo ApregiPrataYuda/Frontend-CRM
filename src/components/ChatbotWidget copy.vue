@@ -45,6 +45,9 @@
             class="msg-row"
             :class="msg.from === 'user' ? 'msg-row--user' : 'msg-row--bot'"
           >
+            <!-- <div class="msg-bubble" :class="msg.from === 'user' ? 'msg-bubble--user' : 'msg-bubble--bot'">
+              {{ msg.text }}
+            </div> -->
             <div
               class="msg-bubble"
               :class="msg.from === 'user' ? 'msg-bubble--user' : 'msg-bubble--bot'"
@@ -97,7 +100,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, nextTick, onMounted } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 /**
@@ -113,6 +116,8 @@ import DOMPurify from 'dompurify'
  */
 
 // TODO: ganti dengan Production URL webhook n8n kamu
+// const N8N_WEBHOOK_URL = 'https://your-n8n-instance.com/webhook/dim-chatbot'
+// const N8N_WEBHOOK_URL = 'https://chemo-kissing-flakily.ngrok-free.dev/webhook/db1f390d-53a5-41d3-b28a-ebefb7457697/chat'
 const N8N_WEBHOOK_URL = 'https://n8n.clavisdev.cloud/webhook/db1f390d-53a5-41d3-b28a-ebefb7457697/chat'
 
 const isOpen = ref(false)
@@ -145,11 +150,7 @@ const messages = ref([
 
 function togglePanel() {
   isOpen.value = !isOpen.value
-  if (isOpen.value) {
-    unreadCount.value = 0
-    // 🆕 pastikan langsung ke-scroll ke bawah saat panel dibuka
-    scrollToBottom()
-  }
+  if (isOpen.value) unreadCount.value = 0
 }
 
 function closePanel() {
@@ -168,8 +169,6 @@ async function sendMessage(text) {
   await scrollToBottom()
 
   isTyping.value = true
-  await scrollToBottom() // 🆕 scroll juga saat bubble "mengetik" muncul
-
   const reply = await getBotReply(text)
   isTyping.value = false
 
@@ -178,14 +177,41 @@ async function sendMessage(text) {
 }
 
 // --- Calls the n8n webhook and returns the bot's reply text ---
+// async function getBotReply(userText) {
+//   try {
+//     const res = await fetch(N8N_WEBHOOK_URL, {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({
+//         message: userText,
+//         sessionId,
+//         // sisipkan info tambahan kalau perlu, misal:
+//         // userId: currentUser?.id_user,
+//         // source: 'crm-dim',
+//       }),
+//     })
+
+//     if (!res.ok) {
+//       console.error('n8n webhook error:', res.status, res.statusText)
+//       return 'Maaf, terjadi kendala saat menghubungi asisten. Coba lagi dalam beberapa saat ya.'
+//     }
+
+//     const data = await res.json()
+//     return data?.reply ?? 'Maaf, saya belum punya jawaban untuk itu.'
+//   } catch (err) {
+//     console.error('Gagal menghubungi n8n webhook:', err)
+//     return 'Sepertinya koneksi ke asisten sedang bermasalah. Coba lagi sebentar lagi ya.'
+//   }
+// }
+
 async function getBotReply(userText) {
   try {
     const res = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'sendMessage',
-        chatInput: userText,
+        action: 'sendMessage',   // 🆕 tambahkan ini
+        chatInput: userText,      // 🔄 ganti dari "message" jadi "chatInput"
         sessionId,
       }),
     })
@@ -203,53 +229,20 @@ async function getBotReply(userText) {
   }
 }
 
-// 🔧 Lebih reliable: tunggu Vue update DOM (nextTick) lalu tunggu
-// satu frame render browser (requestAnimationFrame) sebelum membaca
-// scrollHeight. Ini mengatasi kasus scroll "kadang jalan kadang enggak"
-// karena tinggi konten (terutama hasil markdown) belum final saat
-// nextTick saja selesai.
-function scrollToBottom() {
-  return new Promise((resolve) => {
-    nextTick(() => {
-      requestAnimationFrame(() => {
-        if (chatBodyRef.value) {
-          chatBodyRef.value.scrollTop = chatBodyRef.value.scrollHeight
-        }
-        resolve()
-      })
-    })
-  })
-}
-
-// 🆕 Kalau balasan bot mengandung gambar (mis. dari markdown ![]()),
-// tinggi bubble bisa berubah setelah gambar selesai dimuat — jauh
-// setelah nextTick/rAF di atas selesai. Event 'load' tidak bubble,
-// jadi pasang listener dengan capture=true supaya tetap tertangkap
-// lewat event delegation di container chat-body.
-function handleMediaLoad(e) {
-  if (e.target && (e.target.tagName === 'IMG' || e.target.tagName === 'VIDEO')) {
-    scrollToBottom()
+async function scrollToBottom() {
+  await nextTick()
+  if (chatBodyRef.value) {
+    chatBodyRef.value.scrollTop = chatBodyRef.value.scrollHeight
   }
 }
-
-// 🆕 Auto-scroll juga saat daftar pesan berubah (jaring pengaman
-// tambahan, misal kalau ada pemanggilan sendMessage dari luar fungsi ini)
-watch(
-  () => messages.value.length,
-  () => {
-    scrollToBottom()
-  }
-)
 
 onMounted(() => {
-  chatBodyRef.value?.addEventListener('load', handleMediaLoad, true)
   // e.g. fetch initial greeting / connection status from backend here
 })
 
-onBeforeUnmount(() => {
-  chatBodyRef.value?.removeEventListener('load', handleMediaLoad, true)
-})
-
+// function renderMarkdown(text) {
+//   return marked.parse(text, { breaks: true })
+// }
 function renderMarkdown(text) {
   const html = marked.parse(text, { breaks: true })
   return DOMPurify.sanitize(html)
@@ -287,7 +280,6 @@ function renderMarkdown(text) {
 .msg-bubble :deep(p) { margin: 0 0 6px; }
 .msg-bubble :deep(p:last-child) { margin-bottom: 0; }
 .msg-bubble :deep(ul), .msg-bubble :deep(ol) { margin: 4px 0; padding-left: 18px; }
-.msg-bubble :deep(img) { max-width: 100%; border-radius: 8px; display: block; }
 
 /* ---------- Launcher button ---------- */
 .launcher {
