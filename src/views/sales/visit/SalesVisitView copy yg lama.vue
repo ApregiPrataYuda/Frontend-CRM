@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast }    from 'vue-toastification'
 import AppModal        from '@/components/AppModal.vue'
-import RichTextEditor  from '@/components/RichTextEditor.vue'
+
 
 import { useVisitDataStore }      from '@/stores/visitSalesStore'
 import { useLeadsVisitStore }     from '@/stores/leadsVisitStore'
@@ -20,14 +20,14 @@ const customersVisitStore = useCustomersVisitStore()
 const permission  = usePermissionStore()
 
 
-// â”€â”€ PERMISSIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── PERMISSIONS ───────────────────────────────────────
 const currentUrl = computed(() => route.path.replace('/app', ''))
 const canCreate  = computed(() => permission.canCreate(currentUrl.value))
 const canUpdate  = computed(() => permission.canUpdate(currentUrl.value))
 const canDelete  = computed(() => permission.canDelete(currentUrl.value))
 const canView    = computed(() => permission.canView(currentUrl.value))
 
-// â”€â”€ Store refs â”€â”€
+// ── Store refs ──
 const {
   visitsData, loadingVisits, pagination, searchVisits, sort,
   visitsDetail, loadingDetail, loadingVisitNow,
@@ -47,12 +47,12 @@ const {
   searchCustomers, activeCustomerPhase,
 } = storeToRefs(customersVisitStore)
 
-// â”€â”€ Toolbar dropdowns â”€â”€
+// ── Toolbar dropdowns ──
 const showPerPageMenu = ref(false)
 const showSortByMenu  = ref(false)
 const showSortDirMenu = ref(false)
 
-// â”€â”€ View mode (card / table) â”€â”€
+// ── View mode (card / table) ──
 const viewMode = ref('card') // default tampilan: card
 
 const sortByOptions = [
@@ -66,9 +66,9 @@ const sortByLabel = computed(() =>
 
 const photoBase = `${import.meta.env.VITE_STORAGE_URL}/`
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // INIT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 onMounted(async () => {
   visitDataStore.fetchVisits(visitDataStore.buildUrl())
   updateCurrentDateTime()
@@ -83,9 +83,9 @@ onUnmounted(() => {
 
 watch(searchVisits, visitDataStore.searchWithDelay)
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // CLOCK
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const currentDateTime = ref('')
 let   clockInterval   = null
 
@@ -107,9 +107,9 @@ function getInitials(name = '') {
   return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('')
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // RESTORE ACTIVE STATE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 async function restoreActiveState() {
   await visitDataStore.fetchVisits(visitDataStore.buildUrl())
 
@@ -140,9 +140,9 @@ async function restoreActiveState() {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // CAMERA (shared)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const videoRef          = ref(null)
 const canvasRef         = ref(null)
 const cameraStream      = ref(null)
@@ -233,11 +233,11 @@ async function capturePhoto() {
 
   ctx.fillStyle = '#ffffff'
   ctx.font = 'bold 28px Arial'
-  ctx.fillText(`ðŸ¢ ${selectedVisit.value?.company_name || 'Visit Sales'}`, 20, canvas.height - 75)
+  ctx.fillText(`🏢 ${selectedVisit.value?.company_name || 'Visit Sales'}`, 20, canvas.height - 75)
   ctx.font = '20px Arial'
-  ctx.fillText(`ðŸ•’ ${currentDateTime.value}`, 20, canvas.height - 45)
+  ctx.fillText(`🕒 ${currentDateTime.value}`, 20, canvas.height - 45)
   ctx.font = '18px Arial'
-  wrapText(ctx, `ðŸ“ ${currentLocation.value.address || 'Location unavailable'}`, 20, canvas.height - 18, canvas.width - 40, 22)
+  wrapText(ctx, `📍 ${currentLocation.value.address || 'Location unavailable'}`, 20, canvas.height - 18, canvas.width - 40, 22)
 
   capturedPhoto.value = canvas.toDataURL('image/jpeg', 1)
   stopCamera()
@@ -248,9 +248,9 @@ async function retakePhoto() {
   await startCamera()
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // DETAIL MODAL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const showDetailModal = ref(false)
 
 async function openDetail(id) {
@@ -262,9 +262,9 @@ function closeDetail() {
   visitDataStore.visitsDetail = null
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // FILE TYPE HELPER (untuk preview check_out_file)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 
 function getFileExtension(filename = '') {
@@ -291,9 +291,9 @@ function getFileNameOnly(path = '') {
   return path.split('/').pop() ?? path
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // IMAGE ZOOM / LIGHTBOX
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const showImageZoom = ref(false)
 const zoomImageSrc  = ref('')
 const zoomLevel     = ref(1)
@@ -344,9 +344,9 @@ function onDrag(e) {
 }
 function stopDrag() { isDragging.value = false }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // LEADS LIST MODAL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const showLeadForm = ref(false)
 
 function openLeadForm() {
@@ -355,9 +355,9 @@ function openLeadForm() {
 }
 function closeLeadModal() { showLeadForm.value = false }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// LEAD â€” VISIT NOW
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// LEAD — VISIT NOW
+// ════════════════════════════════════════════
 const showVisitNowModal = ref(false)
 const selectedLead      = ref(null)
 
@@ -378,9 +378,9 @@ async function confirmVisitNow() {
   } else { toast.error(message) }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// LEAD â€” CHECK IN
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// LEAD — CHECK IN
+// ════════════════════════════════════════════
 const showCheckInModal = ref(false)
 
 async function checkIn(item) {
@@ -414,9 +414,9 @@ async function submitCheckIn() {
   } finally { loadingCheckIn.value = false }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// LEAD â€” CHECK OUT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// LEAD — CHECK OUT
+// ════════════════════════════════════════════
 const showCheckOutModal    = ref(false)
 const selectedCheckOut     = ref(null)
 const checkOutNotes        = ref('')
@@ -461,9 +461,9 @@ async function submitCheckOut() {
   } else { toast.error(result.message) }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // CUSTOMERS LIST MODAL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const showCustomerForm = ref(false)
 
 function openCustomerForm() {
@@ -472,9 +472,9 @@ function openCustomerForm() {
 }
 function closeCustomerModal() { showCustomerForm.value = false }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CUSTOMER â€” VISIT NOW
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// CUSTOMER — VISIT NOW
+// ════════════════════════════════════════════
 const showVisitCustNowModal = ref(false)
 const selectedCust          = ref(null)
 
@@ -501,7 +501,7 @@ async function confirmVisitCustNow() {
     toast.success(message)
     activeCustomerPhase.value = 'visiting'
     closeVisitCustNowModal()
-    // â”€â”€ refresh keduanya biar list "Ready to Visit" langsung sinkron â”€â”€
+    // ── refresh keduanya biar list "Ready to Visit" langsung sinkron ──
     await Promise.all([
       visitDataStore.fetchVisits(visitDataStore.buildUrl()),
       customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()),
@@ -512,11 +512,11 @@ async function confirmVisitCustNow() {
 }
 
 
-// â”€â”€ row dianggap aktif kalau backend sudah kasih active_visit_id untuk baris ini â”€â”€
+// ── row dianggap aktif kalau backend sudah kasih active_visit_id untuk baris ini ──
 const isRowActive = (item) => !!item.active_visit_id
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CUSTOMER â€” CHECK IN
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// CUSTOMER — CHECK IN
+// ════════════════════════════════════════════
 const showCheckInModalCustomers = ref(false)
 
 async function checkInCustomers(item) {
@@ -549,161 +549,123 @@ async function submitCheckInCustomers() {
       toast.success(result.message)
       closeCheckInModalCustomers()
       visitDataStore.fetchVisits(visitDataStore.buildUrl())
-      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // â† tambahkan ini
+      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // ← tambahkan ini
     } else { toast.error(result.message) }
       } catch (err) { console.error(err); toast.error('Failed check in customer')
       } finally { loadingCheckIn.value = false }
     }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CUSTOMER â€” CHECK OUT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// CUSTOMER — CHECK OUT
+// ════════════════════════════════════════════
 const showCheckOutCustomerModal = ref(false)
 const selectedCustomerCheckOut  = ref(null)
 const loadingCustomerCheckOut   = ref(false)
+const selectedCheckOutFile      = ref(null)
 
 const customerResponses = [
-  { value: 'maintained', label: 'Relationship Maintained / ', desc: 'Regular Visit', icon: 'fa-solid fa-handshake' },
-  { value: 'improved', label: 'Growth Potential /', desc: 'Upsell Identified Additional, increase potential has been identified.', icon: 'fa-solid fa-arrow-trend-up' },
-  { value: 'complaint_handled', label: 'Outstanding Issue / ', desc: 'Issue requires further attention', icon: 'fa-solid fa-triangle-exclamation' },
-  { value: 'no_progress', label: 'No Progress', desc: 'Low engagement, negative feedback, or no significant progress', icon: 'fa-solid fa-circle-exclamation' },
+  { value: 'maintained',        label: 'Relationship Maintained / ', desc: 'Regular Visit',       icon: 'fa-solid fa-handshake'           },
+  { value: 'improved', label: 'growth potential /',       desc: 'Upsell Identified Additional, increase potential has been identified.',    icon: 'fa-solid fa-arrow-trend-up'          },
+  { value: 'complaint_handled', label: 'Outstanding Issue / ',       desc: 'Issue requires further attention',      icon: 'fa-solid fa-triangle-exclamation' },
+  { value: 'no_progress',           label: 'No Progress',        desc: 'Low engagement, negative feedback, or no significant progress',     icon: 'fa-solid fa-circle-exclamation'   },
+  // ini kode lama di comment saja siapa tau kedepanya berubah lagi
+  // { value: 'improved',          label: 'Relationship Improved',   desc: 'Positive development',             icon: 'fa-solid fa-arrow-trend-up'      },
+  // { value: 'renewal_discussed', label: 'Renewal Discussed',       desc: 'Contract renewal / continuation', icon: 'fa-solid fa-file-signature'       },
+  // { value: 'no_progress',       label: 'Customer At Risk',             desc: 'No significant outcome',          icon: 'fa-solid fa-minus'                },
 ]
 const followUpTypes = ['CALL', 'VISIT', 'WHATSAPP', 'EMAIL', 'MEETING']
 
-function emptyCustomerCheckOutForm() {
-  return {
-    no_reference: '', notes: '', customer_response: '',
-    has_complaint: false, complaint_detail: '',
-    has_potential_order: false, potential_order_detail: '',
-    follow_up_at: '', follow_up_notes: '', follow_up_type: '',
-    check_out_file: null,
-  }
-}
-
-const customerCheckOutForms = ref([emptyCustomerCheckOutForm()])
-
-const tomorrowDateTime = computed(() => {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  d.setHours(0, 0, 0, 0)
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00`
+const customerCheckOutForm = ref({
+  no_reference: '', notes: '', customer_response: '',
+  has_complaint: false, complaint_detail: '',
+  has_potential_order: false, potential_order_detail: '',
+  follow_up_at: '', follow_up_notes: '', follow_up_type: '',
 })
 
-function isRichTextEmpty(html) {
-  if (!html) return true
-  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().length === 0
-}
+const tomorrow = computed(() => {
+  const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]
+})
 
-function isCustomerResultValid(form) {
-  if (!form.no_reference.trim() || isRichTextEmpty(form.notes) || !form.customer_response || !form.follow_up_at || !form.follow_up_type) return false
-  if (form.has_complaint && isRichTextEmpty(form.complaint_detail)) return false
-  if (form.has_potential_order && isRichTextEmpty(form.potential_order_detail)) return false
+const showCustomerComplaintSection      = computed(() => ['complaint_handled', 'at_risk','no_progress'].includes(customerCheckOutForm.value.customer_response))
+const showCustomerPotentialOrderSection = computed(() => ['upsell_identified', 'improved'].includes(customerCheckOutForm.value.customer_response))
+const isCustomerCheckOutValid           = computed(() => {
+  const f = customerCheckOutForm.value
+  if (!f.no_reference.trim() || !f.notes.trim() || !f.customer_response || !f.follow_up_at || !f.follow_up_type) return false
+  if (f.has_complaint       && !f.complaint_detail.trim())       return false
+  if (f.has_potential_order && !f.potential_order_detail.trim()) return false
   return true
+})
+
+function onCheckOutFileChange(event) {
+  selectedCheckOutFile.value = event.target.files?.[0] ?? null
 }
 
-const isCustomerCheckOutValid = computed(() =>
-  customerCheckOutForms.value.length > 0 && customerCheckOutForms.value.every(isCustomerResultValid)
-)
+watch(() => customerCheckOutForm.value.customer_response, (val) => {
+  customerCheckOutForm.value.has_complaint       = ['complaint_handled', 'at_risk'].includes(val)
+  customerCheckOutForm.value.has_potential_order = ['upsell_identified', 'improved'].includes(val)
+  if (!customerCheckOutForm.value.has_complaint)       customerCheckOutForm.value.complaint_detail = ''
+  if (!customerCheckOutForm.value.has_potential_order) customerCheckOutForm.value.potential_order_detail = ''
+})
 
-function addCustomerCheckOutResult() {
-  customerCheckOutForms.value.push(emptyCustomerCheckOutForm())
-}
-
-function removeCustomerCheckOutResult(index) {
-  if (customerCheckOutForms.value.length === 1) return
-  customerCheckOutForms.value.splice(index, 1)
-}
-
-function onCheckOutFileChange(event, form) {
-  form.check_out_file = event.target.files?.[0] ?? null
-}
-
-function selectCustomerResponse(form, value) {
-  form.customer_response = value
-  form.has_complaint = ['complaint_handled', 'at_risk'].includes(value)
-  form.has_potential_order = ['upsell_identified', 'improved'].includes(value)
-  if (!form.has_complaint) form.complaint_detail = ''
-  if (!form.has_potential_order) form.potential_order_detail = ''
-}
-
-const checkOutDrafts = ref({})
-function draftKey(item) {
-  if (!item) return null
-  return item.target_type === 'branch' ? `branch-${item.branch_id}` : `customer-${item.id}`
-}
-function cloneCheckOutForms(forms) {
-  return forms.map(form => ({ ...form }))
-}
 
 function openCustomerCheckOut(item) {
   selectedCustomerCheckOut.value = item
-  visitDataStore.activeVisitCustId = item.active_visit_id
+  selectedCheckOutFile.value = null
+  visitDataStore.activeVisitCustId      = item.active_visit_id
   visitDataStore.activeVisitCustomersId = item.id
-  const draft = checkOutDrafts.value[draftKey(item)]
-  customerCheckOutForms.value = draft?.forms?.length
-    ? cloneCheckOutForms(draft.forms)
-    : [emptyCustomerCheckOutForm()]
+  customerCheckOutForm.value = {
+    no_reference: '', notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
+    has_potential_order: false, potential_order_detail: '',
+    follow_up_at: '', follow_up_notes: '', follow_up_type: '',
+  }
   showCheckOutCustomerModal.value = true
 }
 
+
 function closeCustomerCheckOutModal() {
-  if (loadingCustomerCheckOut.value) return
-  if (selectedCustomerCheckOut.value) {
-    checkOutDrafts.value[draftKey(selectedCustomerCheckOut.value)] = {
-      forms: cloneCheckOutForms(customerCheckOutForms.value),
-    }
+  showCheckOutCustomerModal.value = false; selectedCustomerCheckOut.value = null
+  selectedCheckOutFile.value = null
+  customerCheckOutForm.value = {
+    no_reference: '', notes: '', customer_response: '', has_complaint: false, complaint_detail: '',
+    has_potential_order: false, potential_order_detail: '',
+    follow_up_at: '', follow_up_notes: '', follow_up_type: '',
   }
-  showCheckOutCustomerModal.value = false
-  selectedCustomerCheckOut.value = null
 }
-
-function hardCloseCustomerCheckOutModal() {
-  showCheckOutCustomerModal.value = false
-  selectedCustomerCheckOut.value = null
-  customerCheckOutForms.value = [emptyCustomerCheckOutForm()]
-}
-
 async function submitCustomerCheckOut() {
   const visitId = activeVisitCustId.value ?? selectedCustomerCheckOut.value?.id
   if (!visitId) { toast.error('Visit ID tidak ditemukan.'); return }
-  if (!isCustomerCheckOutValid.value) return
-
+  const f = customerCheckOutForm.value
   loadingCustomerCheckOut.value = true
   try {
     const formData = new FormData()
-    customerCheckOutForms.value.forEach((form, index) => {
-      const key = `results[${index}]`
-      formData.append(`${key}[no_reference]`, form.no_reference)
-      formData.append(`${key}[notes]`, form.notes)
-      formData.append(`${key}[customer_response]`, form.customer_response)
-      formData.append(`${key}[has_complaint]`, form.has_complaint ? '1' : '0')
-      formData.append(`${key}[complaint_detail]`, form.complaint_detail || '')
-      formData.append(`${key}[has_potential_order]`, form.has_potential_order ? '1' : '0')
-      formData.append(`${key}[potential_order_detail]`, form.potential_order_detail || '')
-      formData.append(`${key}[follow_up_at]`, form.follow_up_at)
-      formData.append(`${key}[follow_up_notes]`, form.follow_up_notes || '')
-      formData.append(`${key}[follow_up_type]`, form.follow_up_type)
-      if (form.check_out_file) formData.append(`${key}[check_out_file]`, form.check_out_file)
-    })
+    formData.append('no_reference', f.no_reference)
+    formData.append('notes', f.notes)
+    formData.append('customer_response', f.customer_response)
+    formData.append('has_complaint', f.has_complaint ? '1' : '0')
+    formData.append('complaint_detail', f.complaint_detail || '')
+    formData.append('has_potential_order', f.has_potential_order ? '1' : '0')
+    formData.append('potential_order_detail', f.potential_order_detail || '')
+    formData.append('follow_up_at', f.follow_up_at)
+    formData.append('follow_up_notes', f.follow_up_notes || '')
+    formData.append('follow_up_type', f.follow_up_type)
+
+    if (selectedCheckOutFile.value) {
+      formData.append('check_out_file', selectedCheckOutFile.value)
+    }
 
     const result = await visitDataStore.submitCheckOutCustomers(visitId, formData)
+    
     if (result.success) {
-      const key = draftKey(selectedCustomerCheckOut.value)
-      if (key) delete checkOutDrafts.value[key]
       activeCustomerPhase.value = null
       toast.success(result.message || 'Check out customer berhasil')
-      hardCloseCustomerCheckOutModal()
+      closeCustomerCheckOutModal()
       visitDataStore.fetchVisits(visitDataStore.buildUrl())
-      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl())
-    } else toast.error(result.message || 'Gagal check out customer')
-  } catch (err) {
-    console.error(err)
-    toast.error('Terjadi kesalahan saat check out customer')
-  } finally {
-    loadingCustomerCheckOut.value = false
-  }
-}
+      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // ← tambahkan ini
+    } else { toast.error(result.message || 'Gagal check out customer') }
+      } catch (err) { console.error(err); toast.error('Terjadi kesalahan saat check out customer')
+      } finally { loadingCustomerCheckOut.value = false }
+    }
+
 
 function getResultClass(result) {
   const map = {
@@ -741,7 +703,7 @@ function getResultIcon(result) {
   return map[result] ?? 'tag'
 }
 
-// â”€â”€ helpers â”€â”€
+// ── helpers ──
 const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 </script>
 
@@ -762,7 +724,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       </div>
     </div>
 
-    <!-- TOOLBAR â€” 3 Action Buttons -->
+    <!-- TOOLBAR — 3 Action Buttons -->
     <div class="toolbar-top">
       <div class="toolbar-center">
 
@@ -883,9 +845,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       </div>
     </div>
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          TABLE VIEW
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <div v-if="viewMode === 'table'" class="table-card flex-grow-1 overflow-auto mb-3">
       <table class="data-table">
         <thead>
@@ -950,7 +912,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
                 <font-awesome-icon :icon="getResultIcon(visit.visit_result)" />
                 {{ visit.visit_result?.replaceAll('_', ' ')?.replace(/\b\w/g, l => l.toUpperCase()) }}
               </span>
-              <span v-else class="badge-empty">-</span>
+              <span v-else class="badge-empty">—</span>
             </td>
 
             <td class="td-name">{{ visit.visit_code }}</td>
@@ -961,7 +923,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               {{ visit.company_name }}
               <div v-if="visit.target_type === 'BRANCH'" class="td-sub text-primary" style="text-transform:none">
                 <font-awesome-icon icon="code-branch" />
-                {{ visit.branch_name }}<span v-if="visit.branch_city"> - {{ visit.branch_city }}</span>
+                {{ visit.branch_name }}<span v-if="visit.branch_city"> — {{ visit.branch_city }}</span>
               </div>
             </td>
 
@@ -1010,9 +972,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       </table>
     </div>
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          CARD VIEW
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <div v-else class="card-grid-wrap flex-grow-1 overflow-auto mb-3">
 
       <!-- LOADING -->
@@ -1042,13 +1004,13 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               <font-awesome-icon :icon="getResultIcon(visit.visit_result)" />
               {{ visit.visit_result?.replaceAll('_', ' ')?.replace(/\b\w/g, l => l.toUpperCase()) }}
             </span>
-            <span v-else class="badge-empty">-</span>
+            <span v-else class="badge-empty">—</span>
           </div>
 
           <p class="visit-card-company">{{ visit.company_name }}</p>
           <p v-if="visit.target_type === 'BRANCH'" class="td-sub text-primary" style="margin:0">
             <font-awesome-icon icon="code-branch" />
-            {{ visit.branch_name }}<span v-if="visit.branch_city"> - {{ visit.branch_city }}</span>
+            {{ visit.branch_name }}<span v-if="visit.branch_city"> — {{ visit.branch_city }}</span>
           </p>
           <p class="visit-card-code">{{ visit.visit_code }}</p>
           <p class="visit-card-code"> No Reference: {{ visit.no_reference }}</p>
@@ -1128,9 +1090,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </div>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          DETAIL MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showDetailModal"
       title="Detail Visit"
@@ -1164,7 +1126,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <span class="detail-value">{{ visitsDetail.visit_type }}</span>
           </div>
 
-          <!-- â•â•â• TARGET: HEAD OFFICE / BRANCH â•â•â• -->
+          <!-- ═══ TARGET: HEAD OFFICE / BRANCH ═══ -->
           <div v-if="visitsDetail.target_type" class="detail-row">
             <span class="detail-label">Target</span>
             <span class="target-type-badge" :class="visitsDetail.target_type === 'BRANCH' ? 'target-branch' : 'target-hq'">
@@ -1174,7 +1136,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           </div>
           <div v-if="visitsDetail.target_type === 'BRANCH'" class="detail-row">
             <span class="detail-label">Nama Cabang</span>
-            <span class="detail-value">{{ visitsDetail.branch_name }} - {{ visitsDetail.branch_city ?? '-' }}</span>
+            <span class="detail-value">{{ visitsDetail.branch_name }} — {{ visitsDetail.branch_city ?? '-' }}</span>
           </div>
 
           <div class="detail-row">
@@ -1207,10 +1169,10 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           </div>
           <div class="detail-row" style="flex-direction:column; align-items:flex-start; gap:8px">
             <span class="detail-label">Notes</span>
-            <div style="font-size:0.85rem; color:var(--text-primary); margin:0" v-html="visitsDetail.notes || '-'"></div>
+            <p style="font-size:0.85rem; color:var(--text-primary); margin:0">{{ visitsDetail.notes || '-' }}</p>
           </div>
 
-          <!-- â•â•â• CHECK OUT FILE: image â†’ zoomable, non-image â†’ file preview card â•â•â• -->
+          <!-- ═══ CHECK OUT FILE: image → zoomable, non-image → file preview card ═══ -->
           <div v-if="visitsDetail.check_out_file" style="margin-top:8px">
             <span class="detail-label" style="display:block; margin-bottom:8px">Photo / File Check Out</span>
 
@@ -1234,13 +1196,13 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               />
               <div class="file-preview-info">
                 <p class="file-preview-name">{{ getFileNameOnly(visitsDetail.check_out_file) }}</p>
-                <p class="file-preview-type">{{ getFileIconMeta(visitsDetail.check_out_file).label }} Â· Klik untuk membuka</p>
+                <p class="file-preview-type">{{ getFileIconMeta(visitsDetail.check_out_file).label }} · Klik untuk membuka</p>
               </div>
               <font-awesome-icon icon="up-right-from-square" class="file-preview-open-icon" />
             </a>
           </div>
 
-          <!-- â•â•â• CHECK IN PHOTO: always image, zoomable â•â•â• -->
+          <!-- ═══ CHECK IN PHOTO: always image, zoomable ═══ -->
           <div v-if="visitsDetail.photo" style="margin-top:8px">
             <span class="detail-label" style="display:block; margin-bottom:8px">Photo Check In</span>
             <img
@@ -1256,7 +1218,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               target="_blank"
               style="font-size:0.84rem; color:#6366f1; font-weight:600"
             >
-              <font-awesome-icon icon="map-location-dot" /> Open in Google Maps â†’
+              <font-awesome-icon icon="map-location-dot" /> Open in Google Maps →
             </a>
           </div>
         </div>
@@ -1267,9 +1229,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          LEADS LIST MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showLeadForm"
       title="Data Leads Ready To Visit"
@@ -1319,7 +1281,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               </td>
             </tr>
             <tr v-else-if="leadsData.length === 0">
-              <td colspan="7" class="td-center">ðŸ“­ Tidak ada leads yang siap dikunjungi</td>
+              <td colspan="7" class="td-center">📭 Tidak ada leads yang siap dikunjungi</td>
             </tr>
             <tr
               v-else
@@ -1336,7 +1298,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               <td>{{ item.contact_name ?? '-' }}</td>
               <td style="max-width:180px">
                 <p class="td-muted" style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis" :title="item.address">
-                  {{ item.address || '-' }}
+                  {{ item.address || '—' }}
                 </p>
               </td>
               <td>{{ item.phone ?? '-' }}</td>
@@ -1405,9 +1367,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         LEAD â€” VISIT NOW MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         LEAD — VISIT NOW MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showVisitNowModal && !!selectedLead"
       title="Visit Confirmation"
@@ -1419,7 +1381,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
         <div class="detail-info-box">
           <p class="detail-box-label">Lead yang akan dikunjungi</p>
           <p style="font-weight:700; font-size:0.95rem">{{ selectedLead.company_name }}</p>
-          <p class="td-muted">{{ selectedLead.contact_name }} Â· {{ selectedLead.address ?? '-' }}</p>
+          <p class="td-muted">{{ selectedLead.contact_name }} · {{ selectedLead.address ?? '-' }}</p>
         </div>
         <div class="detail-list">
           <div class="detail-row">
@@ -1451,9 +1413,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         LEAD â€” CHECK IN MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         LEAD — CHECK IN MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showCheckInModal"
       title="Check In Lead"
@@ -1538,9 +1500,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         LEAD â€” CHECK OUT MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         LEAD — CHECK OUT MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showCheckOutModal"
       title="Check Out Visit"
@@ -1576,9 +1538,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
         <div v-if="selectedLeadResponseOpt" class="info-box">
           <font-awesome-icon :icon="selectedLeadResponseOpt.icon.replace('fa-solid fa-', '')" />
           <span><strong>{{ selectedLeadResponseOpt.label }}</strong>
-            <span v-if="selectedLeadResponseOpt.value === 'convert_to_customer'"> - Lead akan dikonversi menjadi Customer.</span>
-            <span v-else-if="selectedLeadResponseOpt.value === 'failed'"> - Status lead akan diubah menjadi Failed.</span>
-            <span v-else> - Follow up otomatis akan dibuat dalam 3 hari.</span>
+            <span v-if="selectedLeadResponseOpt.value === 'convert_to_customer'"> — Lead akan dikonversi menjadi Customer.</span>
+            <span v-else-if="selectedLeadResponseOpt.value === 'failed'"> — Status lead akan diubah menjadi Failed.</span>
+            <span v-else> — Follow up otomatis akan dibuat dalam 3 hari.</span>
           </span>
         </div>
       </div>
@@ -1597,9 +1559,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          CUSTOMERS LIST MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showCustomerForm"
       title="Data Customers Ready To Visit"
@@ -1650,7 +1612,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               </td>
             </tr>
             <tr v-else-if="customersData.length === 0">
-              <td colspan="7" class="td-center">📭­ Tidak ada customers yang siap dikunjungi</td>
+              <td colspan="7" class="td-center">📭 Tidak ada customers yang siap dikunjungi</td>
             </tr>
             <tr
               v-else
@@ -1661,7 +1623,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             >
               <td class="td-no">{{ index + 1 + customersPagination.per_page * (customersPagination.current_page - 1) }}.</td>
 
-              <!-- â•â•â• TARGET TYPE BADGE â•â•â• -->
+              <!-- ═══ TARGET TYPE BADGE ═══ -->
               <td>
                 <span
                   class="target-type-badge"
@@ -1672,30 +1634,30 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
                 </span>
               </td>
 
-              <!-- â•â•â• COMPANY (+ nama branch & kota kalau target branch) â•â•â• -->
+              <!-- ═══ COMPANY (+ nama branch & kota kalau target branch) ═══ -->
               <td>
                 <p class="td-name">{{ item.company_name ?? '-' }}</p>
                 <p class="td-muted" style="font-family:monospace">{{ item.customer_code ?? '-' }}</p>
                 <p v-if="item.target_type === 'branch'" class="td-sub text-primary" style="margin:2px 0 0">
                   <font-awesome-icon icon="code-branch" />
-                  {{ item.branch_name ?? '-' }}<span v-if="item.city"> - {{ item.city }}</span>
+                  {{ item.branch_name ?? '-' }}<span v-if="item.city"> — {{ item.city }}</span>
                 </p>
               </td>
 
-              <!-- â•â•â• KONTAK (bisa banyak) â•â•â• -->
+              <!-- ═══ KONTAK (bisa banyak) ═══ -->
               <td style="max-width:220px">
                 <div v-if="item.contacts?.length">
                   <div v-for="ct in item.contacts" :key="ct.id" class="contact-mini-row">
                     <span class="fw-semibold">{{ ct.name }}</span> <br>
                     <span v-if="ct.is_primary" class="contact-primary-tag">Kontak Utama</span>
-                    <span v-if="ct.position" class="td-muted">· {{ ct.position }}</span>
+                    <span v-if="ct.position" class="td-muted"> · {{ ct.position }}</span>
                     <div v-if="ct.phone" class="td-muted" style="font-size:0.76rem">{{ ct.phone }}</div>
                   </div>
                 </div>
                 <span v-else class="td-muted">{{ item.contact_name ?? '-' }}</span>
               </td>
 
-              <!-- â•â•â• ADDRESS â•â•â• -->
+              <!-- ═══ ADDRESS ═══ -->
               <td style="max-width:180px">
                 <p class="td-muted" style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis" :title="item.address">
                   {{ item.address || '—' }}
@@ -1757,9 +1719,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         CUSTOMER â€” VISIT NOW MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         CUSTOMER — VISIT NOW MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showVisitCustNowModal && !!selectedCust"
       title="Visit Confirmation Customer"
@@ -1772,10 +1734,10 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           <p class="detail-box-label">Customer yang akan dikunjungi</p>
           <p style="font-weight:700; font-size:0.95rem">{{ selectedCust.company_name }}</p>
 
-          <!-- â•â•â• TARGET: BRANCH atau HEAD OFFICE â•â•â• -->
+          <!-- ═══ TARGET: BRANCH atau HEAD OFFICE ═══ -->
           <p v-if="selectedCust.target_type === 'branch'" class="td-muted text-primary" style="font-weight:600">
             <font-awesome-icon icon="code-branch" />
-            {{ selectedCust.branch_name }}<span v-if="selectedCust.city"> - {{ selectedCust.city }}</span>
+            {{ selectedCust.branch_name }}<span v-if="selectedCust.city"> — {{ selectedCust.city }}</span>
           </p>
           <p v-else class="td-muted text-primary" style="font-weight:600">
             <font-awesome-icon icon="building" /> Head Office
@@ -1814,9 +1776,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         CUSTOMER â€” CHECK IN MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         CUSTOMER — CHECK IN MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showCheckInModalCustomers"
       title="Check In Customer"
@@ -1887,9 +1849,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         CUSTOMER â€” CHECK OUT MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         CUSTOMER — CHECK OUT MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showCheckOutCustomerModal && !!selectedCustomerCheckOut"
       title="Check Out Customer"
@@ -1904,94 +1866,106 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           <p style="font-weight:700">{{ selectedCustomerCheckOut.company_name }}</p>
           <p class="td-muted">{{ selectedCustomerCheckOut.contact_name }}</p>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px">
-  <div>
-    <p class="detail-box-label" style="margin:0">Hasil Kunjungan</p>
-    <p class="td-muted" style="margin:3px 0 0">Satu form untuk setiap nomor referensi.</p>
-  </div>
-  <button type="button" class="btn-save" @click="addCustomerCheckOutResult">
-    <font-awesome-icon icon="plus" /> Tambah Form Check Out
-  </button>
-</div>
 
-        <div
-  v-for="(form, index) in customerCheckOutForms"
-  :key="index"
-  class="detail-info-box"
-  style="display:flex; flex-direction:column; gap:14px"
->
-  <div style="display:flex; justify-content:space-between; align-items:center; gap:12px">
-    <strong class="text-danger fw-bolder text-decoration-underline">Form Check Out Customer {{ index + 1 }}</strong>
-    <button
-      v-if="customerCheckOutForms.length > 1"
-      type="button"
-      class="btn-cancel btn btn-danger"
-      @click="removeCustomerCheckOutResult(index)"
-    >  <font-awesome-icon icon="trash" />  Hapus</button>
-  </div>
+        <!-- No. Reference -->
+        <div class="form-group">
+          <label>No. Reference <span style="color:#ef4444"></span></label>
+          <input
+            v-model.trim="customerCheckOutForm.no_reference"
+            type="text"
+            maxlength="100"
+            placeholder="Masukkan nomor referensi..."
+            class="form-input"
+          />
+        </div>
 
-  <div class="form-group">
-    <label>No. Reference <span style="color:#ef4444">*</span></label>
-    <input v-model.trim="form.no_reference" type="text" maxlength="100" placeholder="Masukkan nomor referensi..." class="form-input" />
-  </div>
+        <!-- Upload file atau foto Check Out -->
+        <div class="form-group">
+          <label>Upload File / Foto Check Out</label>
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp"
+            class="form-input"
+            @change="onCheckOutFileChange"
+          />
+          <small v-if="selectedCheckOutFile" class="td-muted">
+            File dipilih: {{ selectedCheckOutFile.name }}
+          </small>
+          <small v-else class="td-muted">
+            Dokumen atau foto: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, WEBP. Maksimal 10 MB.
+          </small>
+        </div>
 
-  <div class="form-group">
-    <label>Upload File / Foto Check Out</label>
-    <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif" class="form-input" @change="onCheckOutFileChange($event, form)" />
-    <small v-if="form.check_out_file" class="td-muted">File dipilih: {{ form.check_out_file.name }}</small>
-  </div>
+        <!-- Notes -->
+        <div class="form-group">
+          <label>Notes on Visit Result <span style="color:#ef4444">*</span></label>
+          <textarea v-model="customerCheckOutForm.notes" rows="4" placeholder="Write visit result here..." class="form-input form-textarea"></textarea>
+        </div>
 
-  <div class="form-group">
-    <label>Notes on Visit Result <span style="color:#ef4444">*</span></label>
-    <RichTextEditor v-model="form.notes" placeholder="Write visit result here..." />
-  </div>
+        <!-- Customer Response -->
+        <div class="form-group">
+          <label>Customer Response <span style="color:#ef4444">*</span></label>
+          <div class="response-grid" style="grid-template-columns: repeat(2, 1fr)">
+            <label
+              v-for="item in customerResponses" :key="item.value"
+              class="response-btn"
+              :class="customerCheckOutForm.customer_response === item.value ? 'response-active-emerald' : ''"
+              style="cursor:pointer"
+            >
+              <input v-model="customerCheckOutForm.customer_response" type="radio" :value="item.value" style="display:none" />
+              <font-awesome-icon :icon="item.icon.replace('fa-solid fa-', '')" />
+              <div>
+                <p style="font-weight:600; margin:0; font-size:0.84rem">{{ item.label }}</p>
+                <p style="font-size:0.72rem; color:var(--text-muted); margin:0">{{ item.desc }}</p>
+              </div>
+            </label>
+          </div>
+        </div>
 
-  <div class="form-group">
-    <label>Customer Response <span style="color:#ef4444">*</span></label>
-    <div class="response-grid" style="grid-template-columns:repeat(2, 1fr)">
-      <button
-        v-for="item in customerResponses"
-        :key="item.value"
-        type="button"
-        class="response-btn"
-        :class="form.customer_response === item.value ? 'response-active-emerald' : ''"
-        @click="selectCustomerResponse(form, item.value)"
-      >
-        <font-awesome-icon :icon="item.icon.replace('fa-solid fa-', '')" />
-        <div><p style="font-weight:600; margin:0; font-size:0.84rem">{{ item.label }}</p><p style="font-size:0.72rem; color:var(--text-muted); margin:0">{{ item.desc }}</p></div>
-      </button>
-    </div>
-  </div>
+        <!-- Complaint (conditional) -->
+        <div v-if="showCustomerComplaintSection" class="form-group">
+          <label style="color:#ef4444">Complaint, Noted, Issue, Or etc Noted <span>*</span></label>
+          <textarea v-model="customerCheckOutForm.complaint_detail" rows="3" placeholder="Describe customer complaint or detail Issue requires further attention and etc..." class="form-input form-textarea" style="border-color:#fca5a5"></textarea>
+        </div>
 
-  <div v-if="form.has_complaint" class="form-group">
-    <label style="color:#ef4444">Complaint / Issue <span>*</span></label>
-    <RichTextEditor v-model="form.complaint_detail" placeholder="Describe customer complaint or issue..." />
-  </div>
+        <!-- Write additional notes (conditional) -->
+        <div v-if="showCustomerPotentialOrderSection" class="form-group">
+          <label style="color:#d97706">Write Additional Notes Detail <span>*</span></label>
+          <textarea v-model="customerCheckOutForm.potential_order_detail" rows="3" placeholder="Explain. Write additional notes. Detail examples (potential orders or future plans)" class="form-input form-textarea" style="border-color:#fcd34d"></textarea>
+        </div>
 
-  <div v-if="form.has_potential_order" class="form-group">
-    <label style="color:#d97706">Additional Notes <span>*</span></label>
-    <RichTextEditor v-model="form.potential_order_detail" placeholder="Explain potential order or future plan..." />
-  </div>
+        <!-- Follow Up -->
+        <div class="form-group">
+          <label>Follow Up Date / Next Action Plan Date<span style="color:#ef4444">*</span></label>
+          <input v-model="customerCheckOutForm.follow_up_at" type="date" :min="tomorrow" class="form-input" />
+        </div>
 
-  <div class="form-group">
-    <label>Follow Up Date / Next Action Plan Date <span style="color:#ef4444">*</span></label>
-    <input v-model="form.follow_up_at" type="datetime-local" :min="tomorrowDateTime" class="form-input" />
-  </div>
+        <div class="form-group">
+          <label>Follow Up Type <span style="color:#ef4444">*</span></label>
+          <div style="display:flex; flex-wrap:wrap; gap:8px">
+            <button
+              v-for="type in followUpTypes" :key="type"
+              type="button"
+              @click="customerCheckOutForm.follow_up_type = type"
+              class="segment-btn"
+              :class="{ active: customerCheckOutForm.follow_up_type === type }"
+              style="flex:unset; padding:8px 14px; border-radius:8px"
+            >{{ type }}</button>
+          </div>
+        </div>
 
-  <div class="form-group">
-    <label>Follow Up Type <span style="color:#ef4444">*</span></label>
-    <div style="display:flex; flex-wrap:wrap; gap:8px">
-      <button v-for="type in followUpTypes" :key="type" type="button" @click="form.follow_up_type = type" class="segment-btn" :class="{ active: form.follow_up_type === type }" style="flex:unset; padding:8px 14px; border-radius:8px">{{ type }}</button>
-    </div>
-  </div>
+        <div class="form-group">
+          <label>Follow Up Notes</label>
+          <textarea v-model="customerCheckOutForm.follow_up_notes" rows="3" placeholder="Write next follow up notes..." class="form-input form-textarea"></textarea>
+        </div>
 
-  <div class="form-group">
-    <label>Follow Up Notes</label>
-    <RichTextEditor v-model="form.follow_up_notes" placeholder="Write next follow up notes..." />
-  </div>
-
-  <span style="font-size:0.78rem; color:var(--text-muted)">{{ isCustomerResultValid(form) ? '✔️ form siap disimpan' : 'Lengkapi form referensi ini' }}</span>
-</div>
+        <!-- Progress indicator -->
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--text-muted)">
+          <span style="width:8px;height:8px;border-radius:50%;display:inline-block" :style="customerCheckOutForm.notes.trim() ? 'background:#10b981' : 'background:#e2e8f0'"></span>
+          <span style="width:8px;height:8px;border-radius:50%;display:inline-block" :style="customerCheckOutForm.customer_response ? 'background:#10b981' : 'background:#e2e8f0'"></span>
+          <span style="width:8px;height:8px;border-radius:50%;display:inline-block" :style="customerCheckOutForm.follow_up_at && customerCheckOutForm.follow_up_type ? 'background:#10b981' : 'background:#e2e8f0'"></span>
+          <span>{{ isCustomerCheckOutValid ? '✓ Siap disimpan' : 'Lengkapi form' }}</span>
+        </div>
       </div>
 
       <template #footer>
@@ -2008,9 +1982,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       </template>
     </AppModal>
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          IMAGE ZOOM LIGHTBOX
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <Teleport to="body">
       <div v-if="showImageZoom" class="lightbox-overlay" @click.self="closeImageZoom">
         <div class="lightbox-toolbar">
@@ -2061,7 +2035,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 </template>
 
 <style scoped>
-/* â”€â”€ Inherit semua CSS dari kode lama â”€â”€ */
+/* ── Inherit semua CSS dari kode lama ── */
 .h-100 { --text-muted: #64748b; --primary-color: #6366f1; }
 .form-container-gap { display: flex; flex-direction: column; gap: 14px; }
 
@@ -2474,7 +2448,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   .visit-card-grid { grid-template-columns: 1fr; }
 }
 
-/* â”€â”€ SPINNER & EMPTY â”€â”€ */
+/* ── SPINNER & EMPTY ── */
 .spinner-custom { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 8px; }
@@ -2491,20 +2465,18 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 /* MODAL FOOTER BUTTONS */
 .btn-cancel {
   padding: 8px 18px;
-  background: #ef4444;
-  color: #fff;
-  border: 1px solid #dc2626;
+  background: var(--bg-main, #f1f5f9);
+  color: var(--text-muted);
+  border: 1px solid var(--border-main);
   border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
-
 .btn-cancel:hover {
-  background: #dc2626;
-  border-color: #b91c1c;
-  color: #fff;
+  background: var(--border-main);
+  color: var(--text-primary);
 }
 
 /* DETAIL MODAL CONTENT */
@@ -2550,7 +2522,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .segment-btn:hover:not(.active) { background: rgba(99, 102, 241, 0.08); color: #6366f1; }
 .segment-btn.active { background: #6366f1; color: #fff; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25); }
 
-/* â”€â”€ TARGET TYPE BADGE â”€â”€ */
+/* ── TARGET TYPE BADGE ── */
 .target-type-badge {
   display: inline-flex;
   align-items: center;
@@ -2564,7 +2536,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .target-hq     { background: #e0e7ff; color: #3730a3; }
 .target-branch { background: #fef3c7; color: #92400e; }
 
-/* â”€â”€ KONTAK MINI (list dalam tabel) â”€â”€ */
+/* ── KONTAK MINI (list dalam tabel) ── */
 .contact-mini-row {
   padding: 4px 0;
   border-bottom: 1px dashed var(--border-main);
@@ -2581,19 +2553,19 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   margin-left: 4px;
 }
 
-/* Tablet (â‰¤ 768px) */
+/* Tablet (≤ 768px) */
 @media (max-width: 768px) {
   .toolbar-center { gap: 8px; }
   .btn-toolbar { flex: 1 1 calc(33.33% - 8px); justify-content: center; padding: 10px 12px; font-size: 0.82rem; min-width: 100px; }
 }
 
-/* Mobile (â‰¤ 480px) */
+/* Mobile (≤ 480px) */
 @media (max-width: 480px) {
   .toolbar-center { flex-direction: column; gap: 8px; }
   .btn-toolbar { flex: 1 1 100%; width: 100%; padding: 11px 16px; font-size: 0.85rem; justify-content: center; }
 }
 
-/* Layar sangat kecil (â‰¤ 360px) */
+/* Layar sangat kecil (≤ 360px) */
 @media (max-width: 360px) {
   .btn-toolbar { flex: 1 1 100%; width: 100%; padding: 10px 14px; font-size: 0.8rem; gap: 6px; justify-content: center; }
 }
@@ -2606,7 +2578,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .result-orange  { background:#ffedd5; color:#9a3412; }
 .result-slate   { background:#f1f5f9; color:#475569; }
 
-/* â”€â”€ FILE PREVIEW CARD (non-image check_out_file) â”€â”€ */
+/* ── FILE PREVIEW CARD (non-image check_out_file) ── */
 .file-preview-card {
   display: flex;
   align-items: center;
@@ -2642,7 +2614,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   font-size: 0.9rem;
 }
 
-/* â”€â”€ LIGHTBOX / IMAGE ZOOM â”€â”€ */
+/* ── LIGHTBOX / IMAGE ZOOM ── */
 .lightbox-overlay {
   position: fixed;
   inset: 0;

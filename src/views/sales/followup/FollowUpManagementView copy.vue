@@ -20,14 +20,14 @@ const toast         = useToast()
 const authStore     = useAuthStore()
 const followUpStore = useFollowUpStore()
 
-// â”€â”€ PERMISSIONS â”€â”€
+// ── PERMISSIONS ──
 const currentUrl = computed(() => route.path.replace('/app', ''))
 const canCreate  = computed(() => permission.canCreate(currentUrl.value))
 const canUpdate  = computed(() => permission.canUpdate(currentUrl.value))
 const canDelete  = computed(() => permission.canDelete(currentUrl.value))
 const canView    = computed(() => permission.canView(currentUrl.value))
 
-// â”€â”€ DROPDOWN TOGGLES â”€â”€
+// ── DROPDOWN TOGGLES ──
 const showExportMenu  = ref(false)
 const showImportMenu  = ref(false)
 const showPerPageMenu = ref(false)
@@ -36,10 +36,10 @@ const showSortDirMenu = ref(false)
 const showModeMenu    = ref(false)
 const closingFollowUpId = ref(null)
 
-// â”€â”€ VIEW MODE (Card / Table) â”€â”€
+// ── VIEW MODE (Card / Table) ──
 const viewMode = ref('card') // default: card
 
-// â”€â”€ DATETIME HELPERS â”€â”€
+// ── DATETIME HELPERS ──
 // native input pakai format "YYYY-MM-DDTHH:mm", backend expect "YYYY-MM-DD HH:mm"
 const toNative = (val) => {
   if (!val) return ''
@@ -56,12 +56,12 @@ const minDatetime = computed(() => {
   return now.toISOString().slice(0, 16)
 })
 
-// â”€â”€ INIT â”€â”€
+// ── INIT ──
 onMounted(() => {
   followUpStore.fetchFollowUps('customers')
 })
 
-// â”€â”€ MODE LABEL â”€â”€
+// ── MODE LABEL ──
 const modeLabel = computed(() =>
   followUpStore.mode === 'leads' ? 'Leads' : 'Customers'
 )
@@ -71,7 +71,7 @@ const changeMode = (type) => {
   followUpStore.fetchFollowUps(type)
 }
 
-// â”€â”€ SORT OPTIONS â”€â”€
+// ── SORT OPTIONS ──
 const sortByOptions = [
   { label: 'Created Date', value: 'created_at'   },
   { label: 'Company Name', value: 'company_name' },
@@ -80,12 +80,12 @@ const sortByLabel = computed(() =>
   sortByOptions.find(o => o.value === followUpStore.sort.column)?.label ?? 'Created Date'
 )
 
-// â”€â”€ COMPUTED: SHOW COLUMNS â”€â”€
+// ── COMPUTED: SHOW COLUMNS ──
 const showVisitColumn  = computed(() => followUpStore.mode !== 'customers')
 const showActionColumn = computed(() => followUpStore.mode !== 'leads')
 const isActionable     = (item) => !['DONE', 'CLOSED', 'CANCELLED'].includes(item.status)
 
-// â”€â”€ STATUS CONFIG â”€â”€
+// ── STATUS CONFIG ──
 const StatusConfigFromLeads = {
   PROSPECTIVE_CUSTOMERS: { class: 'status-info',    icon: 'fa-solid fa-user-plus'    },
   CONSIDERATION_STAGE  : { class: 'status-warning', icon: 'fa-solid fa-clock'        },
@@ -115,9 +115,9 @@ const getFollowUpStatus = (status) => {
   return followUpStatusConfig[normalized] || { class: 'status-secondary', label: normalized || '-' }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 //  MODAL: EDIT / RESCHEDULE FOLLOW UP
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const isEditModalVisible = ref(false)
 const editFollowUpId     = ref(null)
 const formEdit = reactive({
@@ -162,9 +162,9 @@ const submitEdit = async () => {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 //  MODAL: SUBMIT RESULT LEAD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const isSubmitLeadModalVisible = ref(false)
 const selectedFollowUpId       = ref(null)
 
@@ -234,9 +234,9 @@ const submitLeadResult = async () => {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 //  MODAL: SUBMIT RESULT CUSTOMER
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const isSubmitCustomerModalVisible = ref(false)
 
 const resultForm = reactive({
@@ -299,9 +299,9 @@ const submitCustomerResult = async () => {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 //  MODAL: DIRECT FOLLOW UP LEAD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const isDirectLeadModalVisible = ref(false)
 
 const formDirectLead = reactive({
@@ -351,9 +351,9 @@ const submitDirectLead = async () => {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 //  MODAL: DIRECT FOLLOW UP CUSTOMER
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const isDirectCustomerModalVisible = ref(false)
 
 const followUpTypes = [
@@ -477,7 +477,7 @@ const selectedCustomer = computed(() =>
 
 // Opsi dropdown branch: selalu diawali "Head Office", baru diikuti
 // cabang-cabang aktual. Kalau customer tidak punya cabang sama sekali,
-// dropdown branch disembunyikan total (lihat hasBranches di bawah) â€”
+// dropdown branch disembunyikan total (lihat hasBranches di bawah) —
 // jadi sales dengan customer sederhana tidak akan pernah lihat pilihan
 // yang tidak relevan buat mereka.
 
@@ -501,7 +501,7 @@ const branchOptions = computed(() => {
 
 const hasBranches = computed(() => (selectedCustomer.value?.branches ?? []).length > 0)
 
-// Preview kontak yang akan dihubungi â€” read-only, cuma buat konfirmasi
+// Preview kontak yang akan dihubungi — read-only, cuma buat konfirmasi
 // visual supaya sales yakin dia menghubungi orang yang benar sebelum submit.
 const contactPreview = computed(() => {
   if (!selectedCustomer.value) return null
@@ -586,9 +586,9 @@ const submitDirectCustomer = async () => {
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 //  MODAL: DETAIL FOLLOW UP
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const isDetailModalVisible = ref(false)
 
 const openDetailModal = async (item) => {
@@ -606,9 +606,9 @@ const closeDetailModal = () => {
   isDetailModalVisible.value = false
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 //  MODAL: TIMELINE LEAD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const isTimelineLeadModalVisible = ref(false)
 
 const openTimelineLeadModal = async (item) => {
@@ -617,9 +617,9 @@ const openTimelineLeadModal = async (item) => {
   await followUpStore.fetchTimelineLead(item.id)
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 //  MODAL: TIMELINE CUSTOMER
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const isTimelineCustomerModalVisible = ref(false)
 
 const openTimelineCustomerModal = async (item) => {
@@ -627,11 +627,11 @@ const openTimelineCustomerModal = async (item) => {
   await followUpStore.fetchTimelineCustomer(item.id)
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  CLOSE FOLLOW UP (MANUAL) â€” customer only
+// ══════════════════════════════════════════════
+//  CLOSE FOLLOW UP (MANUAL) — customer only
 //  Satu-satunya pemicu close ada di panel "Follow Up Aktif"
 //  (open-fu-container) di dalam modal Timeline Customer.
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const handleCloseFollowUp = async (fu) => {
   const ok = await confirm({
     type: 'warning',
@@ -670,9 +670,9 @@ const handleCloseFollowUp = async (fu) => {
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 //  DELETE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const handleDelete = async (item) => {
   const ok = await confirm({
     type       : 'danger',
@@ -692,9 +692,9 @@ const handleDelete = async (item) => {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 //  VISIT FROM FOLLOW UP
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════
 const createVisitFromFollowUp = (item) => {
   if (!item.customer_id) {
     return toast.warning('Customer tidak ditemukan untuk follow up ini')
@@ -702,12 +702,12 @@ const createVisitFromFollowUp = (item) => {
   router.push('/app/sales-visit')
 }
 
-// â”€â”€ RESET â”€â”€
+// ── RESET ──
 const handleReset = () => {
   followUpStore.resetFilters()
 }
 
-// â”€â”€ HELPER: FU TYPE ICON â”€â”€
+// ── HELPER: FU TYPE ICON ──
 const fuTypeIcon = (type) => {
   const map = {
     CALL    : 'fa-solid fa-phone',
@@ -876,9 +876,9 @@ const fuTypeIcon = (type) => {
       </div>
     </div>
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          TABLE VIEW
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    ══════════════════════════════════════════ -->
     <div v-if="viewMode === 'table'" class="table-card flex-grow-1 overflow-auto mb-3">
       <table class="data-table">
         <thead>
@@ -1076,9 +1076,9 @@ const fuTypeIcon = (type) => {
       </table>
     </div>
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         CARD VIEW â€” default tampilan
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         CARD VIEW — default tampilan
+    ══════════════════════════════════════════ -->
     <div v-else class="card-view flex-grow-1 overflow-auto mb-3">
 
       <!-- LOADING -->
@@ -1152,7 +1152,7 @@ const fuTypeIcon = (type) => {
                 </div>
                 <div v-if="item.contact?.name && item.contact.name !== '-'" class="td-muted target-sub">
                   <font-awesome-icon icon="fa-solid fa-user" /> {{ item.contact.name }}
-                  <span v-if="item.contact.phone">  {{ item.contact.phone }}</span>
+                  <span v-if="item.contact.phone"> · {{ item.contact.phone }}</span>
                 </div>
               </div>
             </div>
@@ -1282,9 +1282,9 @@ const fuTypeIcon = (type) => {
     </div>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          MODAL: EDIT / RESCHEDULE
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    ══════════════════════════════════════════ -->
     <AppModal
       :show="isEditModalVisible"
       title="Reschedule Follow Up"
@@ -1333,9 +1333,9 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          MODAL: SUBMIT RESULT LEAD
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    ══════════════════════════════════════════ -->
     <AppModal
       :show="isSubmitLeadModalVisible"
       title="Submit Result Follow Up Lead"
@@ -1440,9 +1440,9 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          MODAL: SUBMIT RESULT CUSTOMER
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    ══════════════════════════════════════════ -->
     <AppModal
       :show="isSubmitCustomerModalVisible"
       title="Submit Follow Up Result"
@@ -1541,9 +1541,9 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          MODAL: DIRECT FOLLOW UP LEAD
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    ══════════════════════════════════════════ -->
     <AppModal
       :show="isDirectLeadModalVisible"
       title="Direct Follow Up Lead"
@@ -1622,13 +1622,13 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          MODAL: DIRECT FOLLOW UP CUSTOMER
          UX: customer dulu -> branch (default Head Office,
          disembunyikan kalau customer tidak punya cabang) ->
          preview kontak read-only supaya sales yakin menghubungi
          orang yang benar sebelum submit.
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    ══════════════════════════════════════════ -->
     <AppModal
       :show="isDirectCustomerModalVisible"
       title="Direct Follow Up Customer"
@@ -1676,7 +1676,7 @@ const fuTypeIcon = (type) => {
               <div class="contact-preview-title">Akan menghubungi ({{ contactPreview.label }})</div>
               <div class="contact-preview-name">
                 {{ contactPreview.name }}
-                <span v-if="contactPreview.phone" class="td-muted">  {{ contactPreview.phone }}</span>
+                <span v-if="contactPreview.phone" class="td-muted"> · {{ contactPreview.phone }}</span>
               </div>
             </div>
           </div>
@@ -1768,9 +1768,9 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          MODAL: DETAIL FOLLOW UP
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    ══════════════════════════════════════════ -->
     <AppModal
       :show="isDetailModalVisible"
       title="Detail Follow Up"
@@ -1791,7 +1791,7 @@ const fuTypeIcon = (type) => {
             <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px">
               {{ followUpStore.followUpDetail?.customer_company_name ?? followUpStore.followUpDetail?.lead_company_name }}
               <template v-if="followUpStore.followUpDetail?.branch_name">
-                â€” {{ followUpStore.followUpDetail.branch_name }}
+                — {{ followUpStore.followUpDetail.branch_name }}
               </template>
             </div>
           </div>
@@ -1816,7 +1816,7 @@ const fuTypeIcon = (type) => {
           </div>
           <div class="detail-row" style="grid-column:1/-1">
             <span class="detail-label">Notes</span>
-            <div class="detail-value rich-content" v-html="followUpStore.followUpDetail.notes || '-'"></div>
+            <span class="detail-value" style="white-space:pre-wrap">{{ followUpStore.followUpDetail.notes || '-' }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Est. Follow Up</span>
@@ -1843,7 +1843,7 @@ const fuTypeIcon = (type) => {
               <small>{{ followUpStore.formatDates(c.created_at) }}</small>
             </div>
             <span class="status-badge status-danger mb-2" style="display:inline-block">Complaint</span>
-            <div class="rich-content" v-html="c.complaint_detail"></div>
+            <p>{{ c.complaint_detail }}</p>
             <small class="td-muted">Check In: {{ followUpStore.formatDates(c.check_in_at) }} | Check Out: {{ followUpStore.formatDates(c.check_out_at) }}</small>
           </div>
         </template>
@@ -1863,7 +1863,7 @@ const fuTypeIcon = (type) => {
               <small>{{ followUpStore.formatDates(v.created_at) }}</small>
             </div>
             <span class="status-badge status-success mb-2" style="display:inline-block">Potential Order</span>
-            <div class="rich-content" v-html="v.potential_order_detail"></div>
+            <p>{{ v.potential_order_detail }}</p>
           </div>
         </template>
 
@@ -1881,7 +1881,7 @@ const fuTypeIcon = (type) => {
               <strong>{{ activity.title }}</strong>
               <small>{{ followUpStore.formatDates(activity.activity_at) }}</small>
             </div>
-            <div class="td-muted rich-content" v-html="activity.description || '-'"></div>
+            <div class="td-muted">{{ activity.description }}</div>
           </div>
         </template>
 
@@ -1895,9 +1895,9 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          MODAL: TIMELINE LEAD
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    ══════════════════════════════════════════ -->
     <AppModal
       :show="isTimelineLeadModalVisible"
       title="Lead Journey"
@@ -1942,10 +1942,10 @@ const fuTypeIcon = (type) => {
                 <small>{{ item.activity_at }}</small>
               </div>
               <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap">
-                <span class="status-badge status-danger">Follow Up</span>
+                <span class="status-badge status-danger">📋 Follow Up</span>
                 <span v-if="item.follow_up_code" class="status-badge status-secondary">{{ item.follow_up_code }}</span>
               </div>
-              <div class="td-muted rich-content" style="margin:0" v-html="item.description || '-'"></div>
+              <p class="td-muted" style="margin:0">{{ item.description }}</p>
             </div>
           </div>
         </div>
@@ -1957,9 +1957,9 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          MODAL: TIMELINE CUSTOMER
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    ══════════════════════════════════════════ -->
     <AppModal
       :show="isTimelineCustomerModalVisible"
       title="Customer Journey"
@@ -1981,14 +1981,14 @@ const fuTypeIcon = (type) => {
           <span class="status-badge status-warning">{{ followUpStore.customerTimeline.filter(h => h.has_potential_order).length }} Potential Orders</span>
         </div>
 
-        <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        <!-- ══════════════════════════════════════
              PANEL: FOLLOW UP AKTIF
              Satu-satunya tempat menutup follow up secara
              manual. Satu follow up = satu baris = satu
              tombol Close, terlepas dari berapa banyak
              activity log yang dimilikinya di timeline
-             bawah â€” jadi tidak ada tombol dobel.
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+             bawah — jadi tidak ada tombol dobel.
+        ══════════════════════════════════════ -->
         <div
           v-if="followUpStore.openFollowUpsCustomer.length"
           class="open-fu-container"
@@ -2040,12 +2040,12 @@ const fuTypeIcon = (type) => {
           </div>
         </div>
 
-        <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        <!-- ══════════════════════════════════════
              TIMELINE: murni histori/activity log.
-             Tidak ada aksi Close di sini â€” activity
+             Tidak ada aksi Close di sini — activity
              adalah kejadian masa lalu (append-only),
              bukan kontrol status saat ini.
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        ══════════════════════════════════════ -->
         <div class="timeline-wrapper" style="--line-color:#6366f1">
           <div v-for="(item, i) in followUpStore.customerTimeline" :key="i" class="timeline-step">
             <div class="timeline-dot"
@@ -2071,7 +2071,7 @@ const fuTypeIcon = (type) => {
               </div>
               <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap">
                 <span class="status-badge" :class="item.source === 'VISIT' ? 'status-success' : 'status-primary'">
-                  {{ item.source === 'VISIT' ? 'ðŸ¢ Visit' : 'ðŸ“‹ Follow Up' }}
+                  {{ item.source === 'VISIT' ? '🏢 Visit' : '📋 Follow Up' }}
                 </span>
                 <span v-if="item.follow_up_code" class="status-badge status-secondary">{{ item.follow_up_code }}</span>
                 <span v-if="item.visit_code" class="status-badge status-secondary">{{ item.visit_code }}</span>
@@ -2091,13 +2091,13 @@ const fuTypeIcon = (type) => {
   </div>
   <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap">
     <span class="status-badge" :class="item.source === 'VISIT' ? 'status-success' : 'status-primary'">
-      {{ item.source === 'VISIT' ? 'Visit' : 'Follow Up' }}
+      {{ item.source === 'VISIT' ? '🏢 Visit' : '📋 Follow Up' }}
     </span>
     <span v-if="item.follow_up_code" class="status-badge status-secondary">{{ item.follow_up_code }}</span>
     <span v-if="item.visit_code" class="status-badge status-secondary">{{ item.visit_code }}</span>
   </div>
   <!-- ...sisanya tetap sama... -->
-              <div class="td-muted rich-content" style="margin:0 0 8px" v-html="item.description || '-'"></div>
+              <p class="td-muted" style="margin:0 0 8px">{{ item.description }}</p>
 
               <template v-if="item.source === 'VISIT'">
                 <div style="font-size:0.75rem; display:flex; gap:16px; margin-bottom:6px">
@@ -2105,10 +2105,10 @@ const fuTypeIcon = (type) => {
                   <span><font-awesome-icon icon="fa-solid fa-right-from-bracket" style="color:#dc2626" /> {{ item.check_out_at ?? '-' }}</span>
                 </div>
                 <div v-if="item.has_complaint" class="info-alert info-danger" style="font-size:0.8rem">
-                  <font-awesome-icon icon="triangle-exclamation" /> <span class="rich-content" v-html="item.complaint_detail"></span>
+                  <font-awesome-icon icon="triangle-exclamation" /> {{ item.complaint_detail }}
                 </div>
                 <div v-if="item.has_potential_order" class="info-alert info-success" style="font-size:0.8rem">
-                  <font-awesome-icon icon="fa-solid fa-sack-dollar" /> <span class="rich-content" v-html="item.potential_order_detail"></span>
+                  <font-awesome-icon icon="fa-solid fa-sack-dollar" /> {{ item.potential_order_detail }}
                 </div>
               </template>
             </div>
@@ -2370,7 +2370,7 @@ const fuTypeIcon = (type) => {
 .mb-2 { margin-bottom: 8px; }
 .me-1 { margin-right: 4px; }
 
-/* â”€â”€ SPINNER & EMPTY â”€â”€ */
+/* ── SPINNER & EMPTY ── */
 .spinner-custom { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 8px; }
@@ -2381,9 +2381,9 @@ const fuTypeIcon = (type) => {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ══════════════════════════════════════════
    CARD VIEW
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+══════════════════════════════════════════ */
 .card-view { background: transparent; }
 .card-grid {
   display: grid;
@@ -2572,11 +2572,4 @@ const fuTypeIcon = (type) => {
     font-size:.78rem;
     margin-bottom:10px;
 }
-
-/* Rich text dari editor. Gunakan :deep karena elemen dari v-html tidak menerima scoped attribute. */
-.rich-content :deep(p) { margin: 0 0 8px; }
-.rich-content :deep(p:last-child) { margin-bottom: 0; }
-.rich-content :deep(ul), .rich-content :deep(ol) { margin: 6px 0; padding-left: 20px; }
-.rich-content :deep(li) { margin: 3px 0; }
 </style>
-
