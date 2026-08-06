@@ -2,6 +2,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppModal from '@/components/AppModal.vue'
+import RichTextEditor from '@/components/RichTextEditor.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { usePermissionStore } from '@/stores/PermissionStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -20,14 +21,14 @@ const toast         = useToast()
 const authStore     = useAuthStore()
 const followUpStore = useFollowUpStore()
 
-// â”€â”€ PERMISSIONS â”€â”€
+// PERMISSIONS
 const currentUrl = computed(() => route.path.replace('/app', ''))
 const canCreate  = computed(() => permission.canCreate(currentUrl.value))
 const canUpdate  = computed(() => permission.canUpdate(currentUrl.value))
 const canDelete  = computed(() => permission.canDelete(currentUrl.value))
 const canView    = computed(() => permission.canView(currentUrl.value))
 
-// â”€â”€ DROPDOWN TOGGLES â”€â”€
+// DROPDOWN TOGGLES
 const showExportMenu  = ref(false)
 const showImportMenu  = ref(false)
 const showPerPageMenu = ref(false)
@@ -36,10 +37,32 @@ const showSortDirMenu = ref(false)
 const showModeMenu    = ref(false)
 const closingFollowUpId = ref(null)
 
-// â”€â”€ VIEW MODE (Card / Table) â”€â”€
+// â”€â”€ TIMELINE GROUP LINK (Follow Up Aktif <-> Histori terkait) â”€â”€
+// Menggantikan garis penghubung manual. Setiap follow-up aktif dan histori
+// yang berasal dari visit yang sama diberi warna sama, dan saling menyala
+// saat salah satunya di-hover. Lebih tahan banyak follow-up aktif sekaligus
+// dibanding garis fisik yang gampang tabrakan di layar sempit.
+// Kunci penghubung: visit_code (kalau follow-up lahir dari visit),
+// fallback ke follow_up_id/id untuk direct follow-up yang tidak punya visit.
+const groupKeyOf = (item) =>
+  item?.visit_code || (item?.follow_up_id ? `fu-${item.follow_up_id}` : (item?.id ? `fu-${item.id}` : null))
+
+const groupColorPalette = ['#f59e0b', '#6366f1', '#16a34a', '#0891b2', '#dc2626', '#7c3aed']
+const groupColorMap = new Map()
+const groupColorOf = (key) => {
+  if (!key) return '#94a3b8'
+  if (!groupColorMap.has(key)) {
+    groupColorMap.set(key, groupColorPalette[groupColorMap.size % groupColorPalette.length])
+  }
+  return groupColorMap.get(key)
+}
+
+const hoveredGroupKey = ref(null)
+
+// VIEW MODE (Card / Table)
 const viewMode = ref('card') // default: card
 
-// â”€â”€ DATETIME HELPERS â”€â”€
+// DATETIME HELPERS
 // native input pakai format "YYYY-MM-DDTHH:mm", backend expect "YYYY-MM-DD HH:mm"
 const toNative = (val) => {
   if (!val) return ''
@@ -56,12 +79,12 @@ const minDatetime = computed(() => {
   return now.toISOString().slice(0, 16)
 })
 
-// â”€â”€ INIT â”€â”€
+// INIT
 onMounted(() => {
   followUpStore.fetchFollowUps('customers')
 })
 
-// â”€â”€ MODE LABEL â”€â”€
+// MODE LABEL
 const modeLabel = computed(() =>
   followUpStore.mode === 'leads' ? 'Leads' : 'Customers'
 )
@@ -71,7 +94,7 @@ const changeMode = (type) => {
   followUpStore.fetchFollowUps(type)
 }
 
-// â”€â”€ SORT OPTIONS â”€â”€
+// SORT OPTIONS
 const sortByOptions = [
   { label: 'Created Date', value: 'created_at'   },
   { label: 'Company Name', value: 'company_name' },
@@ -80,12 +103,22 @@ const sortByLabel = computed(() =>
   sortByOptions.find(o => o.value === followUpStore.sort.column)?.label ?? 'Created Date'
 )
 
-// â”€â”€ COMPUTED: SHOW COLUMNS â”€â”€
+// COMPUTED: SHOW COLUMNS
 const showVisitColumn  = computed(() => followUpStore.mode !== 'customers')
 const showActionColumn = computed(() => followUpStore.mode !== 'leads')
 const isActionable     = (item) => !['DONE', 'CLOSED', 'CANCELLED'].includes(item.status)
 
-// â”€â”€ STATUS CONFIG â”€â”€
+// â”€â”€ CODE DISPLAY HELPER â”€â”€
+// Dipakai di semua tempat yang menampilkan "kode" follow up:
+// Table view, Card view, dan panel Follow Up Aktif di Customer Journey.
+// Prioritas tampilan: no_reference (dari visit) > follow_up_code (kode internal FUP-...)
+// isRef dipakai untuk nentuin apakah perlu label "(No Ref)" atau tidak.
+const codeDisplay = (item) => ({
+  value: item?.no_reference || item?.follow_up_code || '-',
+  isRef: !!item?.no_reference,
+})
+
+// STATUS CONFIG
 const StatusConfigFromLeads = {
   PROSPECTIVE_CUSTOMERS: { class: 'status-info',    icon: 'fa-solid fa-user-plus'    },
   CONSIDERATION_STAGE  : { class: 'status-warning', icon: 'fa-solid fa-clock'        },
@@ -115,9 +148,9 @@ const getFollowUpStatus = (status) => {
   return followUpStatusConfig[normalized] || { class: 'status-secondary', label: normalized || '-' }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  MODAL: EDIT / RESCHEDULE FOLLOW UP
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const isEditModalVisible = ref(false)
 const editFollowUpId     = ref(null)
 const formEdit = reactive({
@@ -162,9 +195,9 @@ const submitEdit = async () => {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  MODAL: SUBMIT RESULT LEAD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const isSubmitLeadModalVisible = ref(false)
 const selectedFollowUpId       = ref(null)
 
@@ -234,9 +267,9 @@ const submitLeadResult = async () => {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  MODAL: SUBMIT RESULT CUSTOMER
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const isSubmitCustomerModalVisible = ref(false)
 
 const resultForm = reactive({
@@ -299,9 +332,9 @@ const submitCustomerResult = async () => {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  MODAL: DIRECT FOLLOW UP LEAD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const isDirectLeadModalVisible = ref(false)
 
 const formDirectLead = reactive({
@@ -351,9 +384,9 @@ const submitDirectLead = async () => {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  MODAL: DIRECT FOLLOW UP CUSTOMER
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const isDirectCustomerModalVisible = ref(false)
 
 const followUpTypes = [
@@ -586,9 +619,9 @@ const submitDirectCustomer = async () => {
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  MODAL: DETAIL FOLLOW UP
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const isDetailModalVisible = ref(false)
 
 const openDetailModal = async (item) => {
@@ -606,9 +639,9 @@ const closeDetailModal = () => {
   isDetailModalVisible.value = false
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  MODAL: TIMELINE LEAD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const isTimelineLeadModalVisible = ref(false)
 
 const openTimelineLeadModal = async (item) => {
@@ -617,21 +650,23 @@ const openTimelineLeadModal = async (item) => {
   await followUpStore.fetchTimelineLead(item.id)
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  MODAL: TIMELINE CUSTOMER
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const isTimelineCustomerModalVisible = ref(false)
 
 const openTimelineCustomerModal = async (item) => {
+  groupColorMap.clear()          // reset palet warna tiap buka modal customer baru
+  hoveredGroupKey.value = null
   isTimelineCustomerModalVisible.value = true
   await followUpStore.fetchTimelineCustomer(item.id)
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  CLOSE FOLLOW UP (MANUAL) â€” customer only
 //  Satu-satunya pemicu close ada di panel "Follow Up Aktif"
 //  (open-fu-container) di dalam modal Timeline Customer.
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const handleCloseFollowUp = async (fu) => {
   const ok = await confirm({
     type: 'warning',
@@ -670,9 +705,9 @@ const handleCloseFollowUp = async (fu) => {
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  DELETE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const handleDelete = async (item) => {
   const ok = await confirm({
     type       : 'danger',
@@ -692,9 +727,9 @@ const handleDelete = async (item) => {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  VISIT FROM FOLLOW UP
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const createVisitFromFollowUp = (item) => {
   if (!item.customer_id) {
     return toast.warning('Customer tidak ditemukan untuk follow up ini')
@@ -702,12 +737,12 @@ const createVisitFromFollowUp = (item) => {
   router.push('/app/sales-visit')
 }
 
-// â”€â”€ RESET â”€â”€
+// RESET
 const handleReset = () => {
   followUpStore.resetFilters()
 }
 
-// â”€â”€ HELPER: FU TYPE ICON â”€â”€
+// HELPER: FU TYPE ICON
 const fuTypeIcon = (type) => {
   const map = {
     CALL    : 'fa-solid fa-phone',
@@ -876,9 +911,9 @@ const fuTypeIcon = (type) => {
       </div>
     </div>
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          TABLE VIEW
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div v-if="viewMode === 'table'" class="table-card flex-grow-1 overflow-auto mb-3">
       <table class="data-table">
         <thead>
@@ -934,7 +969,11 @@ const fuTypeIcon = (type) => {
 
             <!-- CODE -->
             <td>
-              <span class="code-badge">{{ item.follow_up_code }}</span>
+              <span class="code-badge">
+                <font-awesome-icon icon="fa-solid fa-hashtag" />
+                {{ codeDisplay(item).value }}
+                <span v-if="!codeDisplay(item).isRef" class="code-badge-note">(No Ref)</span>
+              </span>
             </td>
 
             <!-- TYPE -->
@@ -994,27 +1033,15 @@ const fuTypeIcon = (type) => {
 
             <!-- ACTIONS -->
             <td class="td-actions">
-              <!-- saat ini dimatikan tapi jika suatu saat akan di pake uncomment saja -->
               <!-- Edit (hanya PENDING) -->
-              <!-- <button
-                 v-if="canUpdate && item.status === 'PENDING'"
+              <button
+                v-if="canUpdate && item.status === 'PENDING'"
                 class="act-btn act-edit"
                 title="Reschedule"
                 @click="openEditModal(item)"
               >
                 <font-awesome-icon icon="fa-pen-to-square" />
-              </button> -->
-
-                <!-- saat ini dimatikan tapi jika suatu saat akan di pake uncomment saja -->
-              <!-- Delete (hanya PENDING) -->
-              <!-- <button
-                 v-if="canDelete && item.status === 'PENDING'"
-                class="act-btn act-delete"
-                title="Hapus"
-                @click="handleDelete(item)"
-              >
-                <font-awesome-icon icon="fa-trash-can" />
-              </button> -->
+              </button>
 
               <!-- Done badge -->
               <span v-if="!['PENDING'].includes(item.status)" class="status-badge status-success me-1">
@@ -1076,9 +1103,9 @@ const fuTypeIcon = (type) => {
       </table>
     </div>
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          CARD VIEW â€” default tampilan
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div v-else class="card-view flex-grow-1 overflow-auto mb-3">
 
       <!-- LOADING -->
@@ -1102,21 +1129,22 @@ const fuTypeIcon = (type) => {
           :class="{ 'card-overdue': item.is_overdue }"
         >
 
-
         <!-- STAMP -->
-  <div
-    v-if="!isActionable(item)"
-    class="fu-stamp"
-    :class="item.status === 'CANCELLED' ? 'stamp-cancelled' : 'stamp-done'"
-  >
-    {{ item.status === 'CANCELLED' ? 'Cancelled' : 'Selesai' }}
-  </div>
-
-
+        <div
+          v-if="!isActionable(item)"
+          class="fu-stamp"
+          :class="item.status === 'CANCELLED' ? 'stamp-cancelled' : 'stamp-done'"
+        >
+          {{ item.status === 'CANCELLED' ? 'Cancelled' : 'Selesai' }}
+        </div>
 
           <!-- HEADER -->
           <div class="fu-card-header">
-            <span class="code-badge">{{ item.follow_up_code }}</span>
+            <span class="code-badge">
+              <font-awesome-icon icon="fa-solid fa-hashtag" />
+              {{ codeDisplay(item).value }}
+              <span v-if="!codeDisplay(item).isRef" class="code-badge-note">(No Ref)</span>
+            </span>
             <span class="status-badge"
               :class="item.computed_status === 'OVERDUE' ? 'status-danger'
                 : item.status === 'PENDING' ? 'status-warning' : 'status-success'">
@@ -1177,26 +1205,14 @@ const fuTypeIcon = (type) => {
           <!-- FOOTER / ACTIONS -->
           <div class="fu-card-footer">
             <!-- Edit (hanya PENDING) -->
-               <!-- saat ini dimatikan tapi jika suatu saat akan di pake uncomment saja -->
-            <!-- <button
+            <button
               v-if="canUpdate && item.status === 'PENDING'"
               class="act-btn act-edit"
               title="Reschedule"
               @click="openEditModal(item)"
             >
               <font-awesome-icon icon="fa-pen-to-square" />
-            </button> -->
-
-            <!-- Delete (hanya PENDING) -->
-               <!-- saat ini dimatikan tapi jika suatu saat akan di pake uncomment saja -->
-            <!-- <button
-              v-if="canDelete && item.status === 'PENDING'"
-              class="act-btn act-delete"
-              title="Hapus"
-              @click="handleDelete(item)"
-            >
-              <font-awesome-icon icon="fa-trash-can" />
-            </button> -->
+            </button>
 
             <!-- Done badge -->
             <span v-if="!['PENDING'].includes(item.status)" class="status-badge status-success me-1">
@@ -1282,9 +1298,7 @@ const fuTypeIcon = (type) => {
     </div>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         MODAL: EDIT / RESCHEDULE
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- MODAL: EDIT / RESCHEDULE -->
     <AppModal
       :show="isEditModalVisible"
       title="Reschedule Follow Up"
@@ -1293,7 +1307,7 @@ const fuTypeIcon = (type) => {
       @close="closeEditModal"
     >
       <div class="form-container-gap">
-        <div class="form-group">
+        <!-- <div class="form-group">
           <label>Template Subject <span class="opt-label">(opsional)</span></label>
           <Multiselect
             v-model="formEdit.subject_template"
@@ -1303,13 +1317,13 @@ const fuTypeIcon = (type) => {
             placeholder="Pilih template subject"
             :searchable="true"
           />
-        </div>
-        <div class="form-group">
+        </div> -->
+        <!-- <div class="form-group">
           <label>Subject <span class="req-label"></span></label>
           <input v-model="formEdit.subject" class="form-input" placeholder="Tulis subject..." />
-        </div>
+        </div> -->
         <div class="form-group">
-          <label>Follow Up Date <span class="opt-label">(opsional)</span></label>
+          <label>Follow Up Date <span class="opt-label">(harus di Isi / dipilih)</span></label>
           <input
                 type="datetime-local"
                 class="form-input datetime-input"
@@ -1318,10 +1332,10 @@ const fuTypeIcon = (type) => {
                 @change="e => formEdit.follow_up_at = fromNative(e.target.value)"
               />
         </div>
-        <div class="form-group">
-          <label>Notes <span class="opt-label">(opsional)</span></label>
-          <textarea v-model="formEdit.notes" class="form-input form-textarea" rows="3" />
-        </div>
+        <!-- <div class="form-group">
+          <label>Notes <span class="opt-label">(harus di Isi / dipilih)</span></label>
+          <RichTextEditor v-model="formEdit.notes" placeholder="Tulis catatan reschedule..." />
+        </div> -->
       </div>
       <template #footer>
         <button class="btn-cancel" @click="closeEditModal">Cancel</button>
@@ -1333,9 +1347,7 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         MODAL: SUBMIT RESULT LEAD
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- MODAL: SUBMIT RESULT LEAD -->
     <AppModal
       :show="isSubmitLeadModalVisible"
       title="Submit Result Follow Up Lead"
@@ -1440,9 +1452,7 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         MODAL: SUBMIT RESULT CUSTOMER
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- MODAL: SUBMIT RESULT CUSTOMER -->
     <AppModal
       :show="isSubmitCustomerModalVisible"
       title="Submit Follow Up Result"
@@ -1541,9 +1551,7 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         MODAL: DIRECT FOLLOW UP LEAD
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- MODAL: DIRECT FOLLOW UP LEAD -->
     <AppModal
       :show="isDirectLeadModalVisible"
       title="Direct Follow Up Lead"
@@ -1622,13 +1630,7 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         MODAL: DIRECT FOLLOW UP CUSTOMER
-         UX: customer dulu -> branch (default Head Office,
-         disembunyikan kalau customer tidak punya cabang) ->
-         preview kontak read-only supaya sales yakin menghubungi
-         orang yang benar sebelum submit.
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- MODAL: DIRECT FOLLOW UP CUSTOMER -->
     <AppModal
       :show="isDirectCustomerModalVisible"
       title="Direct Follow Up Customer"
@@ -1652,8 +1654,7 @@ const fuTypeIcon = (type) => {
           />
         </div>
 
-        <!-- BRANCH: hanya muncul kalau customer punya cabang.
-             Kalau tidak punya, sales tidak perlu lihat pilihan ini sama sekali. -->
+        <!-- BRANCH: hanya muncul kalau customer punya cabang. -->
         <transition name="fade">
           <div v-if="formDirectCustomer.customer_id && hasBranches" class="form-group">
             <label>Lokasi / Cabang <span class="req-label">*</span></label>
@@ -1668,7 +1669,7 @@ const fuTypeIcon = (type) => {
           </div>
         </transition>
 
-        <!-- CONTACT PREVIEW: read-only, biar sales yakin sebelum submit -->
+        <!-- CONTACT PREVIEW -->
         <transition name="fade">
           <div v-if="formDirectCustomer.customer_id && contactPreview" class="contact-preview">
             <font-awesome-icon icon="fa-solid fa-address-card" />
@@ -1681,10 +1682,6 @@ const fuTypeIcon = (type) => {
             </div>
           </div>
         </transition>
-
-
-        
-
 
         <!-- TYPE RADIO BUTTON -->
         <div class="form-group">
@@ -1699,8 +1696,6 @@ const fuTypeIcon = (type) => {
             </template>
           </div>
         </div>
-
-
 
         <div class="form-group">
           <label>Template Subject <span class="opt-label">(opsional)</span></label>
@@ -1768,9 +1763,7 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         MODAL: DETAIL FOLLOW UP
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- MODAL: DETAIL FOLLOW UP -->
     <AppModal
       :show="isDetailModalVisible"
       title="Detail Follow Up"
@@ -1787,7 +1780,8 @@ const fuTypeIcon = (type) => {
         <!-- HEADER ALERT -->
         <div class="detail-header-alert">
           <div>
-            <strong>{{ followUpStore.followUpDetail.follow_up_code }}</strong>
+            <strong>{{ codeDisplay(followUpStore.followUpDetail).value }}</strong>
+            <span v-if="!codeDisplay(followUpStore.followUpDetail).isRef" class="code-badge-note">(No Ref)</span>
             <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px">
               {{ followUpStore.followUpDetail?.customer_company_name ?? followUpStore.followUpDetail?.lead_company_name }}
               <template v-if="followUpStore.followUpDetail?.branch_name">
@@ -1895,9 +1889,7 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         MODAL: TIMELINE LEAD
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- MODAL: TIMELINE LEAD -->
     <AppModal
       :show="isTimelineLeadModalVisible"
       title="Lead Journey"
@@ -1957,9 +1949,7 @@ const fuTypeIcon = (type) => {
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         MODAL: TIMELINE CUSTOMER
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- MODAL: TIMELINE CUSTOMER -->
     <AppModal
       :show="isTimelineCustomerModalVisible"
       title="Customer Journey"
@@ -1981,14 +1971,7 @@ const fuTypeIcon = (type) => {
           <span class="status-badge status-warning">{{ followUpStore.customerTimeline.filter(h => h.has_potential_order).length }} Potential Orders</span>
         </div>
 
-        <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-             PANEL: FOLLOW UP AKTIF
-             Satu-satunya tempat menutup follow up secara
-             manual. Satu follow up = satu baris = satu
-             tombol Close, terlepas dari berapa banyak
-             activity log yang dimilikinya di timeline
-             bawah â€” jadi tidak ada tombol dobel.
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- PANEL: FOLLOW UP AKTIF -->
         <div
           v-if="followUpStore.openFollowUpsCustomer.length"
           class="open-fu-container"
@@ -2007,14 +1990,19 @@ const fuTypeIcon = (type) => {
             v-for="fu in followUpStore.openFollowUpsCustomer"
             :key="fu.id"
             class="open-fu-card"
+            :class="{ 'group-active': hoveredGroupKey === groupKeyOf(fu) }"
+            :style="{ '--group-color': groupColorOf(groupKeyOf(fu)) }"
+            @mouseenter="hoveredGroupKey = groupKeyOf(fu)"
+            @mouseleave="hoveredGroupKey = null"
           >
             <div class="open-fu-content">
               <div class="fu-code">
                 <font-awesome-icon
                   icon="fa-solid fa-circle"
-                  style="color:#f59e0b;font-size:9px"
+                  :style="{ color: groupColorOf(groupKeyOf(fu)), fontSize: '9px' }"
                 />
-                {{ fu.follow_up_code }}
+                {{ codeDisplay(fu).value }}
+                <span v-if="!codeDisplay(fu).isRef" class="code-badge-note">(No Ref)</span>
               </div>
 
               <div class="fu-subject">
@@ -2040,14 +2028,17 @@ const fuTypeIcon = (type) => {
           </div>
         </div>
 
-        <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-             TIMELINE: murni histori/activity log.
-             Tidak ada aksi Close di sini â€” activity
-             adalah kejadian masa lalu (append-only),
-             bukan kontrol status saat ini.
-        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <!-- TIMELINE: murni histori/activity log -->
         <div class="timeline-wrapper" style="--line-color:#6366f1">
-          <div v-for="(item, i) in followUpStore.customerTimeline" :key="i" class="timeline-step">
+          <div
+            v-for="(item, i) in followUpStore.customerTimeline"
+            :key="i"
+            class="timeline-step"
+            :class="{ 'group-active': hoveredGroupKey && hoveredGroupKey === groupKeyOf(item) }"
+            :style="{ '--group-color': groupColorOf(groupKeyOf(item)) }"
+            @mouseenter="hoveredGroupKey = groupKeyOf(item)"
+            @mouseleave="hoveredGroupKey = null"
+          >
             <div class="timeline-dot"
               :class="{
                 'dot-primary' : item.source === 'FOLLOW_UP',
@@ -2064,40 +2055,39 @@ const fuTypeIcon = (type) => {
                 style="color:#fff; font-size:0.7rem"
               />
             </div>
-            <!-- <div class="timeline-card">
+            <div class="timeline-card">
               <div class="timeline-card-header">
                 <strong>{{ item.title }}</strong>
+                <span
+                  v-if="/closed|selesai/i.test(item.title)"
+                  class="fu-mini-stamp"
+                  :class="/closed/i.test(item.title) ? 'stamp-cancelled' : 'stamp-done'"
+                >
+                  <font-awesome-icon icon="fa-solid fa-stamp" />
+                  {{ /closed/i.test(item.title) ? 'Closed' : 'Done' }}
+                </span>
                 <small>{{ item.activity_at }}</small>
               </div>
               <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap">
                 <span class="status-badge" :class="item.source === 'VISIT' ? 'status-success' : 'status-primary'">
-                  {{ item.source === 'VISIT' ? 'ðŸ¢ Visit' : 'ðŸ“‹ Follow Up' }}
+                  {{ item.source === 'VISIT' ? 'Visit' : 'Follow Up' }}
                 </span>
-                <span v-if="item.follow_up_code" class="status-badge status-secondary">{{ item.follow_up_code }}</span>
+                <span v-if="item.follow_up_code" class="status-badge status-secondary">
+                  {{ item.no_reference || item.follow_up_code }}
+                </span>
                 <span v-if="item.visit_code" class="status-badge status-secondary">{{ item.visit_code }}</span>
-              </div> -->
-              <div class="timeline-card">
-  <div class="timeline-card-header">
-    <strong>{{ item.title }}</strong>
-    <span
-      v-if="/closed|selesai/i.test(item.title)"
-      class="fu-mini-stamp"
-      :class="/closed/i.test(item.title) ? 'stamp-cancelled' : 'stamp-done'"
-    >
-      <font-awesome-icon icon="fa-solid fa-stamp" />
-      {{ /closed/i.test(item.title) ? 'Closed' : 'Done' }}
-    </span>
-    <small>{{ item.activity_at }}</small>
-  </div>
-  <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap">
-    <span class="status-badge" :class="item.source === 'VISIT' ? 'status-success' : 'status-primary'">
-      {{ item.source === 'VISIT' ? 'Visit' : 'Follow Up' }}
-    </span>
-    <span v-if="item.follow_up_code" class="status-badge status-secondary">{{ item.follow_up_code }}</span>
-    <span v-if="item.visit_code" class="status-badge status-secondary">{{ item.visit_code }}</span>
-  </div>
-  <!-- ...sisanya tetap sama... -->
+              </div>
               <div class="td-muted rich-content" style="margin:0 0 8px" v-html="item.description || '-'"></div>
+
+              <!-- Notes asli follow-up (diketik user saat reschedule/submit result),
+                   dibedakan dari description di atas yang cuma teks otomatis sistem.
+                   Cuma tampil untuk FOLLOW_UP dan kalau memang ada isinya. -->
+              <div v-if="item.source === 'FOLLOW_UP' && item.notes" class="timeline-notes-box">
+                <div class="timeline-notes-label">
+                  <font-awesome-icon icon="fa-solid fa-note-sticky" /> Catatan
+                </div>
+                <div class="rich-content" v-html="item.notes"></div>
+              </div>
 
               <template v-if="item.source === 'VISIT'">
                 <div style="font-size:0.75rem; display:flex; gap:16px; margin-bottom:6px">
@@ -2123,8 +2113,6 @@ const fuTypeIcon = (type) => {
 
   </div>
 </template>
-
-
 
 <style scoped>
 .h-100 {
@@ -2207,8 +2195,33 @@ const fuTypeIcon = (type) => {
 .fw-600 { font-weight: 600; }
 .target-sub { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 
-/* CODE BADGE */
-.code-badge { font-family: monospace; font-size: 0.78rem; font-weight: 700; background: rgba(99,102,241,0.1); color: #6366f1; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+/* CODE BADGE â€” dipakai di Table, Card, dan panel Follow Up Aktif.
+   Disatukan supaya tampilannya konsisten di semua tempat, dan
+   otomatis muat teks panjang berkat text-overflow: ellipsis. */
+.code-badge {
+  font-family: monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(99,102,241,0.1);
+  color: #6366f1;
+  padding: 3px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.code-badge-note {
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  margin-left: 2px;
+  white-space: nowrap;
+}
 
 /* TYPE PILL */
 .type-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 600; padding: 3px 8px; border-radius: 20px; background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-main); }
@@ -2358,7 +2371,6 @@ const fuTypeIcon = (type) => {
 .stamp-done      { color: #16a34a; }
 .stamp-cancelled { color: #dc2626; }
 
-
 /* ACTIVITY */
 .activity-item { padding: 12px 0; border-bottom: 1px solid var(--border-main); }
 .activity-item:last-child { border-bottom: none; }
@@ -2370,7 +2382,7 @@ const fuTypeIcon = (type) => {
 .mb-2 { margin-bottom: 8px; }
 .me-1 { margin-right: 4px; }
 
-/* â”€â”€ SPINNER & EMPTY â”€â”€ */
+/* SPINNER & EMPTY */
 .spinner-custom { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 8px; }
@@ -2381,9 +2393,7 @@ const fuTypeIcon = (type) => {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   CARD VIEW
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* CARD VIEW */
 .card-view { background: transparent; }
 .card-grid {
   display: grid;
@@ -2402,7 +2412,7 @@ const fuTypeIcon = (type) => {
 }
 .fu-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
 .card-overdue { border-left: 3px solid #ef4444; background: rgba(239,68,68,0.03); }
-.fu-card-header { display: flex; justify-content: space-between; align-items: center; }
+.fu-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .fu-card-body { display: flex; flex-direction: column; gap: 8px; }
 .fu-card-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
 .fu-card-subject { font-weight: 600; font-size: 0.92rem; color: var(--text-primary); line-height: 1.4; }
@@ -2456,10 +2466,7 @@ const fuTypeIcon = (type) => {
 .fu-mini-stamp.stamp-done      { color: #16a34a; }
 .fu-mini-stamp.stamp-cancelled { color: #dc2626; }
 
-/* =======================================================
-   PANEL: FOLLOW UP AKTIF (satu-satunya sumber tombol Close)
-======================================================= */
-
+/* PANEL: FOLLOW UP AKTIF (satu-satunya sumber tombol Close) */
 .open-fu-container{
     margin:18px 0 24px;
     border:1px solid #f8d8a7;
@@ -2467,13 +2474,11 @@ const fuTypeIcon = (type) => {
     background:#fffaf3;
     overflow:hidden;
 }
-
 .open-fu-header{
     background:#fff4df;
     border-bottom:1px solid #f6dfb9;
     padding:12px 18px;
 }
-
 .open-fu-title{
     display:flex;
     align-items:center;
@@ -2481,20 +2486,16 @@ const fuTypeIcon = (type) => {
     font-weight:700;
     color:#9a4d00;
 }
-
 .open-fu-count{
     color:#f59e0b;
     font-weight:700;
 }
-
 .open-fu-card{
     padding:16px 18px;
 }
-
 .open-fu-card + .open-fu-card{
     border-top:1px dashed #ecd8b5;
 }
-
 .fu-code{
     display:flex;
     align-items:center;
@@ -2504,19 +2505,16 @@ const fuTypeIcon = (type) => {
     margin-bottom:8px;
     font-size:.88rem;
 }
-
 .fu-subject{
     color:#6b7280;
     line-height:1.6;
     margin-bottom:14px;
 }
-
 .fu-footer{
     display:flex;
     justify-content:space-between;
     align-items:center;
 }
-
 .fu-date{
     display:flex;
     align-items:center;
@@ -2524,7 +2522,6 @@ const fuTypeIcon = (type) => {
     color:#6b7280;
     font-size:.82rem;
 }
-
 .btn-close-fu{
     display:flex;
     align-items:center;
@@ -2539,33 +2536,75 @@ const fuTypeIcon = (type) => {
     cursor:pointer;
     transition:.25s;
 }
-
 .btn-close-fu:hover{
     background:#d97706;
 }
-
 .btn-close-fu:disabled{
     opacity:.65;
     cursor:not-allowed;
 }
 
-/* =======================================================
-   TIMELINE (activity log, murni display)
-======================================================= */
+/* â”€â”€ GROUP LINK: warna penghubung Follow Up Aktif <-> histori terkait â”€â”€
+   Menggantikan garis fisik. Setiap grup (follow-up + histori yang lahir
+   dari visit yang sama) diberi warna konsisten lewat --group-color, dan
+   saling menyala saat salah satu kartunya di-hover. */
+.open-fu-card {
+  border-left: 4px solid transparent;
+  border-left-color: var(--group-color, transparent);
+  transition: background 0.2s, box-shadow 0.2s;
+  cursor: default;
+}
+.open-fu-card.group-active {
+  background: color-mix(in srgb, var(--group-color) 10%, transparent);
+  box-shadow: inset 0 0 0 1px var(--group-color);
+}
 
+.timeline-step { transition: opacity 0.2s; }
+.timeline-step .timeline-card {
+  border-left: 3px solid transparent;
+  border-left-color: var(--group-color, transparent);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.timeline-step.group-active .timeline-card {
+  background: color-mix(in srgb, var(--group-color) 10%, var(--bg-input));
+  box-shadow: 0 0 0 1px var(--group-color);
+}
+.timeline-step.group-active .timeline-dot {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--group-color) 30%, transparent);
+}
+
+/* â”€â”€ NOTES BOX di Customer Journey timeline (catatan asli follow-up) â”€â”€ */
+.timeline-notes-box {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(99,102,241,0.06);
+  border: 1px dashed rgba(99,102,241,0.25);
+}
+.timeline-notes-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6366f1;
+  margin-bottom: 4px;
+}
+
+/* TIMELINE (activity log, murni display) */
 .timeline-tags{
     display:flex;
     gap:6px;
     flex-wrap:wrap;
     margin-bottom:8px;
 }
-
 .timeline-description{
     margin:0 0 10px;
     color:#6b7280;
     line-height:1.55;
 }
-
 .timeline-time{
     display:flex;
     gap:18px;
@@ -2579,4 +2618,3 @@ const fuTypeIcon = (type) => {
 .rich-content :deep(ul), .rich-content :deep(ol) { margin: 6px 0; padding-left: 20px; }
 .rich-content :deep(li) { margin: 3px 0; }
 </style>
-

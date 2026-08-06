@@ -191,6 +191,7 @@ import {
   faAddressCard,
   faStamp,
   faCartShopping,
+  faHashtag
 
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -369,7 +370,8 @@ library.add(
   faUserShield,
   faAddressCard,
   faStamp,
-  faCartShopping
+  faCartShopping,
+  faHashtag
 
 )
 

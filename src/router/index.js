@@ -350,13 +350,13 @@ const routes = [
 
 
       {
-        path: 'customer-population',
-        name: 'Population Cust',
+        path: 'customer-history',
+        name: 'Customer History',
 
         component: () =>
         import('@/views/sales/customers/CustomersPopulationView.vue'),
         meta: {
-          role: [2], title: 'Sales Follow Up'
+          role: [2], title: 'Customer History'
         }
       },
 

@@ -1050,8 +1050,8 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <font-awesome-icon icon="code-branch" />
             {{ visit.branch_name }}<span v-if="visit.branch_city"> - {{ visit.branch_city }}</span>
           </p>
-          <p class="visit-card-code">{{ visit.visit_code }}</p>
-          <p class="visit-card-code"> No Reference: {{ visit.no_reference }}</p>
+          <p class="visit-card-code fw-bolder"> Code Visit: {{ visit.visit_code }}</p>
+          <p class="visit-card-code fw-bolder"> No Reference: {{ visit.no_reference }}</p>
 
           <div class="visit-card-info">
             <div class="visit-card-row">

@@ -138,13 +138,13 @@ function goNext() {
       <div class="breadcrumb-left">
         <h4 class="breadcrumb-title">
           <font-awesome-icon icon="table-list" />
-          Customer Population
+          Customer History Transaksi
         </h4>
 
         <div class="breadcrumb-path">
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
           <span class="breadcrumb-item active">
-            Customer Population
+            Customer History Transaksi
           </span>
         </div>
       </div>
