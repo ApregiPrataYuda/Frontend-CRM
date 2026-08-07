@@ -98,7 +98,7 @@ onMounted(async () => {
     <nav class="lp-nav">
       <div class="lp-nav-inner">
         <div class="lp-brand">
-          <!-- <img src="/logo.png" alt="Logo" class="logo-img" /> -->
+          <img src="/logo_dim.png" alt="Logo" class="logo-img" />
           <span class="lp-brand-name">PT. Duta Indomandiri</span>
         </div>
 
@@ -243,7 +243,7 @@ onMounted(async () => {
 .lp-nav{ background:#fff; border-bottom:1px solid #e5e7eb; position:sticky; top:0; z-index:100; }
 .lp-nav-inner{ max-width:1440px; margin:0 auto; padding:12px 24px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; }
 .lp-brand{ display:flex; align-items:center; gap:10px; }
-.logo-img{ width:42px; height:42px; object-fit:contain; border-radius:10px; }
+.logo-img{ width:50px; height:50px; object-fit:contain; border-radius:10px; }
 .lp-brand-name{ font-weight:800; font-size:.95rem; letter-spacing:.05em; white-space:nowrap; }
 .lp-mobile-toggle{ display:none; width:42px; height:42px; border:none; border-radius:10px; background:#f3f4f6; cursor:pointer; font-size:1rem; color:#111827; align-items:center; justify-content:center; }
 

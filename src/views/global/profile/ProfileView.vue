@@ -266,13 +266,13 @@ const activities = [
             </div>
 
             <!-- BUTTON -->
-           <button
+           <!-- <button
               class="btn-edit-profile"
               @click="router.push('/app/settings')"
             >
               <font-awesome-icon icon="pen" />
               Edit Profile
-            </button>
+            </button> -->
           </div>
         </div>
 
