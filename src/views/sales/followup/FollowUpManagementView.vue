@@ -294,7 +294,7 @@ const isNextFollowUpRequired = computed(() =>
 
 const openSubmitCustomerModal = (item) => {
   selectedFollowUpId.value = item.id
-  Object.assign(resultForm, { result: '', notes: '', next_follow_up_at: '', follow_up_type: '' })
+  Object.assign(resultForm, { result: '', notes: '', next_follow_up_at: '', follow_up_type: '', no_reference: item.no_reference ?? '',})
   isSubmitCustomerModalVisible.value = true
 }
 
@@ -326,6 +326,7 @@ const submitCustomerResult = async () => {
     ...(resultForm.next_follow_up_at && {
       next_follow_up_at: resultForm.next_follow_up_at,
       follow_up_type   : resultForm.follow_up_type ?? null,
+      no_reference      : resultForm.no_reference || null,   // ← tambahan
     }),
   }
 
@@ -670,8 +671,22 @@ const submitDirectCustomer = async () => {
 //  MODAL: DETAIL FOLLOW UP
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const isDetailModalVisible = ref(false)
+const isDetailAboveTimeline = ref(false) 
 
-const openDetailModal = async (item) => {
+// const openDetailModal = async (item) => {
+//   isDetailAboveTimeline.value = aboveTimeline 
+//   followUpStore.followUpDetail = null
+//   isDetailModalVisible.value   = true
+//   try {
+//     await followUpStore.detailFollowUp(item.id)
+//   } catch {
+//     toast.error('Gagal memuat detail follow up')
+//     isDetailModalVisible.value = false
+//   }
+// }
+
+const openDetailModal = async (item, aboveTimeline = false) => {
+  isDetailAboveTimeline.value = aboveTimeline   // ← tambahan
   followUpStore.followUpDetail = null
   isDetailModalVisible.value   = true
   try {
@@ -684,6 +699,7 @@ const openDetailModal = async (item) => {
 
 const closeDetailModal = () => {
   isDetailModalVisible.value = false
+  isDetailAboveTimeline.value = false  
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -709,16 +725,16 @@ const openTimelineCustomerModal = async (item) => {
   await followUpStore.fetchTimelineCustomer(item.id)
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  CLOSE FOLLOW UP (MANUAL) â€” customer only
-//  Satu-satunya pemicu close ada di panel "Follow Up Aktif"
-//  (open-fu-container) di dalam modal Timeline Customer.
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 const handleCloseFollowUp = async (fu) => {
+  const refText = fu.no_reference
+    ? `dengan No Reference "${fu.no_reference}"`
+    : `ini (Tidak ada No Reference)`
+
   const ok = await confirm({
     type: 'warning',
     title: 'Tutup Follow Up',
-    message: `Yakin ingin menutup "${fu.follow_up_code}"?`,
+    message: `Yakin ingin menutup Follow Up ${refText}?`,
     detail: 'Follow up ini akan ditandai CLOSED.',
     confirmText: 'Ya, Tutup',
     cancelText: 'Batal',
@@ -801,6 +817,10 @@ const fuTypeIcon = (type) => {
   }
   return map[type] ?? 'fa-solid fa-ellipsis'
 }
+
+
+
+
 
 </script>
 
@@ -1509,6 +1529,15 @@ const fuTypeIcon = (type) => {
     >
       <div class="form-container-gap">
 
+
+        <div class="form-group" style="margin-top:12px">
+          <label>No. Referensi <span class="opt-label">(opsional)</span></label>
+          <input v-model="resultForm.no_reference" class="form-input" placeholder="Contoh: DIM/TES/1234/45" />
+          <small v-if="resultForm.no_reference" class="text-muted-sm">
+            Dibawa dari follow up sebelumnya — ubah jika referensi berbeda.
+          </small>
+        </div>
+
         <div class="form-group">
           <label>Result <span class="req-label">*</span></label>
           <Multiselect
@@ -1542,6 +1571,11 @@ const fuTypeIcon = (type) => {
             class="action-box"
             :class="isNextFollowUpRequired ? 'action-box-primary' : 'action-box-secondary'"
           >
+
+          
+
+
+
             <div class="action-box-title">
               <font-awesome-icon icon="fa-regular fa-calendar-plus" />
               Jadwalkan Follow Up Berikutnya
@@ -1786,14 +1820,7 @@ const fuTypeIcon = (type) => {
           <textarea v-model="formDirectCustomer.notes" class="form-input form-textarea" rows="4" placeholder="Hasil pembicaraan, rencana selanjutnya..." />
         </div>
 
-        <!-- <div class="form-group">
-          <div class="toggle-switch-wrap">
-            <input type="checkbox" v-model="formDirectCustomer.need_follow_up" id="needFollowUp" class="toggle-switch-input" />
-            <label for="needFollowUp" class="toggle-switch-label">
-              <font-awesome-icon icon="fa-solid fa-calendar-plus" /> Schedule Next Follow Up
-            </label>
-          </div>
-        </div> -->
+       
 
         <transition name="fade">
           <div v-if="formDirectCustomer.need_follow_up" class="form-group">
@@ -1820,13 +1847,21 @@ const fuTypeIcon = (type) => {
 
 
     <!-- MODAL: DETAIL FOLLOW UP -->
-    <AppModal
+    <!-- <AppModal
       :show="isDetailModalVisible"
       title="Detail Follow Up"
       icon="circle-info"
       size="xl"
       @close="closeDetailModal"
-    >
+    > -->
+    <AppModal
+  :show="isDetailModalVisible"
+  :elevated="isDetailAboveTimeline"
+  title="Detail Follow Up"
+  icon="circle-info"
+  size="xl"
+  @close="closeDetailModal"
+>
       <div v-if="followUpStore.loadingDetail" class="td-center">
         <font-awesome-icon icon="fa-solid fa-spinner" spin style="font-size:1.4rem; color:#6366f1" />
       </div>
@@ -1837,7 +1872,7 @@ const fuTypeIcon = (type) => {
         <div class="detail-header-alert">
           <div>
             <strong>{{ codeDisplay(followUpStore.followUpDetail).value }}</strong>
-            <span v-if="!codeDisplay(followUpStore.followUpDetail).isRef" class="code-badge-note">(No Ref)</span>
+            <span v-if="!codeDisplay(followUpStore.followUpDetail).isRef" class="code-badge-note">(Tidak Ada No Referensi)</span>
             <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px">
               {{ followUpStore.followUpDetail?.customer_company_name ?? followUpStore.followUpDetail?.lead_company_name }}
               <template v-if="followUpStore.followUpDetail?.branch_name">
@@ -1851,71 +1886,100 @@ const fuTypeIcon = (type) => {
         </div>
 
         <!-- DETAIL FIELDS -->
-        <div class="detail-grid">
-          <div class="detail-row">
-            <span class="detail-label">Follow Up Type</span>
-            <span class="detail-value">{{ followUpStore.followUpDetail.follow_up_type }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Sales</span>
-            <span class="detail-value">{{ followUpStore.followUpDetail.sales_name }}</span>
-          </div>
-          <div class="detail-row" style="grid-column:1/-1">
-            <span class="detail-label">Subject</span>
-            <span class="detail-value">{{ followUpStore.followUpDetail.subject }}</span>
-          </div>
-          <div class="detail-row" style="grid-column:1/-1">
-            <span class="detail-label">Notes</span>
-            <div class="detail-value rich-content" v-html="followUpStore.followUpDetail.notes || '-'"></div>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Est. Follow Up</span>
-            <span class="detail-value">{{ followUpStore.formatDates(followUpStore.followUpDetail.follow_up_at) }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Created</span>
-            <span class="detail-value">{{ followUpStore.formatDates(followUpStore.followUpDetail.created_at) }}</span>
-          </div>
-        </div>
 
+<div class="detail-grid">
+  <div class="detail-row">
+    <span class="detail-label">Follow Up Type</span>
+    <span class="detail-value">{{ followUpStore.followUpDetail.follow_up_type }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Sales</span>
+    <span class="detail-value">{{ followUpStore.followUpDetail.sales_name }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Estimasi Jadwal Follow Up</span>
+    <span class="detail-value">{{ followUpStore.formatDates(followUpStore.followUpDetail.follow_up_at) }}</span>
+  </div>
+  <div class="detail-row">
+    <span class="detail-label">Created</span>
+    <span class="detail-value">{{ followUpStore.formatDates(followUpStore.followUpDetail.created_at) }}</span>
+  </div>
+</div>
+
+<!-- Subject & Notes, dikeluarkan dari grid -->
+<div class="detail-block">
+  <span class="detail-label">
+    <font-awesome-icon icon="fa-solid fa-heading" /> Subject
+  </span>
+  <div class="detail-block-content">
+    {{ followUpStore.followUpDetail.subject }}
+  </div>
+</div>
+
+<div class="timeline-notes-box" style="margin-top:12px">
+  <div class="timeline-notes-label">
+    <font-awesome-icon icon="fa-solid fa-note-sticky" /> Notes
+  </div>
+  <div class="rich-content" v-html="followUpStore.followUpDetail.notes || '-'"></div>
+</div>
+
+        
         <!-- COMPLAINT -->
-        <template v-if="followUpStore.followUpDetail.complaint_details?.some(c => c.complaint_detail)">
-          <div class="section-title danger mt-4">
-            <font-awesome-icon icon="fa-solid fa-triangle-exclamation" /> Complaint From Visits
-          </div>
-          <div
-            v-for="c in followUpStore.followUpDetail.complaint_details.filter(x => x.complaint_detail)"
-            :key="'c-' + c.visit_id"
-            class="timeline-card border-danger"
-          >
-            <div class="timeline-card-header">
-              <strong>{{ c.visit_code }}</strong>
-              <small>{{ followUpStore.formatDates(c.created_at) }}</small>
-            </div>
-            <span class="status-badge status-danger mb-2" style="display:inline-block">Complaint</span>
-            <div class="rich-content" v-html="c.complaint_detail"></div>
-            <small class="td-muted">Check In: {{ followUpStore.formatDates(c.check_in_at) }} | Check Out: {{ followUpStore.formatDates(c.check_out_at) }}</small>
-          </div>
-        </template>
+<template v-if="followUpStore.followUpDetail.complaint_details?.some(c => c.complaint_detail)">
+  <div class="section-title danger mt-4">
+    <font-awesome-icon icon="fa-solid fa-triangle-exclamation" /> Complaint From Visits
+  </div>
+  <div
+    v-for="c in followUpStore.followUpDetail.complaint_details.filter(x => x.complaint_detail)"
+    :key="'c-' + c.visit_id"
+    class="timeline-card border-danger"
+  >
+    <div class="timeline-card-header">
+      <strong>{{ c.visit_code }}</strong>
+      <small>{{ followUpStore.formatDates(c.created_at) }}</small>
+    </div>
+    <span class="status-badge status-danger mb-2" style="display:inline-block">Complaint</span>
 
-        <!-- POTENTIAL ORDER -->
-        <template v-if="followUpStore.followUpDetail.complaint_details?.some(c => c.has_potential_order)">
-          <div class="section-title success mt-4">
-            <font-awesome-icon icon="fa-solid fa-box" /> Potential Order From Visits
-          </div>
-          <div
-            v-for="v in followUpStore.followUpDetail.complaint_details.filter(x => x.has_potential_order)"
-            :key="'p-' + v.visit_id"
-            class="timeline-card border-success"
-          >
-            <div class="timeline-card-header">
-              <strong>{{ v.visit_code }}</strong>
-              <small>{{ followUpStore.formatDates(v.created_at) }}</small>
-            </div>
-            <span class="status-badge status-success mb-2" style="display:inline-block">Potential Order</span>
-            <div class="rich-content" v-html="v.potential_order_detail"></div>
-          </div>
-        </template>
+    <!-- TAMBAHAN: Catatan Kunjungan -->
+    <div v-if="c.visit_notes" class="timeline-notes-box">
+      <div class="timeline-notes-label">
+        <font-awesome-icon icon="fa-solid fa-comment-dots" /> Catatan Kunjungan
+      </div>
+      <div class="rich-content" v-html="c.visit_notes"></div>
+    </div>
+
+    <div class="rich-content" v-html="c.complaint_detail"></div>
+    <small class="td-muted">Check In: {{ followUpStore.formatDates(c.check_in_at) }} | Check Out: {{ followUpStore.formatDates(c.check_out_at) }}</small>
+  </div>
+</template>
+
+<!-- POTENTIAL ORDER -->
+<template v-if="followUpStore.followUpDetail.complaint_details?.some(c => c.has_potential_order)">
+  <div class="section-title success mt-4">
+    <font-awesome-icon icon="fa-solid fa-box" /> Potential Order From Visits
+  </div>
+  <div
+    v-for="v in followUpStore.followUpDetail.complaint_details.filter(x => x.has_potential_order)"
+    :key="'p-' + v.visit_id"
+    class="timeline-card border-success"
+  >
+    <div class="timeline-card-header">
+      <strong>{{ v.visit_code }}</strong>
+      <small>{{ followUpStore.formatDates(v.created_at) }}</small>
+    </div>
+    <span class="status-badge status-success mb-2" style="display:inline-block">Potential Order</span>
+
+    <!-- TAMBAHAN: Catatan Kunjungan -->
+    <div v-if="v.visit_notes" class="timeline-notes-box">
+      <div class="timeline-notes-label">
+        <font-awesome-icon icon="fa-solid fa-comment-dots" /> Catatan Kunjungan
+      </div>
+      <div class="rich-content" v-html="v.visit_notes"></div>
+    </div>
+
+    <div class="rich-content" v-html="v.potential_order_detail"></div>
+  </div>
+</template>
 
         <!-- ACTIVITY TIMELINE -->
         <template v-if="followUpStore.followUpDetail.activities?.length">
@@ -1939,9 +2003,33 @@ const fuTypeIcon = (type) => {
 
       <div v-else class="td-center">Data tidak ditemukan</div>
 
-      <template #footer>
-        <button class="btn-cancel" @click="closeDetailModal">Close</button>
-      </template>
+     <template #footer>
+
+  <template v-if="followUpStore.followUpDetail && !followUpStore.followUpDetail.lead_id">
+  <button
+    v-if="!['DONE', 'CLOSED', 'CANCELLED'].includes(followUpStore.followUpDetail.status)"
+    class="btn-visit"
+    title="Buka halaman Sales Visit untuk mencatat kunjungan ke customer ini"
+    @click="createVisitFromFollowUp(followUpStore.followUpDetail)"
+  >
+    <font-awesome-icon icon="fa-solid fa-location-dot" />
+    Visit Customer
+  </button>
+
+  <button
+    v-if="!['DONE', 'CLOSED', 'CANCELLED'].includes(followUpStore.followUpDetail.status)"
+    class="btn-save"
+    title="Selesaikan follow up ini dan catat hasilnya"
+    :disabled="followUpStore.submittingResult"
+    @click="closeDetailModal(); openSubmitCustomerModal(followUpStore.followUpDetail)"
+  >
+    <font-awesome-icon icon="fa-solid fa-check" />
+    Submit Result
+  </button>
+</template>
+
+  <button class="btn-cancel" @click="closeDetailModal">Close</button>
+</template>
     </AppModal>
 
 
@@ -2051,36 +2139,49 @@ const fuTypeIcon = (type) => {
             @mouseenter="hoveredGroupKey = groupKeyOf(fu)"
             @mouseleave="hoveredGroupKey = null"
           >
+            
             <div class="open-fu-content">
-              <div class="fu-code">
-                <font-awesome-icon
-                  icon="fa-solid fa-circle"
-                  :style="{ color: groupColorOf(groupKeyOf(fu)), fontSize: '9px' }"
-                />
-                {{ codeDisplay(fu).value }}
-                <span v-if="!codeDisplay(fu).isRef" class="code-badge-note">(No Ref)</span>
-              </div>
+  <div class="fu-code">
+    <font-awesome-icon
+      icon="fa-solid fa-circle"
+      :style="{ color: groupColorOf(groupKeyOf(fu)), fontSize: '9px' }"
+    />
+    {{ codeDisplay(fu).value }}
+    <span v-if="!codeDisplay(fu).isRef" class="code-badge-note">(Tidak ada No Reference)</span>
+  </div>
 
-              <div class="fu-subject">
-                {{ fu.subject }}
-              </div>
+  <div class="fu-subject">
+    {{ fu.subject }}
+  </div>
 
-              <div class="fu-footer">
-                <div class="fu-date">
-                  <font-awesome-icon icon="fa-solid fa-calendar-days" />
-                  {{ followUpStore.formatDate(fu.follow_up_at) }}
-                </div>
+  <div class="fu-footer">
+    <div class="fu-date">
+      <font-awesome-icon icon="fa-solid fa-calendar-days" />
+      {{ followUpStore.formatDate(fu.follow_up_at) }}
+    </div>
 
-                <button
-                  class="btn-close-fu"
-                  :disabled="closingFollowUpId === fu.id"
-                  @click="handleCloseFollowUp(fu)"
-                >
-                  <font-awesome-icon icon="fa-solid fa-lock" />
-                  {{ closingFollowUpId === fu.id ? 'Closing...' : 'Close' }}
-                </button>
-              </div>
-            </div>
+    <div class="fu-footer-actions">
+      <button
+        
+        class="btn btn-secondary btn-sm"
+        title="Lihat Detail Follow Up"
+        @click="openDetailModal({ id: fu.id }, true)"
+      >
+        <font-awesome-icon icon="fa-eye" />
+        Details
+      </button>
+
+      <button
+        class="btn btn-secondary btn-sm"
+        :disabled="closingFollowUpId === fu.id"
+        @click="handleCloseFollowUp(fu)"
+      >
+        <font-awesome-icon icon="fa-solid fa-lock" />
+        {{ closingFollowUpId === fu.id ? 'Closing...' : 'Close' }}
+      </button>
+    </div>
+  </div>
+</div>
           </div>
         </div>
 
@@ -2122,6 +2223,10 @@ const fuTypeIcon = (type) => {
                   <font-awesome-icon icon="fa-solid fa-stamp" />
                   {{ /closed/i.test(item.title) ? 'Closed' : 'Done' }}
                 </span>
+
+                
+
+
                 <small>{{ item.activity_at }}</small>
               </div>
               <div style="display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap">
@@ -2129,34 +2234,59 @@ const fuTypeIcon = (type) => {
                   {{ item.source === 'VISIT' ? 'Visit' : 'Follow Up' }}
                 </span>
                 <span v-if="item.follow_up_code" class="status-badge status-secondary">
-                  {{ item.no_reference || item.follow_up_code }}
+                 No Ref: {{ item.no_reference || item.follow_up_code }}
                 </span>
-                <span v-if="item.visit_code" class="status-badge status-secondary">{{ item.visit_code }}</span>
+                <span v-if="item.visit_code" class="status-badge status-secondary">Code Visit: {{ item.visit_code }}</span>
               </div>
-              <div class="td-muted rich-content" style="margin:0 0 8px" v-html="item.description || '-'"></div>
+              <!-- Description: khusus VISIT dibungkus box "Catatan Kunjungan" biar konsisten
+                sama tampilan box Noted di FOLLOW_UP. Untuk FOLLOW_UP, tetap teks polos
+                (cuma catatan otomatis sistem, bukan input manual). -->
+            <div
+              v-if="item.source === 'FOLLOW_UP'"
+              class="td-muted rich-content"
+              style="margin:0 0 8px"
+              v-html="item.description || '-'"
+            ></div>
+
+            <div v-else-if="item.source === 'VISIT' && item.description" class="timeline-notes-box">
+              <div class="timeline-notes-label">
+                <font-awesome-icon icon="fa-solid fa-comment-dots" /> Catatan Kunjungan
+              </div>
+              <div class="rich-content" v-html="item.description"></div>
+            </div>
 
               <!-- Notes asli follow-up (diketik user saat reschedule/submit result),
                    dibedakan dari description di atas yang cuma teks otomatis sistem.
                    Cuma tampil untuk FOLLOW_UP dan kalau memang ada isinya. -->
               <div v-if="item.source === 'FOLLOW_UP' && item.notes" class="timeline-notes-box">
                 <div class="timeline-notes-label">
-                  <font-awesome-icon icon="fa-solid fa-note-sticky" /> Catatan
+                  <font-awesome-icon icon="fa-solid fa-note-sticky" /> Noted
                 </div>
                 <div class="rich-content" v-html="item.notes"></div>
               </div>
 
+             
               <template v-if="item.source === 'VISIT'">
-                <div style="font-size:0.75rem; display:flex; gap:16px; margin-bottom:6px">
-                  <span><font-awesome-icon icon="fa-solid fa-right-to-bracket" style="color:#16a34a" /> {{ item.check_in_at ?? '-' }}</span>
-                  <span><font-awesome-icon icon="fa-solid fa-right-from-bracket" style="color:#dc2626" /> {{ item.check_out_at ?? '-' }}</span>
-                </div>
-                <div v-if="item.has_complaint" class="info-alert info-danger" style="font-size:0.8rem">
-                  <font-awesome-icon icon="triangle-exclamation" /> <span class="rich-content" v-html="item.complaint_detail"></span>
-                </div>
-                <div v-if="item.has_potential_order" class="info-alert info-success" style="font-size:0.8rem">
-                  <font-awesome-icon icon="fa-solid fa-sack-dollar" /> <span class="rich-content" v-html="item.potential_order_detail"></span>
-                </div>
-              </template>
+  <div class="timeline-notes-box">
+    <div class="timeline-notes-label">
+      <font-awesome-icon icon="fa-solid fa-clock" /> Datetime Check In - Check Out
+      <span v-if="item.visit_code" class="timeline-notes-subtag">{{ item.visit_code }}</span>
+    </div>
+    <div style="font-size:0.8rem; display:flex; gap:16px">
+      <span><font-awesome-icon icon="fa-solid fa-right-to-bracket" style="color:#16a34a" /> {{ item.check_in_at ?? '-' }}</span>
+      <span><font-awesome-icon icon="fa-solid fa-right-from-bracket" style="color:#dc2626" /> {{ item.check_out_at ?? '-' }}</span>
+    </div>
+  </div>
+
+  <template v-if="item.has_complaint || item.has_potential_order">
+    <div v-if="item.has_complaint" class="info-alert info-danger" style="font-size:0.8rem">
+      <font-awesome-icon icon="triangle-exclamation" /> <span class="rich-content" v-html="item.complaint_detail"></span>
+    </div>
+    <div v-if="item.has_potential_order" class="info-alert info-success" style="font-size:0.8rem">
+      <font-awesome-icon icon="fa-solid fa-sack-dollar" /> <span class="rich-content" v-html="item.potential_order_detail"></span>
+    </div>
+  </template>
+            </template>
             </div>
           </div>
         </div>
@@ -2251,6 +2381,18 @@ const fuTypeIcon = (type) => {
 .fw-600 { font-weight: 600; }
 .target-sub { display: flex; align-items: center; gap: 4px; margin-top: 2px; }
 
+
+.timeline-notes-subtag {
+  margin-left: auto;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #6366f1;
+  background: rgba(99,102,241,0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: none;
+  letter-spacing: normal;
+}
 /* CODE BADGE â€” dipakai di Table, Card, dan panel Follow Up Aktif.
    Disatukan supaya tampilannya konsisten di semua tempat, dan
    otomatis muat teks panjang berkat text-overflow: ellipsis. */
@@ -2600,6 +2742,26 @@ const fuTypeIcon = (type) => {
     cursor:not-allowed;
 }
 
+.detail-block {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-main);
+}
+.detail-block .detail-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.detail-block-content {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 /* â”€â”€ GROUP LINK: warna penghubung Follow Up Aktif <-> histori terkait â”€â”€
    Menggantikan garis fisik. Setiap grup (follow-up + histori yang lahir
    dari visit yang sama) diberi warna konsisten lewat --group-color, dan
@@ -2668,9 +2830,53 @@ const fuTypeIcon = (type) => {
     margin-bottom:10px;
 }
 
+.fu-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-detail-fu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid #6366f1;
+  border-radius: 8px;
+  background: transparent;
+  color: #6366f1;
+  padding: 8px 14px;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: .2s;
+}
+.btn-detail-fu:hover {
+  background: #6366f1;
+  color: #fff;
+}
+
+.btn-visit {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-visit:hover {
+  background: #15803d;
+}
+
+
 /* Rich text dari editor. Gunakan :deep karena elemen dari v-html tidak menerima scoped attribute. */
 .rich-content :deep(p) { margin: 0 0 8px; }
 .rich-content :deep(p:last-child) { margin-bottom: 0; }
 .rich-content :deep(ul), .rich-content :deep(ol) { margin: 6px 0; padding-left: 20px; }
 .rich-content :deep(li) { margin: 3px 0; }
 </style>
+

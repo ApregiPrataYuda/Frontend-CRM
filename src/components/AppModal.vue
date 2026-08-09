@@ -1,6 +1,8 @@
 <script setup>
 import { onMounted, onUnmounted } from 'vue'
-
+defineOptions({
+  inheritAttrs: false
+})
 const props = defineProps({
   show:    { type: Boolean, default: false },
   title:   { type: String,  default: '' },
@@ -8,6 +10,7 @@ const props = defineProps({
   size:    { type: String,  default: 'md' }, // sm | md | lg | xl
   persistent: { type: Boolean, default: false }, // true = klik luar tidak tutup
   hideClose: { type: Boolean, default: false },
+   elevated: { type: Boolean, default: false }, 
 })
 
 const emit = defineEmits(['close'])
@@ -27,7 +30,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="show" class="modal-overlay" @click.self="close">
+      <div v-if="show" class="modal-overlay"  :style="elevated ? { zIndex: 2100 } : undefined" @click.self="close">
         <div class="modal-box" :class="`modal-${size}`">
 
           <!-- Header -->

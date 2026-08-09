@@ -191,7 +191,10 @@ import {
   faAddressCard,
   faStamp,
   faCartShopping,
-  faHashtag
+  faHashtag,
+  faCommentDots,
+  faHeading
+  
 
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -371,7 +374,9 @@ library.add(
   faAddressCard,
   faStamp,
   faCartShopping,
-  faHashtag
+  faHashtag,
+  faCommentDots,
+  faHeading
 
 )
 

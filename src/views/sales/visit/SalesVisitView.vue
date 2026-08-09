@@ -233,11 +233,11 @@ async function capturePhoto() {
 
   ctx.fillStyle = '#ffffff'
   ctx.font = 'bold 28px Arial'
-  ctx.fillText(`ðŸ¢ ${selectedVisit.value?.company_name || 'Visit Sales'}`, 20, canvas.height - 75)
+  ctx.fillText(`${selectedVisit.value?.company_name || 'Visit Sales'}`, 20, canvas.height - 75)
   ctx.font = '20px Arial'
-  ctx.fillText(`ðŸ•’ ${currentDateTime.value}`, 20, canvas.height - 45)
+  ctx.fillText(`${currentDateTime.value}`, 20, canvas.height - 45)
   ctx.font = '18px Arial'
-  wrapText(ctx, `ðŸ“ ${currentLocation.value.address || 'Location unavailable'}`, 20, canvas.height - 18, canvas.width - 40, 22)
+  wrapText(ctx, `${currentLocation.value.address || 'Location unavailable'}`, 20, canvas.height - 18, canvas.width - 40, 22)
 
   capturedPhoto.value = canvas.toDataURL('image/jpeg', 1)
   stopCamera()
