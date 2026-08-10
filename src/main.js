@@ -193,7 +193,8 @@ import {
   faCartShopping,
   faHashtag,
   faCommentDots,
-  faHeading
+  faHeading,
+  faMoneyBillTransfer
   
 
 } from '@fortawesome/free-solid-svg-icons'
@@ -376,7 +377,8 @@ library.add(
   faCartShopping,
   faHashtag,
   faCommentDots,
-  faHeading
+  faHeading,
+  faMoneyBillTransfer
 
 )
 

@@ -389,6 +389,58 @@ function resendEmail() {
 }
 
 /* ========================================
+   DARK MODE — FORGOT PASSWORD
+======================================== */
+.login-page.dark-theme {
+  --login-bg: #111827;
+  --login-card: #1f2937;
+  --login-border: #374151;
+  --login-text: #f8fafc;
+  --login-muted: #cbd5e1;
+  --login-input: #111827;
+
+  background: var(--login-bg);
+}
+
+.login-page.dark-theme .login-right {
+  background: var(--login-bg);
+}
+
+.login-page.dark-theme .login-header h2,
+.login-page.dark-theme .form-group label,
+.login-page.dark-theme .success-state h2 {
+  color: var(--login-text);
+}
+
+.login-page.dark-theme .login-header p,
+.login-page.dark-theme .success-state p,
+.login-page.dark-theme .back-link,
+.login-page.dark-theme .copyright {
+  color: var(--login-muted);
+}
+
+.login-page.dark-theme .login-card {
+  background: var(--login-card);
+  border-color: var(--login-border);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35);
+}
+
+.login-page.dark-theme .input-wrapper input {
+  background: var(--login-input);
+  border-color: var(--login-border);
+  color: var(--login-text);
+}
+
+.login-page.dark-theme .input-wrapper input::placeholder,
+.login-page.dark-theme .input-icon {
+  color: #94a3b8;
+}
+
+.login-page.dark-theme .outline-btn:hover {
+  background: rgba(99, 102, 241, 0.16) !important;
+}
+
+/* ========================================
    BUTTON PRIMARY
 ======================================== */
 .login-btn {

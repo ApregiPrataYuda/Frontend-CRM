@@ -23,6 +23,12 @@ export const usecustomersPopulationStore = defineStore('customers', () => {
   const summaryData = ref(null)
   const loadingSummary = ref(false)
 
+  // ═══ BARU: ASSIGN SALES ═══
+  const salesOptions = ref([])          // list sales untuk dropdown
+  const loadingSalesOptions = ref(false)
+  const assigningSales = ref(false)
+  const errorAssign = ref(null)
+
   const pagination = reactive({
     current_page: 1,
     per_page: 10,
@@ -88,7 +94,6 @@ export const usecustomersPopulationStore = defineStore('customers', () => {
     loadingSummary.value = true
     try {
       const response = await customersPopulationServices.summaryPopulationCustomer()
-      // response shape: { success, message, data: { total_customers, total_purchased, total_not_purchased, total_transaksi, top_customers } }
       summaryData.value = response.data.data
     } catch (error) {
       console.error('Gagal fetch summary:', error)
@@ -214,6 +219,73 @@ export const usecustomersPopulationStore = defineStore('customers', () => {
     }
   }
 
+  // ═══ BARU: ASSIGN SALES ═══
+
+  // ── FETCH LIST SALES (untuk dropdown) ──
+  const fetchSalesOptions = async () => {
+    loadingSalesOptions.value = true
+    try {
+      const res = await customersPopulationServices.getSalesList()
+      salesOptions.value = res.data.data ?? []
+    } catch (err) {
+      console.error('Gagal fetch sales options:', err)
+      salesOptions.value = []
+    } finally {
+      loadingSalesOptions.value = false
+    }
+  }
+
+  // ── ASSIGN customer ke sales ──
+  const assignCustomerToSales = async (odooCustomerId, salesId) => {
+    assigningSales.value = true
+    errorAssign.value = null
+    try {
+      const res = await customersPopulationServices.assignSales({
+        odoo_customer_id: odooCustomerId,
+        sales_id: salesId,
+      })
+
+      // Update data di list yang sedang tampil, biar tidak perlu refetch semua
+      const target = customersData.value.find(c => c.odoo_partner_id === odooCustomerId)
+      if (target) {
+        target.sales_id = salesId
+        const sales = salesOptions.value.find(s => s.id_user === salesId)
+        target.assigned_name = sales?.fullname ?? target.assigned_name
+      }
+
+      return res.data
+    } catch (err) {
+      errorAssign.value = err.response?.data?.message || 'Gagal assign customer ke sales'
+      throw err
+    } finally {
+      assigningSales.value = false
+    }
+  }
+
+  // ── UNASSIGN customer dari sales ──
+  const unassignCustomerFromSales = async (odooCustomerId) => {
+    assigningSales.value = true
+    errorAssign.value = null
+    try {
+      const res = await customersPopulationServices.unassignSales({
+        odoo_customer_id: odooCustomerId,
+      })
+
+      const target = customersData.value.find(c => c.odoo_partner_id === odooCustomerId)
+      if (target) {
+        target.sales_id = null
+        target.assigned_name = null
+      }
+
+      return res.data
+    } catch (err) {
+      errorAssign.value = err.response?.data?.message || 'Gagal unassign customer'
+      throw err
+    } finally {
+      assigningSales.value = false
+    }
+  }
+
   return {
     // state
     customersData, loadingCustomers, searchCustomers,
@@ -222,6 +294,8 @@ export const usecustomersPopulationStore = defineStore('customers', () => {
     customerDetail, purchaseItems, loadingDetail,
     syncingCustomers, syncingPurchases,
     summaryData, loadingSummary,
+    // BARU
+    salesOptions, loadingSalesOptions, assigningSales, errorAssign,
     // actions
     buildUrl,
     fetchCustomers,
@@ -231,5 +305,7 @@ export const usecustomersPopulationStore = defineStore('customers', () => {
     formatDate, formatCurrency,
     detailCustomer,
     syncCustomers, syncCustomerPurchases,
+    // BARU
+    fetchSalesOptions, assignCustomerToSales, unassignCustomerFromSales,
   }
 })

@@ -2,8 +2,10 @@
 import { onMounted, ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usecustomersPopulationStore } from '@/stores/customersPopulationStore'
+import { useAuthStore } from '@/stores/authStore'
 
 const store = usecustomersPopulationStore()
+const authStore = useAuthStore()
 
 const {
   customersData, loadingCustomers, searchCustomers,
@@ -11,11 +13,20 @@ const {
   customerDetail, purchaseItems, loadingDetail,
   syncingCustomers, syncingPurchases,
   summaryData, loadingSummary,
+  salesOptions, loadingSalesOptions, assigningSales, errorAssign,
 } = storeToRefs(store)
+
+const { isAdmin, isManager } = storeToRefs(authStore)
+
+// Hanya admin & manager yang boleh assign sales
+const canAssignSales = computed(() => isAdmin.value || isManager.value)
 
 onMounted(() => {
   store.fetchCustomers()
   store.fetchSummary()
+  if (canAssignSales.value) {
+    store.fetchSalesOptions()
+  }
 })
 
 // ── DASHBOARD: COMPUTED ──
@@ -100,6 +111,48 @@ function closeDetailModal() {
   isDetailModalVisible.value = false
   customerDetail.value = null
   purchaseItems.value = []
+}
+
+// ── ASSIGN SALES MODAL ──
+const isAssignModalVisible = ref(false)
+const assignTarget = ref(null)       // customer yang lagi mau di-assign
+const selectedSalesId = ref(null)
+const assignError = ref('')
+
+function openAssignModal(customer) {
+  assignTarget.value = customer
+  selectedSalesId.value = customer.sales_id ?? null
+  assignError.value = ''
+  isAssignModalVisible.value = true
+}
+
+function closeAssignModal() {
+  isAssignModalVisible.value = false
+  assignTarget.value = null
+  selectedSalesId.value = null
+  assignError.value = ''
+}
+
+async function handleConfirmAssign() {
+  if (!selectedSalesId.value) {
+    assignError.value = 'Pilih sales terlebih dahulu.'
+    return
+  }
+  try {
+    await store.assignCustomerToSales(assignTarget.value.odoo_partner_id, selectedSalesId.value)
+    closeAssignModal()
+  } catch (e) {
+    assignError.value = store.errorAssign || 'Gagal assign customer.'
+  }
+}
+
+async function handleUnassign() {
+  try {
+    await store.unassignCustomerFromSales(assignTarget.value.odoo_partner_id)
+    closeAssignModal()
+  } catch (e) {
+    assignError.value = store.errorAssign || 'Gagal unassign customer.'
+  }
 }
 
 // ── SYNC ──
@@ -411,6 +464,11 @@ function goNext() {
               <font-awesome-icon icon="phone" class="cc-icon" />
               <span>{{ customer.phone && customer.phone !== '0' ? customer.phone : '-' }}</span>
             </div>
+            <div class="cc-row">
+              <font-awesome-icon icon="user-tie" class="cc-icon" />
+              <span v-if="customer.assigned_name">{{ customer.assigned_name }}</span>
+              <span v-else class="text-muted-color">Belum di-assign</span>
+            </div>
           </div>
 
           <div class="cc-transaksi">
@@ -421,6 +479,14 @@ function goNext() {
           <div class="cc-footer">
             <span class="cc-date">&nbsp;</span>
             <div class="cc-actions">
+              <button
+                v-if="canAssignSales"
+                class="act-btn act-assign"
+                @click="openAssignModal(customer)"
+                title="Assign Sales"
+              >
+                <font-awesome-icon icon="user-tie" />
+              </button>
               <button class="act-btn act-info" @click="openDetailModal(customer)" title="Detail">
                 <font-awesome-icon icon="circle-info" />
               </button>
@@ -439,7 +505,8 @@ function goNext() {
             <th style="width:160px">PHONE</th>
             <th style="width:140px">STATUS</th>
             <th style="width:120px">TRANSAKSI</th>
-            <th style="width:100px; text-align:center">ACTIONS</th>
+            <th style="width:150px">SALES</th>
+            <th style="width:130px; text-align:center">ACTIONS</th>
           </tr>
         </thead>
         <tbody>
@@ -453,7 +520,19 @@ function goNext() {
               <span v-else class="table-role-badge">Belum Beli</span>
             </td>
             <td class="td-muted">{{ customer.total_transaksi }}x</td>
+            <td class="td-muted">
+              <span v-if="customer.assigned_name">{{ customer.assigned_name }}</span>
+              <span v-else class="text-muted-color">-</span>
+            </td>
             <td class="td-actions">
+              <button
+                v-if="canAssignSales"
+                class="act-btn act-assign"
+                @click="openAssignModal(customer)"
+                title="Assign Sales"
+              >
+                <font-awesome-icon icon="user-tie" />
+              </button>
               <button class="act-btn act-info" @click="openDetailModal(customer)" title="Detail">
                 <font-awesome-icon icon="circle-info" />
               </button>
@@ -478,6 +557,7 @@ function goNext() {
       </div>
     </div>
 
+    <!-- ═══ MODAL: DETAIL PURCHASE ═══ -->
     <Teleport to="body">
       <div v-if="isDetailModalVisible" class="modal-overlay" @click.self="closeDetailModal">
         <div class="modal-box">
@@ -498,6 +578,11 @@ function goNext() {
                 <div class="detail-row">
                   <span class="detail-label">Customer Name</span>
                   <span class="detail-value font-semibold">{{ customerDetail?.name }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Sales</span>
+                  <span v-if="customerDetail?.assigned_name" class="detail-value">{{ customerDetail.assigned_name }}</span>
+                  <span v-else class="text-muted-color">Belum di-assign</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Total Transaksi</span>
@@ -532,6 +617,67 @@ function goNext() {
           </div>
           <div class="modal-footer">
             <button class="btn-cancel" @click="closeDetailModal">Close</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- ═══ MODAL: ASSIGN SALES ═══ -->
+    <Teleport to="body">
+      <div v-if="isAssignModalVisible" class="modal-overlay" @click.self="closeAssignModal">
+        <div class="modal-box modal-sm">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <font-awesome-icon icon="user-tie" /> Assign Sales
+            </h5>
+            <button class="modal-close" @click="closeAssignModal">
+              <font-awesome-icon icon="xmark" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="detail-list mb-3">
+              <div class="detail-row">
+                <span class="detail-label">Customer</span>
+                <span class="detail-value font-semibold">{{ assignTarget?.name }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Sales Saat Ini</span>
+                <span v-if="assignTarget?.assigned_name" class="detail-value">{{ assignTarget.assigned_name }}</span>
+                <span v-else class="text-muted-color">Belum di-assign</span>
+              </div>
+            </div>
+
+            <label class="form-label-custom">Pilih Sales</label>
+            <div v-if="loadingSalesOptions" class="td-center py-2">
+              <font-awesome-icon icon="spinner" spin /> Memuat daftar sales...
+            </div>
+            <select v-else v-model="selectedSalesId" class="select-input">
+              <option :value="null" disabled>-- Pilih Sales --</option>
+              <option v-for="s in salesOptions" :key="s.id_user" :value="s.id_user">
+                {{ s.fullname }}
+              </option>
+            </select>
+
+            <div v-if="assignError" class="assign-error">{{ assignError }}</div>
+          </div>
+          <div class="modal-footer">
+            <button
+              v-if="assignTarget?.sales_id"
+              class="btn-cancel btn-unassign"
+              :disabled="assigningSales"
+              @click="handleUnassign"
+            >
+              <font-awesome-icon icon="user-xmark" /> Unassign
+            </button>
+            <button class="btn-cancel" @click="closeAssignModal">Batal</button>
+            <button
+              class="btn-toolbar btn-purple"
+              :disabled="assigningSales"
+              @click="handleConfirmAssign"
+            >
+              <font-awesome-icon :icon="assigningSales ? 'spinner' : 'check'" :spin="assigningSales" />
+              {{ assigningSales ? 'Menyimpan...' : 'Simpan' }}
+            </button>
           </div>
         </div>
       </div>
@@ -1052,6 +1198,8 @@ function goNext() {
 .act-delete:hover { background: #ef4444; color: #fff; }
 .act-info         { color: #6366f1; border-color: #6366f1; }
 .act-info:hover   { background: #6366f1; color: #fff; }
+.act-assign        { color: #16a34a; border-color: #16a34a; }
+.act-assign:hover  { background: #16a34a; color: #fff; }
 
 .table-role-badge {
   font-size: 0.78rem;
@@ -1224,6 +1372,7 @@ function goNext() {
   justify-content: flex-end;
   padding: 14px 20px;
   border-top: 1px solid var(--border-main);
+  flex-wrap: wrap;
 }
 .justify-content-center { justify-content: center !important; }
 
@@ -1238,6 +1387,12 @@ function goNext() {
   cursor: pointer;
 }
 .btn-cancel:hover { background: var(--border-main); }
+.btn-unassign {
+  color: #ef4444;
+  border-color: #ef4444;
+  margin-right: auto;
+}
+.btn-unassign:hover { background: rgba(239,68,68,0.1); }
 
 .detail-list { display: flex; flex-direction: column; }
 .detail-row {
@@ -1309,5 +1464,37 @@ function goNext() {
   gap: 14px;
   font-size: 0.78rem;
   color: var(--text-muted);
+}
+
+/* ── ASSIGN SALES FORM ── */
+.form-label-custom {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.select-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  outline: none;
+  cursor: pointer;
+}
+.select-input:focus { border-color: #6366f1; }
+.assign-error {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 </style>

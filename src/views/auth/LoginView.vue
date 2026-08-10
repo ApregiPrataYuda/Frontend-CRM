@@ -80,7 +80,7 @@ async function handleLogin() {
       <div class="right-wrapper">
 
         <div class="login-header">
-          <h2>Welcome Back 👋</h2>
+          <h2>Selamat Datang👋</h2>
           <p>Silakan login ke akun anda</p>
         </div>
 
@@ -462,6 +462,54 @@ async function handleLogin() {
 .fade-leave-to {
   opacity: 0;
 }
+
+
+
+.login-page.dark-theme {
+  --login-bg: #111827;
+  --login-card: #1f2937;
+  --login-border: #374151;
+  --login-text: #f8fafc;
+  --login-muted: #cbd5e1;
+  --login-input: #111827;
+
+  background: var(--login-bg);
+}
+
+.login-page.dark-theme .login-right {
+  background: var(--login-bg);
+}
+
+.login-page.dark-theme .login-header h2,
+.login-page.dark-theme .form-group label {
+  color: var(--login-text);
+}
+
+.login-page.dark-theme .login-header p,
+.login-page.dark-theme .remember-me,
+.login-page.dark-theme .login-footer {
+  color: var(--login-muted);
+}
+
+.login-page.dark-theme .login-card {
+  background: var(--login-card);
+  border-color: var(--login-border);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35);
+}
+
+.login-page.dark-theme .input-wrapper input {
+  background: var(--login-input);
+  border-color: var(--login-border);
+  color: var(--login-text);
+}
+
+.login-page.dark-theme .input-wrapper input::placeholder,
+.login-page.dark-theme .input-icon,
+.login-page.dark-theme .toggle-password {
+  color: #94a3b8;
+}
+
+
 
 /* ========================================
    RESPONSIVE DESIGN
