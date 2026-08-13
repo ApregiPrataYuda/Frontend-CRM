@@ -172,17 +172,6 @@ async function handleSave() {
               />
             </div>
 
-            <div class="form-group">
-              <label>Divisi</label>
-
-              <input
-                v-model="account.department"
-                class="form-input"
-                placeholder="Divisi"
-              />
-            </div>
-
-           
 
           </div>
         </div>
@@ -206,27 +195,7 @@ async function handleSave() {
 
             <div class="form-grid">
 
-              <div class="form-group form-full">
-                <label>Password Saat Ini</label>
-
-                <div class="input-eye">
-                  <input
-                    v-model="security.currentPassword"
-                    :type="showPass.current ? 'text' : 'password'"
-                    class="form-input"
-                    placeholder="••••••••"
-                  />
-
-                  <button
-                    class="eye-btn"
-                    @click="showPass.current = !showPass.current"
-                  >
-                    <font-awesome-icon
-                      :icon="showPass.current ? 'eye-slash' : 'eye'"
-                    />
-                  </button>
-                </div>
-              </div>
+              
 
               <div class="form-group">
                 <label>Password Baru</label>
@@ -264,7 +233,7 @@ async function handleSave() {
                   <button
                     class="eye-btn"
                     @click="showPass.confirm = !showPass.confirm"
-                  >
+                   >
                     <font-awesome-icon
                       :icon="showPass.confirm ? 'eye-slash' : 'eye'"
                     />
@@ -279,7 +248,7 @@ async function handleSave() {
           <div class="section-block">
 
             <div class="block-label">
-              Sesi Aktif
+              Anda Aktif di Perangkat Ini Sekarang
             </div>
 
             <div class="session-list">
@@ -306,27 +275,7 @@ async function handleSave() {
 
               </div>
 
-              <div class="session-item">
-
-                <div class="session-icon">
-                  <font-awesome-icon icon="mobile-screen" />
-                </div>
-
-                <div class="session-info">
-                  <div class="session-device">
-                    Safari — iPhone
-                  </div>
-
-                  <div class="session-detail">
-                    Indonesia · 2 jam lalu
-                  </div>
-                </div>
-
-                <button class="btn-revoke">
-                  Cabut
-                </button>
-
-              </div>
+              
 
             </div>
           </div>
@@ -334,28 +283,9 @@ async function handleSave() {
           <!-- 2FA -->
           <div class="section-block">
 
-            <div class="block-label">
-              Two-Factor Authentication
-            </div>
+           
 
-            <div class="toggle-row">
-
-              <div class="toggle-info">
-                <div class="toggle-title">
-                  Aktifkan 2FA
-                </div>
-
-                <div class="toggle-desc">
-                  Tambahkan keamanan ekstra pada akun
-                </div>
-              </div>
-
-              <label class="switch">
-                <input type="checkbox" />
-                <span class="switch-track" />
-              </label>
-
-            </div>
+            
           </div>
 
         </div>
