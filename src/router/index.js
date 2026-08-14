@@ -360,7 +360,7 @@ const routes = [
         }
       },
 
-       {
+      {
         path: 'customer-population',
         name: 'Customer Population',
 
@@ -368,6 +368,18 @@ const routes = [
         import('@/views/sales/customers/CustomersProductPopulationView.vue'),
         meta: {
           role: [2], title: 'Customer Population'
+        }
+      },
+
+
+      {
+        path: 'master-product',
+        name: 'Master Product',
+
+        component: () =>
+        import('@/views/sales/master/MasterProductView.vue'),
+        meta: {
+          role: [2], title: 'Master Product'
         }
       },
 

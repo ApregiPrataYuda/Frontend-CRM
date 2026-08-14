@@ -1,0 +1,1 @@
+<template>ini master product</template>

@@ -34,11 +34,34 @@ const canUpdate  = computed(() => permission.canUpdate(currentUrl.value))
 const canDelete  = computed(() => permission.canDelete(currentUrl.value))
 const canView    = computed(() => permission.canView(currentUrl.value))
 
-// NOTE: belum ada permission action khusus "assign sales" di PermissionStore,
-// jadi fitur "Assign Sales" saya gate pakai canUpdate dulu (dianggap bagian
-// dari hak update data). Ganti computed ini kalau nanti ada permission
-// action tersendiri (misal permission.canAssign(currentUrl.value)).
-const canAssignSales = computed(() => canUpdate.value)
+// ── ROLE CHECK: admin/manager vs sales ────────────────
+// Sama seperti aturan di backend ensurePrivileged() (role_id 2 = Sales,
+// selain itu dianggap privileged/admin-manager). Dipakai buat:
+//  1. Nampilin tombol "Assign Sales" di tab Semua Data.
+//  2. Nyembunyiin section "PIC / Sales yang menangani" di modal Add/Edit,
+//     biar Sales nggak bisa iseng reassign data ke sales lain.
+//
+// NOTE: saya nggak punya visibility ke auth store project ini, jadi
+// role_id user yang login saya ambil dari localStorage key "user" —
+// asumsi ini sesuai response login yang kamu kasih contohnya kemarin
+// ({ ..., "user": { "id":10, "fullname":"Budhi", ..., "role_id":3 } }).
+// Kalau ternyata user login disimpan di tempat lain (misal Pinia
+// authStore / key localStorage lain), tinggal sesuaikan isi
+// getLoggedInRoleId() ini aja, bagian lain nggak perlu diubah.
+function getLoggedInRoleId() {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed?.role_id ?? null
+  } catch (e) {
+    console.error('Gagal baca role_id user login:', e)
+    return null
+  }
+}
+
+const loggedInRoleId = getLoggedInRoleId()
+const canAssignSales = computed(() => Number(loggedInRoleId) !== 2)
 
 // ── VIEW MODE (all / mine / incomplete) — config statis buat tab ──
 const viewModes = [
@@ -331,7 +354,11 @@ function toggleAssignSelectAll() {
 }
 
 async function submitBulkAssign() {
-  if (!assignTargetUser.value) {
+  // Cek eksplisit ke '' / null / undefined (bukan cuma falsy check) supaya
+  // kalau suatu saat ada id sales bernilai 0, validasi ini nggak salah
+  // nganggep "belum pilih". Ini juga jaga-jaga kalau normalisasi data sales
+  // di store berubah bentuk lagi ke depannya.
+  if (assignTargetUser.value === '' || assignTargetUser.value === null || assignTargetUser.value === undefined) {
     showToast('error', 'Pilih sales tujuan terlebih dahulu.')
     return
   }
@@ -587,10 +614,12 @@ async function submitBulkAssign() {
             </td>
             <td class="td-muted">{{ store.formatDate(item.created_at) }}</td>
             <td class="td-actions">
-              <button v-if="canUpdate" class="act-btn act-edit" title="Edit" @click="openEditModal(item)">
+              <!-- Tab "Data Belum Lengkap": cukup tombol Detail, Edit/Hapus
+                   disembunyikan meskipun user punya hak canUpdate/canDelete. -->
+              <button v-if="canUpdate && store.view !== 'incomplete'" class="act-btn act-edit" title="Edit" @click="openEditModal(item)">
                 <font-awesome-icon icon="pen-to-square" />
               </button>
-              <button v-if="canDelete" class="act-btn act-delete" title="Hapus" @click="openDeleteModal(item)">
+              <button v-if="canDelete && store.view !== 'incomplete'" class="act-btn act-delete" title="Hapus" @click="openDeleteModal(item)">
                 <font-awesome-icon icon="trash-can" />
               </button>
               <button v-if="canView" class="act-btn act-info" title="Detail" @click="openDetailModal(item.id)">
@@ -738,7 +767,9 @@ async function submitBulkAssign() {
           <input v-model="formData.mechanical_seal_drawing_no" class="form-input" placeholder="e.g. MSD-0021" />
         </div>
 
-        <div class="form-group">
+        <!-- Khusus admin/manager: Sales nggak boleh liat/ubah PIC biar nggak
+             bisa iseng reassign data ke sales lain lewat form edit. -->
+        <div v-if="canAssignSales" class="form-group">
           <label>PIC / Sales yang menangani</label>
           <div class="pic-checkbox-grid">
             <label v-for="s in salesSelectData" :key="s.id" class="pic-checkbox">

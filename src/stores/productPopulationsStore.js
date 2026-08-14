@@ -264,12 +264,30 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
   // ── SELECT: SALES (dropdown PIC di modal Add/Edit & Assign Sales) ──
   const salesSelectData = ref([])
 
+  // Endpoint /leads/select/user-sales dipakai bareng-bareng sama fitur lain
+  // (leads), jadi field id/nama-nya nggak dijamin selalu literal "id"/"name".
+  // Di-normalize di sini biar dropdown/checkbox PIC di komponen selalu bisa
+  // pakai s.id & s.name dengan aman, apapun nama field asli dari API.
+  // (Ini juga akar dari bug "Pilih sales tujuan terlebih dahulu" yang selalu
+  // muncul walau sudah pilih nama di dropdown: nama-nya render benar karena
+  // salah satu field cocok, tapi :value="s.id" jadi undefined kalau field id
+  // aslinya bukan "id" — makanya assignTargetUser nggak pernah keisi.)
   const fetchSalesSelect = async () => {
     try {
       const data = await productPopulationsServices.getSales()
-      salesSelectData.value = data
+      const rawList = Array.isArray(data)
+        ? data
+        : (Array.isArray(data?.data) ? data.data : [])
+
+      salesSelectData.value = rawList
+        .map((item) => ({
+          id: item.id ?? item.id_user ?? item.user_id ?? item.value ?? null,
+          name: item.name ?? item.fullname ?? item.full_name ?? item.text ?? item.label ?? '-',
+        }))
+        .filter((item) => item.id !== null && item.id !== undefined)
     } catch (error) {
       console.error('Gagal fetch sales select:', error)
+      salesSelectData.value = []
     }
   }
 
