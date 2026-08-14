@@ -376,7 +376,7 @@ function closeImg() {
     <div class="breadcrumb-card mb-2">
       <div class="breadcrumb-left">
         <h4 class="breadcrumb-title">
-          <font-awesome-icon icon="clock" /> Attendance Presensi
+          <font-awesome-icon icon="clock" /> Attendance
         </h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item">
@@ -417,9 +417,9 @@ function closeImg() {
               "
             />
             {{
-              store.attendanceStatus === 'CHECKED_OUT' ? 'Sudah Absen Lengkap'
-            : store.attendanceStatus === 'CHECKED_IN'  ? 'Sudah Check In'
-            : 'Belum Absen Hari Ini'
+              store.attendanceStatus === 'CHECKED_OUT' ? 'Already Checked In'
+            : store.attendanceStatus === 'CHECKED_IN'  ? 'Checked In'
+            : 'Have Not Checked In Today'
             }}
           </span>
         </div>
@@ -487,7 +487,7 @@ function closeImg() {
 
           <!-- Reset -->
           <button class="btn-toolbar btn-orange" @click="store.resetFilters()">
-            <font-awesome-icon icon="rotate-left" /> Reset
+            <font-awesome-icon icon="rotate-left" /> Refresh
           </button>
         </div>
 

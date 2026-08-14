@@ -66,8 +66,8 @@ function photoUrl(path) {
     <div class="hero-card">
       <div class="hero-inner">
         <div>
-          <h4>Riwayat Absensi Saya</h4>
-          <p>Data absensi akun yang sedang login</p>
+          <h4>My Attendance History</h4>
+          <p>Attendance data of the account that is currently logged in</p>
         </div>
         <button class="btn-export">
           <i class="fa-solid fa-file-excel me-1"></i> Export Excel
@@ -94,7 +94,7 @@ function photoUrl(path) {
         </div>
       </div>
       <div class="summary-card">
-        <div class="summary-label">Terlambat</div>
+        <div class="summary-label">Late</div>
         <div class="summary-value text-yellow">
           {{ historyData.filter(r => r.attendance_status === 'LATE').length }}
         </div>
@@ -112,7 +112,7 @@ function photoUrl(path) {
             v-model="search"
             @input="store.onSearchChange()"
             type="text"
-            placeholder="Cari tanggal, lokasi, device..."
+            placeholder="Search by date, location, device..."
             class="search-input"
           />
         </div>
@@ -134,7 +134,7 @@ function photoUrl(path) {
       <div v-if="error" class="error-banner">
         <i class="fa-solid fa-circle-exclamation"></i>
         {{ error }}
-        <button @click="store.fetchMyHistory()">Coba lagi</button>
+        <button @click="store.fetchMyHistory()">Try again</button>
       </div>
 
       <!-- TABLE -->
@@ -143,14 +143,14 @@ function photoUrl(path) {
           <thead>
             <tr>
               <th>No</th>
-              <th>Tanggal</th>
-              <th>Waktu</th>
-              <th>Tipe</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Type</th>
               <th>Status</th>
-              <th>Lokasi</th>
+              <th>Location</th>
               <th>Device</th>
-              <th>Foto</th>
-              <th>Aksi</th>
+              <th>Photo</th>
+              <th>Action</th>
             </tr>
           </thead>
 
@@ -160,7 +160,7 @@ function photoUrl(path) {
             <tr v-if="loading">
               <td colspan="9" class="state-cell">
                 <div class="spinner"></div>
-                <span>Memuat data...</span>
+                <span>Loading data...</span>
               </td>
             </tr>
 
@@ -168,8 +168,8 @@ function photoUrl(path) {
             <tr v-else-if="isEmpty">
               <td colspan="9" class="state-cell">
                 <div class="empty-icon">📭</div>
-                <p>Belum ada riwayat absensi</p>
-                <small>Coba ubah filter pencarian</small>
+                <p>No attendance history available</p>
+                <small>Try adjusting your search filter</small>
               </td>
             </tr>
 
@@ -254,7 +254,7 @@ function photoUrl(path) {
       <div class="pagination-bar">
         <span class="text-gray text-sm">
           Total {{ pagination.total }} data &nbsp;|&nbsp;
-          Hal {{ pagination.current_page }} / {{ pagination.last_page }}
+          Page {{ pagination.current_page }} / {{ pagination.last_page }}
         </span>
 
         <div class="page-btns">
@@ -291,7 +291,7 @@ function photoUrl(path) {
             <!-- Loading -->
             <div v-if="loadingDetail" class="modal-loading">
               <div class="spinner"></div>
-              <span>Memuat detail...</span>
+              <span>Loading detail...</span>
             </div>
 
             <template v-else-if="detailData">
@@ -299,7 +299,7 @@ function photoUrl(path) {
               <!-- Banner -->
               <div class="modal-banner">
                 <button @click="closeDetail" class="modal-close">✕</button>
-                <p class="modal-eyebrow">Detail Absensi</p>
+                <p class="modal-eyebrow">Attendance Detail</p>
                 <h2 class="modal-name">{{ detailData.user?.fullname ?? '-' }}</h2>
                 <p class="modal-nik">NIK: {{ detailData.employee?.nik ?? '-' }}</p>
                 <div class="modal-badges">
@@ -317,14 +317,14 @@ function photoUrl(path) {
 
                 <!-- Waktu -->
                 <div class="modal-section">
-                  <div class="section-title text-indigo">⏰ Waktu</div>
+                  <div class="section-title text-indigo">⏰ Time</div>
                   <div class="detail-grid">
                     <div>
-                      <div class="detail-label">Tanggal</div>
+                      <div class="detail-label">Date</div>
                       <div class="detail-val">{{ store.formatDate(detailData.attendance_date) }}</div>
                     </div>
                     <div>
-                      <div class="detail-label">Waktu</div>
+                      <div class="detail-label">Time</div>
                       <div class="detail-val">{{ store.formatTime(detailData.attendance_time) }}</div>
                     </div>
                     <div>
@@ -342,9 +342,9 @@ function photoUrl(path) {
 
                 <!-- Lokasi -->
                 <div class="modal-section">
-                  <div class="section-title text-green">📍 Lokasi</div>
+                  <div class="section-title text-green">📍 Location</div>
                   <div class="detail-box">
-                    <div class="detail-label">Alamat</div>
+                    <div class="detail-label">Address</div>
                     <div class="detail-val">{{ detailData.location_name ?? '-' }}</div>
                     <div class="detail-grid mt-2">
                       <div>
@@ -356,7 +356,7 @@ function photoUrl(path) {
                         <div class="detail-mono">{{ detailData.longitude ?? '-' }}</div>
                       </div>
                       <div>
-                        <div class="detail-label">Akurasi</div>
+                        <div class="detail-label">Accuracy</div>
                         <div class="detail-val">{{ detailData.accuracy ? detailData.accuracy + ' m' : '-' }}</div>
                       </div>
                       <div>
@@ -378,7 +378,7 @@ function photoUrl(path) {
 
                 <!-- Foto -->
                 <div v-if="detailData.photo_path" class="modal-section">
-                  <div class="section-title text-amber">📷 Foto</div>
+                  <div class="section-title text-amber">📷 Photo</div>
                   <img
                     :src="photoUrl(detailData.photo_path)"
                     @click="openPhoto(photoUrl(detailData.photo_path))"
@@ -389,14 +389,14 @@ function photoUrl(path) {
 
                 <!-- Catatan -->
                 <div v-if="detailData.noted" class="modal-section">
-                  <div class="section-title text-gray">📝 Catatan</div>
+                  <div class="section-title text-gray">📝 Note</div>
                   <div class="detail-box">{{ detailData.noted }}</div>
                 </div>
 
               </div>
 
               <div class="modal-footer">
-                <button @click="closeDetail" class="btn-close-modal">Tutup</button>
+                <button @click="closeDetail" class="btn-close-modal">Close</button>
               </div>
 
             </template>
@@ -412,7 +412,7 @@ function photoUrl(path) {
         <div v-if="showPhotoModal && previewPhoto"
           class="photo-overlay"
           @click="closePhoto">
-          <button @click="closePhoto" class="photo-close">✕ Tutup</button>
+          <button @click="closePhoto" class="photo-close">✕ Close</button>
           <img :src="previewPhoto" class="photo-preview" alt="preview" @click.stop />
         </div>
       </Transition>

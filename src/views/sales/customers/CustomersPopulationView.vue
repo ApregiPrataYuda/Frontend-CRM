@@ -191,13 +191,13 @@ function goNext() {
       <div class="breadcrumb-left">
         <h4 class="breadcrumb-title">
           <font-awesome-icon icon="table-list" />
-          Customer History Transaksi
+          Customer Transaction History
         </h4>
 
         <div class="breadcrumb-path">
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
           <span class="breadcrumb-item active">
-            Customer History Transaksi
+            Customer Transaction History
           </span>
         </div>
       </div>
@@ -230,7 +230,7 @@ function goNext() {
               <template v-if="loadingSummary">...</template>
               <template v-else>{{ totalPurchased.toLocaleString('id-ID') }}</template>
             </div>
-            <div class="stat-label">Sudah Beli</div>
+            <div class="stat-label">Already Purchased</div>
           </div>
         </div>
 
@@ -243,7 +243,7 @@ function goNext() {
               <template v-if="loadingSummary">...</template>
               <template v-else>{{ totalNotPurchase.toLocaleString('id-ID') }}</template>
             </div>
-            <div class="stat-label">Belum Beli</div>
+            <div class="stat-label">Not Purchased</div>
           </div>
         </div>
 
@@ -256,7 +256,7 @@ function goNext() {
               <template v-if="loadingSummary">...</template>
               <template v-else>{{ totalTransaksi.toLocaleString('id-ID') }}</template>
             </div>
-            <div class="stat-label">Total Transaksi</div>
+            <div class="stat-label">Total Transactions</div>
           </div>
         </div>
       </div>
@@ -266,23 +266,23 @@ function goNext() {
 
         <!-- DONUT: Sudah Beli vs Belum Beli -->
         <div class="chart-card">
-          <div class="chart-card-title">Proporsi Customer</div>
+          <div class="chart-card-title">Customer Proportion</div>
           <div v-if="loadingSummary" class="state-wrap"><div class="spinner-custom"></div></div>
           <div v-else class="donut-wrap">
             <div class="donut" :style="{ background: donutGradient }">
               <div class="donut-hole">
                 <span class="donut-percent">{{ purchasedPercent }}%</span>
-                <span class="donut-caption">Sudah Beli</span>
+                <span class="donut-caption">Already Purchased</span>
               </div>
             </div>
             <div class="donut-legend">
               <div class="legend-item">
                 <span class="legend-dot" style="background:#6366f1"></span>
-                Sudah Beli ({{ totalPurchased.toLocaleString('id-ID') }})
+                Already Purchased ({{ totalPurchased.toLocaleString('id-ID') }})
               </div>
               <div class="legend-item">
                 <span class="legend-dot" style="background:#e2e8f0"></span>
-                Belum Beli ({{ totalNotPurchase.toLocaleString('id-ID') }})
+                Not Purchased ({{ totalNotPurchase.toLocaleString('id-ID') }})
               </div>
             </div>
           </div>
@@ -290,10 +290,10 @@ function goNext() {
 
         <!-- BAR: Top 5 Customer -->
         <div class="chart-card chart-card-wide">
-          <div class="chart-card-title">Top Customer by Transaksi</div>
+          <div class="chart-card-title">Top Customer by Transaction</div>
           <div v-if="loadingSummary" class="state-wrap"><div class="spinner-custom"></div></div>
           <div v-else-if="!topCustomers.length" class="state-wrap">
-            <span class="text-muted-color">Belum ada data</span>
+            <span class="text-muted-color">No data available</span>
           </div>
           <div v-else class="bar-list">
             <div v-for="(c, idx) in topCustomers" :key="idx" class="bar-row">
@@ -336,7 +336,7 @@ function goNext() {
                 {{ pagination.per_page }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu" :class="{ show: showPerPageMenu }">
-                <div class="drop-label">Per halaman</div>
+                <div class="drop-label">Per page</div>
                 <div class="perpage-grid">
                   <button
                     v-for="opt in [5,10,25,50]" :key="opt"
@@ -387,7 +387,7 @@ function goNext() {
             <input
               :value="searchCustomers"
               type="text"
-              placeholder="Cari nama, email, telepon..."
+              placeholder="Searc name, email, phone..."
               class="search-input"
               @input="store.searchWithDelay($event.target.value)"
             />
@@ -451,8 +451,8 @@ function goNext() {
               </div>
             </div>
             <div class="cc-break"></div>
-            <span v-if="customer.has_purchased" class="badge-active cc-status">Sudah Beli</span>
-            <span v-else class="table-role-badge cc-status">Belum Beli</span>
+            <span v-if="customer.has_purchased" class="badge-active cc-status">Already Purchased</span>
+            <span v-else class="table-role-badge cc-status">Not Purchased</span>
           </div>
 
           <div class="cc-body">
@@ -516,8 +516,8 @@ function goNext() {
             <td class="td-muted">{{ customer.email && customer.email !== '0' ? customer.email : '-' }}</td>
             <td class="td-muted">{{ customer.phone && customer.phone !== '0' ? customer.phone : '-' }}</td>
             <td>
-              <span v-if="customer.has_purchased" class="badge-active">Sudah Beli</span>
-              <span v-else class="table-role-badge">Belum Beli</span>
+              <span v-if="customer.has_purchased" class="badge-active">Already Purchased</span>
+              <span v-else class="table-role-badge">Not Purchased</span>
             </td>
             <td class="td-muted">{{ customer.total_transaksi }}x</td>
             <td class="td-muted">
@@ -590,14 +590,14 @@ function goNext() {
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Status</span>
-                  <span v-if="customerDetail?.has_purchased" class="badge-active">Sudah Beli</span>
-                  <span v-else class="table-role-badge">Belum Beli</span>
+                  <span v-if="customerDetail?.has_purchased" class="badge-active">Already Purchased</span>
+                  <span v-else class="table-role-badge">Not Purchased</span>
                 </div>
               </div>
 
               <div v-if="purchaseItems.length === 0" class="empty-state py-3">
                 <font-awesome-icon icon="inbox" class="empty-icon" />
-                <div>Belum ada riwayat pembelian</div>
+                <div>No purchase history available</div>
               </div>
 
               <div v-else class="purchase-list">

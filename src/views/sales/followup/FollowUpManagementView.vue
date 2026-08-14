@@ -883,7 +883,7 @@ const fuTypeIcon = (type) => {
       </div>
 
       <button class="btn-toolbar btn-orange" @click="handleReset">
-        <font-awesome-icon icon="rotate-left" /> Reset
+        <font-awesome-icon icon="rotate-left" /> Refresh
       </button>
     </div>
 
@@ -900,7 +900,7 @@ const fuTypeIcon = (type) => {
                 <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu" :class="{ show: showPerPageMenu }">
-                <div class="drop-label">Per Halaman</div>
+                <div class="drop-label">Per Page</div>
                 <div class="perpage-grid">
                   <button
                     v-for="opt in [10, 25, 50, 100]" :key="opt"
@@ -963,7 +963,7 @@ const fuTypeIcon = (type) => {
                 <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu drop-right" :class="{ show: showSortDirMenu }">
-                <div class="drop-label">Urutan</div>
+                <div class="drop-label">Order</div>
                 <button
                   v-for="opt in [{ label: 'Desc', value: 'desc' }, { label: 'Asc', value: 'asc' }]"
                   :key="opt.value"

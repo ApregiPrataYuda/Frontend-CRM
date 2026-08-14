@@ -37,7 +37,7 @@ onMounted(async () => {
           Welcome Back, {{ fullNameUser }} 👋
         </h1>
         <p class="page-subtitle">
-          Kelola leads dan aktivitas penjualan kamu hari ini.
+          Manage your leads and sales activities today.
         </p>
       </div>
     </div>
@@ -45,7 +45,7 @@ onMounted(async () => {
     <!-- LOADING -->
     <div v-if="dashboard.loadingStats" class="loading-state">
       <font-awesome-icon icon="fa-solid fa-spinner" spin />
-      Memuat data dashboard...
+      Loading data dashboard...
     </div>
 
     <template v-else>
@@ -55,15 +55,15 @@ onMounted(async () => {
         <div class="welcome-body">
           <p class="welcome-month">{{ currentMonth }}</p>
           <p class="welcome-desc">
-            Kamu sudah menyelesaikan
+            You have finished
             <strong>{{ dashboard.stats.target?.actual ?? 0 }}</strong>
-            dari
+            from
             <strong>{{ dashboard.stats.target?.target ?? 20 }}</strong>
-            target visit bulan ini
+            target visit this month
             <span v-if="dashboard.stats.ranking?.rank !== '-'">
-              dan berada di posisi
+              and be in a position
               <strong class="rank-highlight">#{{ dashboard.stats.ranking?.rank }}</strong>
-              dari {{ dashboard.stats.ranking?.total_sales }} sales.
+              from {{ dashboard.stats.ranking?.total_sales }} sales.
             </span>
           </p>
           <div class="achievement-wrap">
@@ -97,7 +97,7 @@ onMounted(async () => {
             <div class="stat-value" style="color:#696cff">
               {{ dashboard.stats.visits_today?.length ?? 0 }}
             </div>
-            <div class="stat-title">Visit Hari Ini</div>
+            <div class="stat-title">Visit Today</div>
           </div>
         </div>
 
@@ -109,7 +109,7 @@ onMounted(async () => {
             <div class="stat-value" style="color:#ffab00">
               #{{ dashboard.stats.ranking?.rank ?? '-' }}
             </div>
-            <div class="stat-title">Ranking Bulan Ini</div>
+            <div class="stat-title">This Month's Ranking</div>
           </div>
         </div>
 
@@ -133,7 +133,7 @@ onMounted(async () => {
             <div class="stat-value" style="color:#71dd37">
               {{ dashboard.stats.ranking?.done_visits ?? 0 }}
             </div>
-            <div class="stat-title">Visit Done Bulan Ini</div>
+            <div class="stat-title">Visits Done This Month</div>
           </div>
         </div>
 
@@ -171,7 +171,7 @@ onMounted(async () => {
           <div class="card-header">
             <div class="card-title">
               <font-awesome-icon icon="fa-solid fa-location-dot" style="color:#696cff" />
-              Visit Hari Ini
+              Visit Today
             </div>
             <span class="count-badge">{{ dashboard.stats.visits_today?.length ?? 0 }}</span>
           </div>
@@ -201,7 +201,7 @@ onMounted(async () => {
 
             <div v-if="!dashboard.stats.visits_today?.length" class="empty-state">
               <font-awesome-icon icon="fa-solid fa-map" />
-              <p>Tidak ada visit hari ini</p>
+              <p>No visits today</p>
             </div>
           </div>
         </div>
@@ -247,7 +247,7 @@ onMounted(async () => {
 
             <div v-if="!dashboard.stats.follow_ups?.length" class="empty-state">
               <font-awesome-icon icon="fa-solid fa-circle-check" />
-              <p>Semua follow up selesai 🎉</p>
+              <p>All follow ups are done 🎉</p>
             </div>
           </div>
         </div>
@@ -262,7 +262,7 @@ onMounted(async () => {
           <div class="card-header">
             <div class="card-title">
               <font-awesome-icon icon="fa-solid fa-chart-bar" style="color:#03c3ec" />
-              Target vs Aktual
+              Target vs Actual
             </div>
             <span class="month-label">{{ currentMonth }}</span>
           </div>
@@ -270,7 +270,7 @@ onMounted(async () => {
           <div class="target-summary">
             <div class="target-item">
               <div class="target-num">{{ dashboard.stats.target?.actual ?? 0 }}</div>
-              <div class="target-label">Aktual</div>
+              <div class="target-label">Actual</div>
             </div>
             <div class="target-divider" />
             <div class="target-item">
@@ -304,7 +304,7 @@ onMounted(async () => {
             </div>
             <div v-if="!dashboard.stats.target?.per_day?.length" class="empty-state">
               <font-awesome-icon icon="fa-solid fa-chart-bar" />
-              <p>Belum ada data</p>
+              <p>No data available</p>
             </div>
           </div>
         </div>
@@ -314,7 +314,7 @@ onMounted(async () => {
           <div class="card-header">
             <div class="card-title">
               <font-awesome-icon icon="fa-solid fa-trophy" style="color:#ffab00" />
-              Leaderboard Bulan Ini
+              This Month's Leaderboard
             </div>
           </div>
 
@@ -352,7 +352,7 @@ onMounted(async () => {
 
             <div v-if="!dashboard.stats.ranking?.leaderboard?.length" class="empty-state">
               <font-awesome-icon icon="fa-solid fa-trophy" />
-              <p>Belum ada data leaderboard</p>
+              <p>No leaderboard data available</p>
             </div>
           </div>
         </div>

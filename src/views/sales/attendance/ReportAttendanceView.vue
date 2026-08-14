@@ -1,7 +1,7 @@
 <template>
   <div class="attendance-page">
     <div class="page-header">
-      <h4>Absensi / <span>Laporan Kehadiran Saya</span></h4>
+      <h4>Attendance / <span>My Attendance Report</span></h4>
     </div>
 
     <!-- PROFILE CARD -->
@@ -26,7 +26,7 @@
       <div class="filters">
         <select v-model="store.selectedMonth" class="form-select">
           <option v-for="m in 12" :key="m" :value="m">
-            {{ new Date(0, m - 1).toLocaleString('id-ID', { month: 'long' }) }}
+            {{ new Date(0, m - 1).toLocaleString('en-EN', { month: 'long' }) }}
           </option>
         </select>
 
@@ -42,7 +42,7 @@
 
     <!-- HOLIDAY INFO -->
     <div class="holiday-info" v-if="holidays.length">
-      📅 <b>Libur Nasional bulan ini:</b>
+      📅 <b>This month's national holidays:</b>
       <span v-for="(h, i) in holidays" :key="h.date">
         {{ h.name }} ({{ h.date }})<span v-if="i < holidays.length - 1">, </span>
       </span>
@@ -59,11 +59,11 @@
     <!-- REPORT CARD -->
     <div class="report-card mt-3">
       <div class="report-title">
-        <h5>Rekap Absensi — {{ store.selectedMonth }}/{{ store.selectedYear }}</h5>
+        <h5>Attendance Recap — {{ store.selectedMonth }}/{{ store.selectedYear }}</h5>
         <div class="report-user">{{ user?.fullname }}</div>
       </div>
 
-      <button class="history-btn" @click="goToHistory">🔗 Lihat Riwayat</button>
+      <button class="history-btn" @click="goToHistory">🔗 View History</button>
 
       <!-- TABLE -->
       <div class="table-wrap">
@@ -71,7 +71,7 @@
           <thead>
             <tr>
               <th rowspan="2">NO</th>
-              <th rowspan="2">NAMA</th>
+              <th rowspan="2">NAME</th>
 
               <th
                 v-for="d in mergedDays" :key="'h' + d.day"
@@ -95,7 +95,7 @@
                 :class="d.is_weekend ? 'weekend' : (d.is_holiday ? 'head-off' : 'workday')"
                 style="font-size:10px"
               >
-                {{ new Date(d.date).toLocaleDateString('id-ID', { weekday: 'short' }) }}
+                {{ new Date(d.date).toLocaleDateString('en-En', { weekday: 'short' }) }}
               </th>
             </tr>
           </thead>
@@ -126,17 +126,17 @@
       <!-- FOOTER -->
       <div class="signature">
         <p>Jakarta, {{ today }}</p>
-        <p>Mengetahui,</p>
+        <p>Acknowledged by,</p>
         <div class="space"></div>
-        <strong>Admin HR</strong>
+        <strong>HR Admin</strong>
       </div>
 
       <div class="legend">
-        <span class="badge hadir">H = HADIR (ONTIME)</span>
-        <span class="badge telat">T = TERLAMBAT</span>
-        <span class="badge libur">L = LIBUR WEEKEND</span>
-        <span class="badge nasional">N = LIBUR NASIONAL</span>
-        <span class="badge absen">A = ABSEN</span>
+        <span class="badge hadir">P = PRESENT (ONTIME)</span>
+        <span class="badge telat">L = LATE</span>
+        <span class="badge libur">O = WEEKEND OFF</span>
+        <span class="badge nasional">N = NATIONAL HOLIDAY</span>
+        <span class="badge absen">A = ABSENT</span>
       </div>
     </div>
   </div>
@@ -177,7 +177,7 @@ const isPastDate = (dateStr) => {
   return d < today
 }
 
-const today = new Date().toLocaleDateString('id-ID', {
+const today = new Date().toLocaleDateString('en-EN', {
   day: 'numeric', month: 'long', year: 'numeric'
 })
 
@@ -235,12 +235,12 @@ const absenCount = computed(() =>
 )
 
 const statItems = computed(() => [
-  { label: 'Hadir',          value: summary.value.TOTAL_HADIR,    color: '#22c55e' },
-  { label: 'Ontime',         value: summary.value.ONTIME,         color: '#6366f1' },
-  { label: 'Terlambat',      value: summary.value.LATE,           color: '#eab308' },
-  { label: 'Checkout',       value: summary.value.TOTAL_CHECKOUT, color: '#06b6d4' },
-  { label: 'Libur Nasional', value: liburNasionalCount.value,     color: '#7c3aed' },
-  { label: 'Absen',          value: absenCount.value,             color: '#ef4444' },
+  { label: 'Present',           value: summary.value.TOTAL_HADIR,    color: '#22c55e' },
+  { label: 'Ontime',            value: summary.value.ONTIME,         color: '#6366f1' },
+  { label: 'Late',              value: summary.value.LATE,           color: '#eab308' },
+  { label: 'Checkout',          value: summary.value.TOTAL_CHECKOUT, color: '#06b6d4' },
+  { label: 'National Holiday',  value: liburNasionalCount.value,     color: '#7c3aed' },
+  { label: 'Absent',            value: absenCount.value,             color: '#ef4444' },
 ])
 
 // =======================

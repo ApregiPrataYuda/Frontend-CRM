@@ -177,7 +177,7 @@ const pageTitle = computed(() => {
               <span class="dropdown-item-icon" style="color: #6366f1; background: rgba(99,102,241,0.1)">
                 <font-awesome-icon icon="circle-user" />
               </span>
-              Profile Saya
+              My Profile
             </button>
 
             <!-- <button class="dropdown-item" @click="goTo('/app/settings')">

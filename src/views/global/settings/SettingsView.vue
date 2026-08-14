@@ -1,24 +1,103 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTheme } from '@/composables/useTheme'
+import { authService } from '@/services/authServices'
+import { useAuthStore } from '@/stores/authStore'
 
 const { isDark, toggleTheme } = useTheme()
+const authStore = useAuthStore()
+const sessions = ref([])
 
 // ===== ACTIVE TAB =====
 const activeTab = ref('account')
+const avatarPreview = ref(null)
+const avatarFile = ref(null) 
+const fileInput = ref(null)
 
 const tabs = [
-  { key: 'account', label: 'Akun', icon: 'user' },
-  { key: 'security', label: 'Keamanan', icon: 'shield-halved' },
+  { key: 'account', label: 'Account', icon: 'user' },
+  { key: 'security', label: 'Security', icon: 'shield-halved' },
 ]
+
+// ===== Photo Profile =====
+const IMAGE_BASE_URL = import.meta.env.VITE_STORAGE_URL + '/users/'
+
+const currentPhotoUrl = computed(() =>
+  authStore.user?.image
+    ? IMAGE_BASE_URL + authStore.user.image
+    : null
+)
+
+const userInitials = computed(() => {
+  const name = authStore.user?.fullname?.trim()
+  if (!name) return 'AD'
+
+  const words = name.split(/\s+/)
+
+  if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase()
+  }
+  return (words[0][0] + words[1][0]).toUpperCase()
+})
+
+const userRole = computed(() =>
+  authStore.user?.role?.role
+    ? authStore.user.role.role.charAt(0).toUpperCase() +
+      authStore.user.role.role.slice(1)
+    : 'User'
+)
+
+// ===== Auto Capitalize Nama =====
+function capitalizeWords(str) {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+function handleNameInput(event) {
+  account.value.name = capitalizeWords(event.target.value)
+}
+
+// ===== Photo Profile (Update) =====
+function triggerFileInput() {
+  fileInput.value.click()
+}
+
+function handleFileChange(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const validTypes = ['image/jpeg', 'image/png', 'image/jpg']
+  if (!validTypes.includes(file.type)) {
+    alert('Format file harus JPG atau PNG')
+    return
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    alert('Ukuran file maksimal 2MB')
+    return
+  }
+
+  avatarFile.value = file
+  avatarPreview.value = URL.createObjectURL(file)
+}
 
 // ===== ACCOUNT =====
 const account = ref({
-  name: 'apregi pratayuda',
-  email: 'administrator@example.com',
-  phone: '081234567890',
-  department: 'IT Development',
+  name: '',
+  email: '',
+  phone: '',
+  department: '',
   bio: '',
+})
+
+onMounted(() => {
+  if (authStore.user) {
+    account.value.name  = capitalizeWords(authStore.user.fullname || '')
+    account.value.email = authStore.user.email || ''
+    account.value.phone = authStore.user.employee?.no_hp || ''
+  }
 })
 
 // ===== SECURITY =====
@@ -37,19 +116,119 @@ const showPass = ref({
 // ===== SAVE =====
 const saving = ref(false)
 const saved = ref(false)
+const securityError = ref('')
 
 async function handleSave() {
+  if (activeTab.value === 'account') {
+    await saveAccount()
+  } else if (activeTab.value === 'security') {
+    await saveSecurity()
+  }
+}
+
+async function saveAccount() {
   saving.value = true
 
-  await new Promise((r) => setTimeout(r, 800))
+  try {
+    const formData = new FormData()
+    formData.append('fullname', account.value.name)
+    formData.append('email', account.value.email)
+    formData.append('phone', account.value.phone)
+    if (avatarFile.value) {
+      formData.append('image', avatarFile.value)
+    }
 
-  saving.value = false
-  saved.value = true
+    const response = await authService.updateProfile(formData)
 
-  setTimeout(() => {
-    saved.value = false
-  }, 2500)
+    if (response.data?.user) {
+      authStore.user = response.data.user
+      localStorage.setItem('user', JSON.stringify(response.data.user))
+    }
+
+    avatarFile.value = null
+    avatarPreview.value = null
+
+    saved.value = true
+  } catch (err) {
+    console.error('Gagal menyimpan profil:', err)
+  } finally {
+    saving.value = false
+    setTimeout(() => {
+      saved.value = false
+    }, 2500)
+  }
 }
+
+async function saveSecurity() {
+  securityError.value = ''
+
+  if (!security.value.newPassword || security.value.newPassword.length < 6) {
+    securityError.value = 'Password baru minimal 6 karakter.'
+    return
+  }
+  if (security.value.newPassword !== security.value.confirmPassword) {
+    securityError.value = 'Konfirmasi password tidak cocok.'
+    return
+  }
+
+  saving.value = true
+
+  try {
+    await authService.updatePassword({
+      password: security.value.newPassword,
+      password_confirmation: security.value.confirmPassword,
+    })
+
+    security.value.newPassword = ''
+    security.value.confirmPassword = ''
+
+    saved.value = true
+  } catch (err) {
+    if (err.response?.data?.errors) {
+      const firstError = Object.values(err.response.data.errors)[0]
+      securityError.value = Array.isArray(firstError) ? firstError[0] : firstError
+    } else if (err.response?.data?.message) {
+      securityError.value = err.response.data.message
+    } else {
+      securityError.value = 'Gagal mengubah password.'
+    }
+    console.error('Gagal mengubah password:', err)
+  } finally {
+    saving.value = false
+    setTimeout(() => {
+      saved.value = false
+    }, 2500)
+  }
+}
+
+async function fetchSessions() {
+  try {
+    const response = await authService.getSessions()
+    sessions.value = response.data.sessions
+  } catch (err) {
+    console.error('Gagal mengambil daftar sesi:', err)
+  }
+}
+
+function formatLastActive(dateStr) {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  return date.toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+onMounted(() => {
+  if (authStore.user) {
+    account.value.name  = capitalizeWords(authStore.user.fullname || '')
+    account.value.email = authStore.user.email || ''
+    account.value.phone = authStore.user.employee?.no_hp || ''
+  }
+  fetchSessions()
+})
 </script>
 
 <template>
@@ -58,9 +237,9 @@ async function handleSave() {
     <!-- HEADER -->
     <div class="settings-heading">
       <div>
-        <div class="settings-title">Pengaturan Akun</div>
+        <div class="settings-title">Account Settings</div>
         <div class="settings-sub">
-          Kelola informasi akun dan keamanan login
+          Manage account info and login security
         </div>
       </div>
 
@@ -76,10 +255,10 @@ async function handleSave() {
 
         {{
           saving
-            ? 'Menyimpan...'
+            ? 'Saving...'
             : saved
-              ? 'Tersimpan!'
-              : 'Simpan Perubahan'
+              ? 'Saved!'
+              : 'Save Changes'
         }}
       </button>
     </div>
@@ -113,28 +292,42 @@ async function handleSave() {
         >
           <div class="card-section-title">
             <font-awesome-icon icon="user" />
-            Informasi Akun
+            Account Information
           </div>
 
           <!-- AVATAR -->
           <div class="avatar-section">
-            <div class="avatar-preview">
-              AP
+            <div
+              class="avatar-preview"
+              :style="(avatarPreview || currentPhotoUrl) ? {
+                backgroundImage: `url(${avatarPreview || currentPhotoUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              } : {}"
+            >
+              <span v-if="!avatarPreview && !currentPhotoUrl">{{ userInitials }}</span>
             </div>
 
             <div class="avatar-info">
               <div class="avatar-name">
-                apregi pratayuda
+                {{ account.name }}
               </div>
 
               <div class="avatar-role">
-                Administrator
+                {{ userRole }}
               </div>
 
-              <button class="btn-avatar">
+              <button class="btn-avatar" type="button" @click="triggerFileInput">
                 <font-awesome-icon icon="camera" />
-                Ganti Foto
+                Change Photo
               </button>
+              <input
+                ref="fileInput"
+                type="file"
+                accept="image/png, image/jpeg, image/jpg"
+                style="display: none"
+                @change="handleFileChange"
+              />
             </div>
           </div>
 
@@ -142,12 +335,13 @@ async function handleSave() {
           <div class="form-grid">
 
             <div class="form-group">
-              <label>Nama Lengkap</label>
+              <label>Full Name</label>
 
               <input
                 v-model="account.name"
+                @input="handleNameInput"
                 class="form-input"
-                placeholder="Nama lengkap"
+                placeholder="Full Name"
               />
             </div>
 
@@ -163,7 +357,7 @@ async function handleSave() {
             </div>
 
             <div class="form-group">
-              <label>No. Telepon</label>
+              <label>Phone Number</label>
 
               <input
                 v-model="account.phone"
@@ -252,28 +446,32 @@ async function handleSave() {
             </div>
 
             <div class="session-list">
+              <div
+                v-for="session in sessions"
+                :key="session.id"
+                class="session-item"
+                :class="{ 'active-session': session.is_current }"
+              >
 
-              <div class="session-item active-session">
-
-                <div class="session-icon">
-                  <font-awesome-icon icon="desktop" />
-                </div>
-
-                <div class="session-info">
-                  <div class="session-device">
-                    Chrome — Windows 11
-                  </div>
-
-                  <div class="session-detail">
-                    Indonesia · Aktif sekarang
-                  </div>
-                </div>
-
-                <span class="session-badge">
-                  Sesi Ini
-                </span>
-
+              <div class="session-icon">
+                <font-awesome-icon icon="desktop" />
               </div>
+
+              <div class="session-info">
+                <div class="session-device">
+                  {{ session.device }}
+                </div>
+                <div class="session-detail">
+                  {{ session.location || 'Unknown' }} ·
+                  {{ session.is_current ? 'Aktif sekarang' : formatLastActive(session.last_active) }}
+                </div>
+              </div>
+
+              <span class="session-badge">
+                Sesi Ini
+              </span>
+
+            </div>
 
               
 

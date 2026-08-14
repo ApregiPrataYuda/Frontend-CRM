@@ -308,30 +308,30 @@ const activities = [
               <span class="info-value">{{ profile.name }}</span>
             </div>
 
-            <div class="info-row">
+            <!-- <div class="info-row">
               <span class="info-label">Username</span>
               <span class="info-value">
                 {{ authStore.user?.username }}
               </span>
-            </div>
+            </div> -->
 
             <div class="info-row">
               <span class="info-label">Email</span>
               <span class="info-value">{{ profile.email }}</span>
             </div>
 
-            <div class="info-row">
+            <!-- <div class="info-row">
               <span class="info-label">Role</span>
               <span class="info-value">{{ profile.role }}</span>
-            </div>
+            </div> -->
 
-            <div class="info-row">
+            <!-- <div class="info-row">
               <span class="info-label">ID Number</span>
               <span class="info-value">{{ profile.nik }}</span>
-            </div>
+            </div> -->
 
             <div class="info-row">
-              <span class="info-label">Cellphone</span>
+              <span class="info-label">Phone Number</span>
               <span class="info-value">{{ profile.phone }}</span>
             </div>
 
@@ -349,26 +349,26 @@ const activities = [
               </span>
             </div>
 
-            <div class="info-row">
+            <!-- <div class="info-row">
               <span class="info-label">Gender</span>
               <span class="info-value">
                 {{ profile.gender }}
               </span>
-            </div>
+            </div> -->
 
-            <div class="info-row">
+            <!-- <div class="info-row">
               <span class="info-label">Place of Birth</span>
               <span class="info-value">
                 {{ profile.birthPlace }}
               </span>
-            </div>
+            </div> -->
 
-            <div class="info-row">
+            <!-- <div class="info-row">
               <span class="info-label">Date of Birth</span>
               <span class="info-value">
                 {{ profile.birthDate }}
               </span>
-            </div>
+            </div> -->
 
             <div class="info-row">
               <span class="info-label">Address</span>
@@ -377,35 +377,35 @@ const activities = [
               </span>
             </div>
 
-            <div class="info-row">
+            <!-- <div class="info-row">
               <span class="info-label">Employee Status</span>
               <span class="info-value">
                 {{ profile.statusEmployee }}
               </span>
-            </div>
+            </div> -->
 
-            <div class="info-row">
+            <!-- <div class="info-row">
               <span class="info-label">Attendance</span>
               <span class="info-value">
                 {{ profile.attendanceMode }}
               </span>
-            </div>
+            </div> -->
 
-            <div class="info-row">
+            <!-- <div class="info-row">
               <span class="info-label">Join Date</span>
               <span class="info-value">
                 {{ profile.joinDate }}
               </span>
-            </div>
+            </div> -->
 
             <div class="info-row">
-              <span class="info-label">Status Akun</span>
+              <span class="info-label">Account Status</span>
 
               <span class="badge-active">
                 {{
                   authStore.user?.is_active
-                    ? 'Aktif'
-                    : 'Nonaktif'
+                    ? 'Active'
+                    : 'Inactive'
                 }}
               </span>
             </div>

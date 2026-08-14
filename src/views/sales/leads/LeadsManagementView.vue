@@ -213,26 +213,66 @@ const closeAddModal = () => {
 }
 
 // ── CEK COMPANY NAME (autocomplete) ──
-const showCompanySuggestions  = ref(false)
-const isCompanyModalVisible   = ref(false)
-const existingCompany         = ref(null)
+const showCompanySuggestions    = ref(false)
+const isCompanyModalVisible     = ref(false)
+const existingCompany           = ref(null)
+const activeCompanyTarget       = ref(null)
 
-function onCompanyNameInput(e) {
-  formData.value.company_name = e.target.value
-  showCompanySuggestions.value = true
-  leadsStore.fetchCompanyNameSelect(e.target.value)
+// CAPITALIZE WORDS, KECUALI PT, TBK, DST
+const COMPANY_ABBREVIATIONS = ['PT', 'CV', 'UD', 'TBK', 'PD', 'CO', 'LTD', 'INC']
+function capitalizeWords(str, useAbbreviations = false) {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => {
+      if (!word) return word
+
+      if (useAbbreviations) {
+        const cleanWord = word.replace(/\./g, '').toUpperCase()
+        if (COMPANY_ABBREVIATIONS.includes(cleanWord)) {
+          return word.toUpperCase()
+        }
+      }
+
+      return word.charAt(0).toUpperCase() + word.slice(1)
+    })
+    .join(' ')
 }
 
-function selectExistingCompany(company) {
+function onCompanyNameInput(e, target = formData.value) {
+  const value = capitalizeWords(e.target.value, true)
+  target.company_name = value
+  activeCompanyTarget.value = target
+  leadsStore.fetchCompanyNameSelect(value)
+}
+
+function selectExistingCompany(company, target) {
   existingCompany.value = company
-  showCompanySuggestions.value = false
+  activeCompanyTarget.value = null
   leadsStore.clearCompanySuggestions()
   isCompanyModalVisible.value = true
+  if (target) target.company_name = ''
 }
 
 function closeCompanyModal() {
   isCompanyModalVisible.value = false
   formData.value.company_name = ''
+}
+
+function onContactNameInput(e, target) {
+  target.contact_name = capitalizeWords(e.target.value)
+}
+
+// CAPITALIZE SENTENCE
+function capitalizeSentences(str) {
+  if (!str) return str
+  let result = str.charAt(0).toUpperCase() + str.slice(1)
+  result = result.replace(/([.!?]\s+)([a-z])/g, (match, p1, p2) => p1 + p2.toUpperCase())
+  return result
+}
+
+function onSentenceInput(e, target, field) {
+  target[field] = capitalizeSentences(e.target.value)
 }
 
 // ═══════════════════════════════════════════
@@ -247,7 +287,6 @@ const defaultForm = {
   email            : '',
   phone            : '',
   industry_id      : '',
-  lead_category_id : '',
   lead_source      : '',
   notes            : '',
   address          : '',
@@ -269,7 +308,11 @@ const handleStore = async () => {
 
   formLoading.value = true
   try {
-    await leadsStore.storeLeads(formData.value)
+    const payload = {
+      ...formData.value,
+      lead_category_id: 1,
+    }
+    await leadsStore.storeLeads(payload)
     closeAddModal()
     showToast('success', 'Leads data has been successfully saved!')
   } catch (err) {
@@ -302,7 +345,6 @@ const openEditModal = (lead) => {
     phone            : lead.phone,
     lead_source      : lead.lead_source,
     industry_id      : lead.industry_id      ?? '',
-    lead_category_id : lead.lead_category_id ?? '',
     notes            : lead.notes   ?? '',
     address          : lead.address ?? '',
   }
@@ -390,7 +432,6 @@ const defaultRow = () => ({
   email            : '',
   phone            : '',
   industry_id      : '',
-  lead_category_id : '',
   lead_source      : '',
   notes            : '',
   address          : '',
@@ -430,7 +471,10 @@ const handleStoreBulk = async () => {
   }
 
   try {
-    const payload = bulkRows.value.map(({ _key, ...rest }) => rest)
+    const payload = bulkRows.value.map(({ _key, ...rest }) => ({
+      ...rest,
+      lead_category_id: 1,
+    }))
     await leadsStore.storeBulkLeads(payload)
     closeBulkModal()
     showToast('success', `${payload.length} leads data has been successfully saved!`)
@@ -525,7 +569,7 @@ const handleStoreBulk = async () => {
 
       <!-- RESET -->
       <button class="btn-toolbar btn-orange" @click="leadsStore.resetFilters()">
-        <font-awesome-icon icon="rotate-left" /> Reset
+        <font-awesome-icon icon="rotate-left" /> Refresh
       </button>
     </div>
 
@@ -542,7 +586,7 @@ const handleStoreBulk = async () => {
                 {{ pagination.per_page }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu" :class="{ show: showPerPageMenu }">
-                <div class="drop-label">Per halaman</div>
+                <div class="drop-label">Per page</div>
                 <div class="perpage-grid">
                   <button
                     v-for="opt in [5, 10, 25, 50, 100]" :key="opt"
@@ -577,7 +621,7 @@ const handleStoreBulk = async () => {
           <!-- ADD — hanya tampil di mode master -->
           <template v-if="mode === 'master'">
             <button  v-if="canCreate" class="btn-toolbar btn-purple" @click="openAddModal">
-              <font-awesome-icon icon="plus" /> Add Data
+              <font-awesome-icon icon="plus" /> Add Leads
             </button>
             <button v-if="canCreate" class="btn-toolbar btn-purple" style="background:#7c3aed" @click="openBulkModal">
               <font-awesome-icon icon="layer-group" /> Add Bulk
@@ -619,7 +663,7 @@ const handleStoreBulk = async () => {
                 <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu drop-right" :class="{ show: showSortDirMenu }">
-                <div class="drop-label">Urutan</div>
+                <div class="drop-label">Order</div>
                 <button
                   v-for="opt in [{ label: 'Desc', value: 'desc' }, { label: 'Asc', value: 'asc' }]"
                   :key="opt.value"
@@ -820,7 +864,7 @@ const handleStoreBulk = async () => {
       </div>
       <div class="page-badges">
         <span class="page-badge">
-          Hal {{ pagination.current_page }} / {{ pagination.last_page }}
+          Page {{ pagination.current_page }} / {{ pagination.last_page }}
         </span>
         <span class="page-badge">Total: {{ pagination.total }}</span>
       </div>
@@ -839,25 +883,25 @@ const handleStoreBulk = async () => {
         <div class="form-group company-search-wrap">
           <label>Company Name <span class="text-required">*</span></label>
           <input
-            :value="formData.company_name"
-            class="form-input"
-            placeholder="PT. Example"
-            :class="{ 'is-invalid': getFieldError(formData, addTouched, 'company_name') }"
-            @input="onCompanyNameInput"
-            @focus="showCompanySuggestions = true"
-            @blur="addTouched.company_name = true"
-          />
-          <small v-if="getFieldError(formData, addTouched, 'company_name')" class="text-danger">
-            {{ getFieldError(formData, addTouched, 'company_name') }}
-          </small>
-          <div v-if="showCompanySuggestions && companyNameSelectData.length" class="company-suggest-list">
-            <button
-              v-for="item in companyNameSelectData"
-              :key="`${item.source}-${item.id}`"
-              type="button"
-              class="company-suggest-item"
-              @click="selectExistingCompany(item)"
-            >
+              :value="formData.company_name"
+              class="form-input"
+              placeholder="PT. Example"
+              :class="{ 'is-invalid': getFieldError(formData, addTouched, 'company_name') }"
+              @input="onCompanyNameInput"
+              @focus="activeCompanyTarget = formData"
+              @blur="addTouched.company_name = true"
+            />
+            <small v-if="getFieldError(formData, addTouched, 'company_name')" class="text-danger">
+              {{ getFieldError(formData, addTouched, 'company_name') }}
+            </small>
+            <div v-if="activeCompanyTarget === formData && companyNameSelectData.length" class="company-suggest-list">
+              <button
+                v-for="item in companyNameSelectData"
+                :key="`${item.source}-${item.id}`"
+                type="button"
+                class="company-suggest-item"
+                @click="selectExistingCompany(item, formData)"
+              >
               <span>
                 <span class="company-suggest-name">
                   {{ item.source === 'customer_branch' ? item.parent_company : item.name }}
@@ -883,9 +927,8 @@ const handleStoreBulk = async () => {
         <div class="row g-2">
           <div class="col-6 form-group">
             <label>Contact Name <span style="color:#ef4444">*</span></label>
-            <input v-model="formData.contact_name" class="form-input" placeholder="John Doe"
-              :class="{ 'is-invalid': getFieldError(formData, addTouched, 'contact_name') }"
-              @blur="addTouched.contact_name = true"
+            <input :value="formData.contact_name" class="form-input" placeholder="John Doe" :class="{ 'is-invalid': getFieldError(formData, addTouched, 'contact_name') }"
+              @input="onContactNameInput($event, formData)" @blur="addTouched.contact_name = true"
             />
             <small v-if="getFieldError(formData, addTouched, 'contact_name')" class="text-danger">
               {{ getFieldError(formData, addTouched, 'contact_name') }}
@@ -919,8 +962,8 @@ const handleStoreBulk = async () => {
           </small>
         </div>
 
-        <div class="row g-2">
-          <div class="col-6 form-group">
+        <!-- <div class="row g-2"> -->
+          <div class="form-group">
             <label>Industry</label>
             <select v-model="formData.industry_id" class="form-input form-select"
               :class="{ 'is-invalid': getError('industry_id') }">
@@ -929,7 +972,7 @@ const handleStoreBulk = async () => {
             </select>
             <small v-if="getError('industry_id')" class="text-danger">{{ getError('industry_id') }}</small>
           </div>
-          <div class="col-6 form-group">
+          <!-- <div class="col-6 form-group">
             <label>Category</label>
             <select v-model="formData.lead_category_id" class="form-input form-select"
               :class="{ 'is-invalid': getError('lead_category_id') }">
@@ -937,8 +980,8 @@ const handleStoreBulk = async () => {
               <option v-for="cat in categorySelectData" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
             <small v-if="getError('lead_category_id')" class="text-danger">{{ getError('lead_category_id') }}</small>
-          </div>
-        </div>
+          </div> -->
+        <!-- </div> -->
 
         <div class="form-group">
           <label>Lead Source <span style="color:#ef4444">*</span></label>
@@ -958,12 +1001,16 @@ const handleStoreBulk = async () => {
 
         <div class="form-group">
           <label>Address</label>
-          <textarea v-model="formData.address" class="form-input form-textarea" rows="2" placeholder="Alamat lengkap..."></textarea>
+          <textarea :value="formData.address" class="form-input form-textarea" rows="2" placeholder="Alamat lengkap..."
+            @input="onSentenceInput($event, formData, 'address')"
+          ></textarea>
         </div>
 
         <div class="form-group">
           <label>Notes</label>
-          <textarea v-model="formData.notes" class="form-input form-textarea" rows="2" placeholder="Catatan tambahan..."></textarea>
+          <textarea :value="formData.notes" class="form-input form-textarea" rows="2" placeholder="Catatan tambahan..." 
+            @input="onSentenceInput($event, formData, 'notes')">
+          </textarea>
         </div>
 
       </div>
@@ -989,23 +1036,56 @@ const handleStoreBulk = async () => {
     >
       <div class="form-container-gap">
 
-        <div class="form-group">
+        <div class="form-group company-search-wrap">
           <label>Company Name <span style="color:#ef4444">*</span></label>
-          <input v-model="editData.company_name" class="form-input" placeholder="PT. Example"
+          <input
+            :value="editData.company_name"
+            class="form-input"
+            placeholder="PT. Example"
             :class="{ 'is-invalid': getFieldError(editData, editTouched, 'company_name') }"
-            @blur="editTouched.company_name = true" 
+            @input="onCompanyNameInput($event, editData)"
+            @focus="activeCompanyTarget = editData"
+            @blur="editTouched.company_name = true"
           />
           <small v-if="getFieldError(editData, editTouched, 'company_name')" class="text-danger">
             {{ getFieldError(editData, editTouched, 'company_name') }}
           </small>
-        </div>
 
+          <div v-if="activeCompanyTarget === editData && companyNameSelectData.length" class="company-suggest-list">
+            <button
+              v-for="item in companyNameSelectData"
+              :key="`${item.source}-${item.id}`"
+              type="button"
+              class="company-suggest-item"
+              @click="selectExistingCompany(item, editData)"
+            >
+            <span>
+              <span class="company-suggest-name">
+                {{ item.source === 'customer_branch' ? item.parent_company : item.name }}
+              </span>
+              <span class="company-suggest-code">
+                <template v-if="item.source === 'customer'">
+                  {{ item.customer_code }}
+                </template>
+                <template v-else-if="item.source === 'customer_branch'">
+                  {{ item.name }}
+                </template>
+                <template v-else-if="item.source === 'leads'">
+                  {{ item.contact_name ?? '-' }}
+                </template>
+              </span>
+            </span>
+            <span class="badge-registered">
+              {{ item.source === 'customer' ? 'Customer' : item.source === 'customer_branch' ? 'Cabang' : 'Leads' }}
+            </span>
+          </button>
+        </div>
+      </div>
         <div class="row g-2">
           <div class="col-6 form-group">
             <label>Contact Name <span style="color:#ef4444">*</span></label>
-            <input v-model="editData.contact_name" class="form-input" placeholder="John Doe"
-              :class="{ 'is-invalid': getFieldError(editData, editTouched, 'contact_name') }"
-              @blur="editTouched.contact_name = true" 
+            <input :value="editData.contact_name" class="form-input" placeholder="John Doe" :class="{ 'is-invalid': getFieldError(editData, editTouched, 'contact_name') }"
+              @input="onContactNameInput($event, editData)" @blur="editTouched.contact_name = true" 
             />
             <small v-if="getFieldError(editData, editTouched, 'contact_name')" class="text-danger">
               {{ getFieldError(editData, editTouched, 'contact_name') }}
@@ -1039,8 +1119,8 @@ const handleStoreBulk = async () => {
           </small>
         </div>
 
-        <div class="row g-2">
-          <div class="col-6 form-group">
+        <!-- <div class="row g-2"> -->
+          <div class="form-group">
             <label>Industry</label>
             <select v-model="editData.industry_id" class="form-input form-select"
               :class="{ 'is-invalid': getError('industry_id') }">
@@ -1049,7 +1129,7 @@ const handleStoreBulk = async () => {
             </select>
             <small v-if="getError('industry_id')" class="text-danger">{{ getError('industry_id') }}</small>
           </div>
-          <div class="col-6 form-group">
+          <!-- <div class="col-6 form-group">
             <label>Category</label>
             <select v-model="editData.lead_category_id" class="form-input form-select"
               :class="{ 'is-invalid': getError('lead_category_id') }">
@@ -1057,8 +1137,8 @@ const handleStoreBulk = async () => {
               <option v-for="cat in categorySelectData" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
             <small v-if="getError('lead_category_id')" class="text-danger">{{ getError('lead_category_id') }}</small>
-          </div>
-        </div>
+          </div> -->
+        <!-- </div> -->
 
         <div class="form-group">
           <label>Lead Source <span style="color:#ef4444">*</span></label>
@@ -1078,12 +1158,16 @@ const handleStoreBulk = async () => {
 
         <div class="form-group">
           <label>Address</label>
-          <textarea v-model="editData.address" class="form-input form-textarea" rows="2"></textarea>
+          <textarea v-model="editData.address" class="form-input form-textarea" rows="2"
+            @input="onSentenceInput($event, editData, 'address')"
+          ></textarea>
         </div>
 
         <div class="form-group">
           <label>Notes</label>
-          <textarea v-model="editData.notes" class="form-input form-textarea" rows="2"></textarea>
+          <textarea :value="editData.notes" class="form-input form-textarea" rows="2"
+            @input="onSentenceInput($event, editData, 'notes')"
+          ></textarea>
         </div>
 
       </div>
@@ -1180,7 +1264,7 @@ const handleStoreBulk = async () => {
         <div class="company-alert-icon">
           <font-awesome-icon icon="xmark" />
         </div>
-        <h5 class="company-alert-title">Company Sudah Terdaftar</h5>
+        <h5 class="company-alert-title">Company Already Registered</h5>
         <p class="company-alert-desc">
           <strong>
             {{ existingCompany.source === 'customer_branch' ? existingCompany.parent_company : existingCompany.name }}
@@ -1198,22 +1282,22 @@ const handleStoreBulk = async () => {
         </p>
       </div>
       <template #footer>
-        <button class="btn-alert-ok" @click="closeCompanyModal">Mengerti</button>
+        <button class="btn-alert-ok" @click="closeCompanyModal">Understood</button>
       </template>
     </AppModal>
 
-    <!-- ═══ MODAL BULK ADD ═══ -->
-    <AppModal
+    ═══ MODAL BULK ADD ═══
+    <!-- <AppModal
       :show="isBulkModalVisible"
       title="Add Bulk Leads"
       icon="layer-group"
       size="lg"
       @close="closeBulkModal"
     >
-      <div class="form-container-gap">
+      <div class="form-container-gap"> -->
 
         <!-- Error global -->
-        <div v-if="bulkError" class="alert alert-danger py-2 mb-0" style="font-size:0.85rem">
+        <!-- <div v-if="bulkError" class="alert alert-danger py-2 mb-0" style="font-size:0.85rem">
           <font-awesome-icon icon="triangle-exclamation" /> {{ bulkError }}
         </div>
 
@@ -1222,14 +1306,14 @@ const handleStoreBulk = async () => {
           <button type="button" class="btn-toolbar btn-purple" @click="addRow">
             <font-awesome-icon icon="plus" /> Add Row
           </button>
-        </div>
+        </div> -->
 
         <!-- Rows -->
-        <div v-for="(row, index) in bulkRows" :key="row._key"
+        <!-- <div v-for="(row, index) in bulkRows" :key="row._key"
           class="bulk-row-card"
-        >
+        > -->
           <!-- Row header -->
-          <div class="bulk-row-header">
+          <!-- <div class="bulk-row-header">
             <span class="bulk-row-num">{{ index + 1 }}</span>
             <span class="td-muted" style="font-size:0.82rem">{{ row.company_name || 'New leads...' }}</span>
             <button type="button" class="act-btn act-delete ms-auto"
@@ -1239,22 +1323,57 @@ const handleStoreBulk = async () => {
             >
               <font-awesome-icon icon="trash-can" />
             </button>
-          </div>
+          </div> -->
 
           <!-- Fields -->
-          <div class="p-3">
+          <!-- <div class="p-3">
             <div class="row g-2">
 
-              <div class="col-12 form-group">
+              <div class="col-12 form-group company-search-wrap">
                 <label>Company Name <span style="color:#ef4444">*</span></label>
-                <input v-model="row.company_name" class="form-input" placeholder="PT. Example"
-                  :class="{ 'is-invalid': getRowError(index, 'company_name') }" />
+                <input
+                  :value="row.company_name"
+                  class="form-input"
+                  placeholder="PT. Example"
+                  :class="{ 'is-invalid': getRowError(index, 'company_name') }"
+                  @input="onCompanyNameInput($event, row)"
+                  @focus="activeCompanyTarget = row"
+                  @blur="activeCompanyTarget = null"
+                />
                 <small v-if="getRowError(index, 'company_name')" class="text-danger">{{ getRowError(index, 'company_name') }}</small>
+                <div v-if="activeCompanyTarget === row && companyNameSelectData.length" class="company-suggest-list">
+                  <button
+                    v-for="item in companyNameSelectData"
+                    :key="`${item.source}-${item.id}`"
+                    type="button"
+                    class="company-suggest-item"
+                    @click="selectExistingCompany(item, row)"
+                  >
+                    <span>
+                      <span class="company-suggest-name">
+                        {{ item.source === 'customer_branch' ? item.parent_company : item.name }}
+                      </span>
+                      <span class="company-suggest-code">
+                        <template v-if="item.source === 'customer'">
+                          {{ item.customer_code }}
+                        </template>
+                        <template v-else-if="item.source === 'customer_branch'">
+                          {{ item.name }}
+                        </template>
+                        <template v-else-if="item.source === 'leads'">
+                          {{ item.contact_name ?? '-' }}
+                        </template>
+                      </span>
+                    </span>
+                    <span class="badge-registered">
+                      {{ item.source === 'customer' ? 'Customer' : item.source === 'customer_branch' ? 'Cabang' : 'Leads' }}
+                    </span>
+                  </button>
+                </div>
               </div>
-
               <div class="col-6 form-group">
                 <label>Contact Name</label>
-                <input v-model="row.contact_name" class="form-input" placeholder="John Doe" />
+                <input :value="row.contact_name" class="form-input" placeholder="John Doe" @input="onContactNameInput($event, row)" />
               </div>
 
               <div class="col-6 form-group">
@@ -1276,23 +1395,23 @@ const handleStoreBulk = async () => {
                 <small v-if="getRowError(index, 'email')" class="text-danger">{{ getRowError(index, 'email') }}</small>
               </div>
 
-              <div class="col-6 form-group">
+              <div class="form-group">
                 <label>Industry</label>
                 <select v-model="row.industry_id" class="form-input form-select">
                   <option value="">-- Select Industry --</option>
                   <option v-for="ind in industrySelectData" :key="ind.id" :value="ind.id">{{ ind.name }}</option>
                 </select>
-              </div>
+              </div> -->
 
-              <div class="col-6 form-group">
+              <!-- <div class="col-6 form-group">
                 <label>Category</label>
                 <select v-model="row.lead_category_id" class="form-input form-select">
                   <option value="">-- Select Category --</option>
                   <option v-for="cat in categorySelectData" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                 </select>
-              </div>
+              </div> -->
 
-              <div class="col-12 form-group">
+              <!-- <div class="col-12 form-group">
                 <label>Lead Source</label>
                 <div class="segment-group">
                   <button
@@ -1306,12 +1425,16 @@ const handleStoreBulk = async () => {
 
               <div class="col-12 form-group">
                 <label>Address</label>
-                <textarea v-model="row.address" class="form-input form-textarea" rows="1" placeholder="Alamat..."></textarea>
+                <textarea :value="row.address" class="form-input form-textarea" rows="1" placeholder="Alamat..."
+                  @input="onSentenceInput($event, row, 'address')"
+                ></textarea>
               </div>
 
               <div class="col-12 form-group">
                 <label>Notes</label>
-                <textarea v-model="row.notes" class="form-input form-textarea" rows="1" placeholder="Catatan..."></textarea>
+                <textarea :value="row.notes" class="form-input form-textarea" rows="1" placeholder="Catatan..."
+                  @input="onSentenceInput($event, row, 'notes')"
+                ></textarea>
               </div>
 
             </div>
@@ -1328,7 +1451,7 @@ const handleStoreBulk = async () => {
           {{ bulkLoading ? `Saving ${bulkRows.length} data...` : `Save ${bulkRows.length} Data` }}
         </button>
       </template>
-    </AppModal>
+    </AppModal> -->
 
 
     <!-- ═══ TOAST ═══ -->

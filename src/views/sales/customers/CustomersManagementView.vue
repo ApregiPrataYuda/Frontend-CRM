@@ -669,6 +669,24 @@ async function openDeleteBranchModal(item) {
   }
 }
 
+// Capitalize Words, kecuali PT, TBK, dst
+const COMPANY_ABBREVIATIONS = ['PT', 'CV', 'UD', 'TBK', 'PD', 'CO', 'LTD', 'INC']
+function capitalizeWords(str) {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => {
+      if (!word) return word
+
+      const cleanWord = word.replace(/\./g, '').toUpperCase()
+      if (COMPANY_ABBREVIATIONS.includes(cleanWord)) {
+        return word.toUpperCase()
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1)
+    })
+    .join(' ')
+}
+
 </script>
 
 <template>
@@ -725,7 +743,7 @@ async function openDeleteBranchModal(item) {
         </div> -->
       </div>
       <button class="btn-toolbar btn-orange" @click="store.resetFilters()">
-        <font-awesome-icon icon="rotate-left" /> Reset
+        <font-awesome-icon icon="rotate-left" /> Refresh
       </button>
     </div>
 
@@ -742,7 +760,7 @@ async function openDeleteBranchModal(item) {
                 <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu" :class="{ show: showPerPageCustomers }">
-                <div class="drop-label">Per Halaman</div>
+                <div class="drop-label">Per Page</div>
                 <div class="perpage-grid">
                   <button
                     v-for="opt in [5, 10, 25, 50]" :key="opt"
@@ -776,11 +794,11 @@ async function openDeleteBranchModal(item) {
           </div>
 
           <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openAddModal">
-            <font-awesome-icon icon="plus" /> Add Data
+            <font-awesome-icon icon="plus" /> Add Customer
           </button>
 
           <button class="btn-toolbar btn-submission" @click="openSubmissionModal">
-            <font-awesome-icon icon="hourglass-half" /> Status Pengajuan
+            <font-awesome-icon icon="hourglass-half" /> Submission Status
             <span v-if="store.submissionMeta.total" class="submission-count">
               {{ store.submissionMeta.total }}
             </span>
@@ -821,7 +839,7 @@ async function openDeleteBranchModal(item) {
                 <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu drop-right" :class="{ show: showSortDirCustomers }">
-                <div class="drop-label">Urutan</div>
+                <div class="drop-label">Order</div>
                 <button
                   v-for="opt in ['desc', 'asc']" :key="opt"
                   class="drop-item"
@@ -854,11 +872,11 @@ async function openDeleteBranchModal(item) {
           />
 
           <h5 class="empty-title">
-            Belum Ada Customer
+            No Customers Available
           </h5>
 
           <p class="empty-text">
-            Customer akan muncul di halaman ini setelah disetujui oleh Manager.
+            Customers will appear on this page once approved by the Manager.
           </p>
 
           <button
@@ -867,7 +885,7 @@ async function openDeleteBranchModal(item) {
             @click="openAddModal"
           >
             <font-awesome-icon icon="plus" />
-            Tambah Customer
+            Add Customer
           </button>
 
         </div>
@@ -918,12 +936,12 @@ async function openDeleteBranchModal(item) {
               <div>
                   <small class="text-muted d-block">Sales</small>
                   <span class="fw-semibold">
-    {{
-        item.display_type === 'branch'
-            ? item.branch.assigned_name ?? '-'
-            : item.assigned_name ?? '-'
-    }}
-</span>
+                    {{
+                        item.display_type === 'branch'
+                            ? item.branch.assigned_name ?? '-'
+                            : item.assigned_name ?? '-'
+                    }}
+                </span>
               </div>
           </div>
           </div>
@@ -935,11 +953,11 @@ async function openDeleteBranchModal(item) {
             <span class="badge-lead-source">{{ item.lead_source ?? '-' }}</span>
             <span v-if="item.lead_category_name" class="detail-badge">{{ item.lead_category_name }}</span>
             <span v-if="item.branch_count > 0" class="detail-badge">
-              <font-awesome-icon icon="code-branch" /> {{ item.branch_count }} Cabang
+              <font-awesome-icon icon="code-branch" /> {{ item.branch_count }} Branch
             </span>
             <!-- ── jumlah kontak (kalau lebih dari 1) ── -->
             <span v-if="item.contacts?.length > 1" class="detail-badge">
-              <font-awesome-icon icon="address-book" /> {{ item.contacts.length }} Kontak
+              <font-awesome-icon icon="address-book" /> {{ item.contacts.length }} Contact
             </span>
           </div>
 
@@ -1023,7 +1041,7 @@ async function openDeleteBranchModal(item) {
             <td class="td-name">
               
               <template v-if="item.display_type === 'branch'">
-                  <div class="td-sub">Sales Pemegang Cabang</div>
+                  <div class="td-sub">Branch Sales Owner</div>
                   <div>{{ item.assigned_name ?? '-' }}</div>
               </template>
               <template v-else>
@@ -1083,7 +1101,7 @@ async function openDeleteBranchModal(item) {
     <!-- ═══ MODAL ADD / EDIT ═══ -->
     <AppModal
       :show="isAddModalVisible"
-      :title="isBranchEdit ? 'Edit Cabang Customer' : (store.matchedCompany ? 'Tambah Cabang Baru' : (isEdit ? 'Edit Customer' : 'Add New Customer'))"
+      :title="isBranchEdit ? 'Edit Customer Branch' : (store.matchedCompany ? 'Add New Branch' : (isEdit ? 'Edit Customer' : 'Add New Customer'))"
       :icon="isBranchEdit ? 'pen-to-square' : (store.matchedCompany ? 'code-branch' : (isEdit ? 'pen-to-square' : 'plus'))"
       size="md"
       @close="closeAddModal"
@@ -1114,7 +1132,7 @@ async function openDeleteBranchModal(item) {
                     <div style="font-weight:600">{{ c.company_name }}</div>
                     <div style="font-size:0.72rem;color:var(--text-muted)">{{ c.customer_code }}</div>
                   </div>
-                  <span class="detail-badge">Sudah terdaftar</span>
+                  <span class="detail-badge">Already registered</span>
                 </div>
               </div>
             </div>
@@ -1124,11 +1142,11 @@ async function openDeleteBranchModal(item) {
             <div>
               <div style="font-weight:700">{{ store.matchedCompany.company_name }}</div>
               <div style="font-size:0.72rem;color:var(--text-muted)">
-                {{ store.matchedCompany.customer_code }} — akan ditambahkan sebagai cabang baru
+                {{ store.matchedCompany.customer_code }} — will be added as a new branch
               </div>
             </div>
             <button type="button" class="btn-cancel" style="padding:4px 10px" @click="unlockCompany">
-              Ganti
+              Change
             </button>
           </div>
 
@@ -1139,18 +1157,18 @@ async function openDeleteBranchModal(item) {
 
         <template v-if="store.matchedCompany">
   <div class="form-group">
-    <label>Nama Cabang <span class="required">*</span></label>
+    <label>Branch Name <span class="required">*</span></label>
     <input v-model="branchFormData.branch_name" class="form-input" placeholder="Contoh: Cabang Bandung" />
     <span v-if="getError('branch_name')" class="form-error">{{ getError('branch_name') }}</span>
   </div>
 
   <div class="form-group">
-    <label>Kota</label>
+    <label>City</label>
     <input v-model="branchFormData.city" class="form-input" placeholder="Contoh: Bandung" />
   </div>
 
   <div class="form-group">
-    <label>Alamat Cabang</label>
+    <label>Branch Address</label>
     <textarea v-model="branchFormData.address" class="form-input form-textarea" rows="2" placeholder="Alamat lengkap cabang..." />
   </div>
 </template>
@@ -1158,7 +1176,7 @@ async function openDeleteBranchModal(item) {
         <!-- ═══ KONTAK (repeatable, muncul HANYA saat mode customer baru/edit) ═══ -->
         <!-- Kontak dipakai customer maupun branch -->
         <div class="form-group">
-          <label>Kontak <span class="required">*</span></label>
+          <label>Contact <span class="required">*</span></label>
 
           <div class="contact-list">
             <div
@@ -1174,7 +1192,7 @@ async function openDeleteBranchModal(item) {
                     :checked="contact.is_primary"
                     @change="setPrimaryContact(index)"
                   />
-                  Kontak Utama
+                  Primary Contact
                 </label>
                 <button
                   v-if="contactsForm.length > 1"
@@ -1189,7 +1207,7 @@ async function openDeleteBranchModal(item) {
 
               <div class="form-row-2">
                 <div class="form-group">
-                  <label>Nama <span class="required">*</span></label>
+                  <label>Name <span class="required">*</span></label>
                   <input
                     v-model="contact.name"
                     class="form-input"
@@ -1201,7 +1219,7 @@ async function openDeleteBranchModal(item) {
                   </span>
                 </div>
                 <div class="form-group">
-                  <label>Jabatan</label>
+                  <label>Position</label>
                   <input v-model="contact.position" class="form-input" placeholder="Purchasing, Finance, dll" />
                 </div>
               </div>
@@ -1229,7 +1247,7 @@ async function openDeleteBranchModal(item) {
           </div>
 
           <button type="button" class="btn-add-contact" @click="addContact">
-            <font-awesome-icon icon="plus" /> Tambah Kontak
+            <font-awesome-icon icon="plus" /> Add Contact
           </button>
         </div>
 
@@ -1393,8 +1411,8 @@ async function openDeleteBranchModal(item) {
           <font-awesome-icon v-else :icon="isBranchEdit ? 'pen-to-square' : (store.matchedCompany ? 'code-branch' : (isEdit ? 'pen-to-square' : 'check'))" />
           {{
             (formLoading || savingCustomers || updatingCustomers)
-              ? (isBranchEdit ? 'Menyimpan Cabang...' : (store.matchedCompany ? 'Mengajukan Cabang...' : (isEdit ? 'Menyimpan...' : 'Menambahkan...')))
-              : (isBranchEdit ? 'Simpan Perubahan Cabang' : (store.matchedCompany ? 'Ajukan Cabang' : (isEdit ? 'Simpan Perubahan' : 'Save Data')))
+              ? (isBranchEdit ? 'Saving Branch...' : (store.matchedCompany ? 'Submitting Branch...' : (isEdit ? 'Saving...' : 'Adding...')))
+              : (isBranchEdit ? 'Save Branch Changes' : (store.matchedCompany ? 'Submit Branch' : (isEdit ? 'Save Change' : 'Save Data')))
           }}
         </button>
       </template>
@@ -1417,7 +1435,7 @@ async function openDeleteBranchModal(item) {
 
           <!-- ═══ KONTAK (bisa banyak) ═══ -->
           <div class="detail-section-label">
-            Kontak <span v-if="store.customersDetail.contacts?.length">({{ store.customersDetail.contacts.length }})</span>
+            Contact <span v-if="store.customersDetail.contacts?.length">({{ store.customersDetail.contacts.length }})</span>
           </div>
 
           <div v-if="!store.customersDetail.contacts?.length" class="detail-row">
@@ -1483,11 +1501,11 @@ async function openDeleteBranchModal(item) {
           </div>
 
           <div class="detail-section-label">
-            Cabang <span v-if="store.customersDetail.branches?.length">({{ store.customersDetail.branch_count ?? store.customersDetail.branches.length }})</span>
+            Branch <span v-if="store.customersDetail.branches?.length">({{ store.customersDetail.branch_count ?? store.customersDetail.branches.length }})</span>
           </div>
 
           <div v-if="!store.customersDetail.branches?.length" class="detail-row">
-            <span class="detail-value" style="color:var(--text-muted);">Belum ada cabang</span>
+            <span class="detail-value" style="color:var(--text-muted);">No branches available</span>
           </div>
 
           <div v-else class="branch-list">

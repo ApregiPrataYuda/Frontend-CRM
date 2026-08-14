@@ -841,7 +841,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           </div>
 
           <button class="btn-toolbar btn-orange" @click="visitDataStore.resetFilters()">
-            <font-awesome-icon icon="rotate-left" /> Reset
+            <font-awesome-icon icon="rotate-left" /> Refresh
           </button>
         </div>
 
@@ -870,7 +870,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
                 {{ sort.direction.toUpperCase() }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu drop-right" :class="{ show: showSortDirMenu }">
-                <div class="drop-label">Urutan</div>
+                <div class="drop-label">Order</div>
                 <button
                   v-for="opt in ['desc', 'asc']" :key="opt"
                   class="drop-item" :class="{ active: sort.direction === opt }"
@@ -1122,7 +1122,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
         </button>
       </div>
       <div class="page-badges">
-        <span class="page-badge">Hal {{ pagination.current_page }} / {{ pagination.last_page }}</span>
+        <span class="page-badge">Page {{ pagination.current_page }} / {{ pagination.last_page }}</span>
         <span class="page-badge">TOTAL: {{ pagination.total }}</span>
       </div>
     </div>
@@ -1319,7 +1319,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               </td>
             </tr>
             <tr v-else-if="leadsData.length === 0">
-              <td colspan="7" class="td-center">ðŸ“­ Tidak ada leads yang siap dikunjungi</td>
+              <td colspan="7" class="td-center">ðŸ“­ No leads ready to visit</td>
             </tr>
             <tr
               v-else
@@ -1638,7 +1638,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               <th>No</th>
               <th>Target</th>
               <th>Company</th>
-              <th>Kontak</th>
+              <th>Contact</th>
               <th>Address</th>
               <th style="text-align:center">Action</th>
             </tr>
@@ -1769,7 +1769,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     >
       <div v-if="selectedCust" class="form-container-gap">
         <div class="detail-info-box">
-          <p class="detail-box-label">Customer yang akan dikunjungi</p>
+          <p class="detail-box-label">Customers to be visited</p>
           <p style="font-weight:700; font-size:0.95rem">{{ selectedCust.company_name }}</p>
 
           <!-- â•â•â• TARGET: BRANCH atau HEAD OFFICE â•â•â• -->
@@ -1794,13 +1794,13 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <span class="detail-value">{{ selectedCust.status ?? '-' }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">Waktu Mulai</span>
+            <span class="detail-label">Start Time</span>
             <span class="detail-value">{{ nowFormatted() }}</span>
           </div>
         </div>
         <div class="warning-box">
           <font-awesome-icon icon="triangle-exclamation" />
-          Setelah visit dimulai, sistem akan mencatat waktu kunjungan secara otomatis.
+          Once the visit starts, the system will automatically record the visit time.
         </div>
       </div>
       <template #footer>
