@@ -325,6 +325,13 @@ async function handleSave() {
   }
 }
 
+// ── MODAL: PANDUAN / PENJELASAN HALAMAN ───────────────────────────
+// Isi kontennya beda dikit buat sales vs admin/manager (canAssignSales),
+// jadi masing-masing cuma lihat bagian yang relevan buat role mereka.
+const isHelpModalVisible = ref(false)
+function openHelpModal()  { isHelpModalVisible.value = true }
+function closeHelpModal() { isHelpModalVisible.value = false }
+
 // ── MODAL: ASSIGN SALES (khusus admin/manager, tab Semua Data) ────
 const isAssignModalVisible = ref(false)
 const assignSelectedIds    = ref([])
@@ -398,6 +405,13 @@ async function submitBulkAssign() {
           <span class="breadcrumb-item active">Customer Product Population</span>
         </div>
       </div>
+
+      <div class="breadcrumb-right">
+        <button class="btn-help" type="button" @click="openHelpModal">
+          <font-awesome-icon icon="circle-question" />
+          <span>Apa itu halaman ini?</span>
+        </button>
+      </div>
     </div>
 
     <!-- ═══ VIEW MODE SWITCHER (all / mine / incomplete) ═══ -->
@@ -421,7 +435,7 @@ async function submitBulkAssign() {
     </div>
 
     <!-- ═══ TOOLBAR TOP ═══ -->
-    <div class="toolbar-top">
+    <!-- <div class="toolbar-top">
       <div class="toolbar-left">
         <div class="drop-wrap">
           <button class="btn-toolbar btn-purple" @click="showExportProductPopulations = !showExportProductPopulations">
@@ -459,7 +473,7 @@ async function submitBulkAssign() {
       <button class="btn-toolbar btn-orange" @click="store.resetFilters()">
         <font-awesome-icon icon="rotate-left" /> Reset
       </button>
-    </div>
+    </div> -->
 
     <!-- ═══ CONTROLS ROW ═══ -->
     <div class="controls-card">
@@ -949,6 +963,81 @@ async function submitBulkAssign() {
       </template>
     </AppModal>
 
+    <!-- ═══ MODAL: PANDUAN / PENJELASAN HALAMAN ═══ -->
+    <AppModal
+      :show="isHelpModalVisible"
+      title="Tentang Halaman Customer Product Population"
+      icon="circle-question"
+      size="lg"
+      @close="closeHelpModal"
+    >
+      <div class="help-content">
+        <p class="help-intro">
+          Halaman ini buat mencatat <strong>produk apa yang terpasang/dipakai di customer mana</strong>
+          (pompa, mechanical seal, dll) sekaligus siapa sales (PIC) yang memegang data itu. Dari sini,
+          admin/manager juga bisa lihat data mana yang belum lengkap dan mana yang belum ada sales-nya.
+        </p>
+
+        <div class="help-section">
+          <h5 class="help-section-title">
+            <font-awesome-icon icon="table-list" /> 3 Tampilan Data
+          </h5>
+          <div class="help-view-list">
+            <div v-for="v in viewModes" :key="v.key" class="help-view-item">
+              <span class="help-view-icon" :style="{ color: v.color }">
+                <font-awesome-icon :icon="v.icon" />
+              </span>
+              <div>
+                <div class="help-view-label">{{ v.label }}</div>
+                <div class="help-view-desc">{{ v.desc }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <h5 class="help-section-title">
+            <font-awesome-icon icon="user" /> Buat Sales
+          </h5>
+          <ul class="help-list">
+            <li>Tambah/edit data product population buat customer yang kamu pegang lewat tombol <strong>Add Data</strong>.</li>
+            <li>Tab <strong>Customer Saya</strong> nunjukin data yang PIC-nya kamu.</li>
+            <li>
+              Tab <strong>Data Belum Lengkap</strong> isinya data "yatim" — belum ada customer & belum ada PIC
+              sama sekali. Kamu cuma bisa lihat <strong>Detail</strong>-nya; edit/hapus data di tab ini cuma bisa
+              dilakukan admin/manager, biar nggak diserobot atau salah pegang.
+            </li>
+          </ul>
+        </div>
+
+        <div v-if="canAssignSales" class="help-section">
+          <h5 class="help-section-title">
+            <font-awesome-icon icon="user-shield" /> Khusus Admin/Manager
+          </h5>
+          <ul class="help-list">
+            <li>
+              Tombol <strong>Assign Sales</strong> (di tab Semua Data) buat nge-assign banyak data sekaligus —
+              data yang sudah ada nama customer-nya tapi belum ada sales yang pegang — ke 1 sales tujuan.
+            </li>
+            <li>
+              Data di tab <strong>Data Belum Lengkap</strong> bisa dilengkapi belakangan: tinggal <strong>Edit</strong>
+              baris-nya begitu customer & PIC-nya sudah ketahuan.
+            </li>
+            <li>
+              Begitu di-assign atau dilengkapi, customer terkait otomatis jadi milik sales itu dan status
+              approval-nya ikut ke-set <strong>approved</strong> — tapi <em>cuma</em> kalau customer itu belum ada
+              pemiliknya sama sekali atau statusnya masih pending. Kalau customer-nya udah ada pemilik dan
+              sudah approved sebelumnya, datanya nggak akan ketimpa otomatis.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <template #footer>
+        <button class="btn-cancel" @click="closeHelpModal">Mengerti</button>
+      </template>
+    </AppModal>
+
     <!-- ═══ TOAST ═══ -->
     <Teleport to="body">
       <Transition name="toast">
@@ -979,7 +1068,7 @@ async function submitBulkAssign() {
 .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 /* ── BREADCRUMB ── */
-.breadcrumb-card { background: var(--bg-card); border-radius: 10px; padding: 16px 18px; box-shadow: 0 1px 3px var(--shadow-color); }
+.breadcrumb-card { background: var(--bg-card); border-radius: 10px; padding: 16px 18px; box-shadow: 0 1px 3px var(--shadow-color); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .breadcrumb-left { display: flex; flex-direction: column; gap: 6px; }
 .breadcrumb-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
 .breadcrumb-title svg { color: #6366f1; }
@@ -987,6 +1076,31 @@ async function submitBulkAssign() {
 .breadcrumb-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
 .breadcrumb-item.active { color: #6366f1; font-weight: 700; }
 .breadcrumb-separator { font-size: 0.7rem; color: var(--text-muted); opacity: 0.6; }
+
+.breadcrumb-right { flex-shrink: 0; }
+.btn-help {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 8px; border: 1px solid #6366f1;
+  background: transparent; color: #6366f1; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.btn-help:hover { background: #6366f1; color: #fff; }
+
+/* ── MODAL PANDUAN ── */
+.help-content { display: flex; flex-direction: column; gap: 18px; }
+.help-intro { margin: 0; font-size: 0.88rem; line-height: 1.6; color: var(--text-primary); }
+.help-section { display: flex; flex-direction: column; gap: 8px; }
+.help-section-title {
+  display: flex; align-items: center; gap: 8px; margin: 0;
+  font-size: 0.86rem; font-weight: 700; color: #6366f1;
+}
+.help-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.help-list li { font-size: 0.84rem; line-height: 1.55; color: var(--text-primary); }
+.help-view-list { display: flex; flex-direction: column; gap: 10px; }
+.help-view-item { display: flex; align-items: flex-start; gap: 12px; }
+.help-view-icon { font-size: 1rem; margin-top: 2px; }
+.help-view-label { font-size: 0.86rem; font-weight: 700; color: var(--text-primary); }
+.help-view-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
 
 /* ── VIEW MODE SWITCHER ── */
 .view-card { background: var(--bg-card); border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 3px var(--shadow-color); }
@@ -1188,6 +1302,8 @@ async function submitBulkAssign() {
 @media (max-width: 768px) {
   .breadcrumb-card { padding: 12px 14px; }
   .breadcrumb-title { font-size: 1rem; }
+  .breadcrumb-right { width: 100%; }
+  .btn-help { width: 100%; justify-content: center; }
   .toolbar-top { flex-direction: column; align-items: stretch; padding: 10px 12px; }
   .toolbar-left { width: 100%; }
   .toolbar-left .drop-wrap { flex: 1; }

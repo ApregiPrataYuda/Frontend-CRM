@@ -23,7 +23,7 @@ const {
   salesSelectData,
   customerSuggestions, searchingCustomer,
 
-  unassignedData, loadingUnassigned, searchUnassigned,
+  unassignedData, loadingUnassigned, searchUnassigned, errorUnassignedFetch,
   assigningSales, errorAssign,
 } = storeToRefs(store)
 
@@ -34,16 +34,39 @@ const canUpdate  = computed(() => permission.canUpdate(currentUrl.value))
 const canDelete  = computed(() => permission.canDelete(currentUrl.value))
 const canView    = computed(() => permission.canView(currentUrl.value))
 
-// NOTE: belum ada permission action khusus "assign sales" di PermissionStore,
-// jadi fitur "Assign Sales" saya gate pakai canUpdate dulu (dianggap bagian
-// dari hak update data). Ganti computed ini kalau nanti ada permission
-// action tersendiri (misal permission.canAssign(currentUrl.value)).
-const canAssignSales = computed(() => canUpdate.value)
+// ── ROLE CHECK: admin/manager vs sales ────────────────
+// Sama seperti aturan di backend ensurePrivileged() (role_id 2 = Sales,
+// selain itu dianggap privileged/admin-manager). Dipakai buat:
+//  1. Nampilin tombol "Assign Sales" di tab Semua Data.
+//  2. Nyembunyiin section "PIC / Sales yang menangani" di modal Add/Edit,
+//     biar Sales nggak bisa iseng reassign data ke sales lain.
+//
+// NOTE: saya nggak punya visibility ke auth store project ini, jadi
+// role_id user yang login saya ambil dari localStorage key "user" —
+// asumsi ini sesuai response login yang kamu kasih contohnya kemarin
+// ({ ..., "user": { "id":10, "fullname":"Budhi", ..., "role_id":3 } }).
+// Kalau ternyata user login disimpan di tempat lain (misal Pinia
+// authStore / key localStorage lain), tinggal sesuaikan isi
+// getLoggedInRoleId() ini aja, bagian lain nggak perlu diubah.
+function getLoggedInRoleId() {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed?.role_id ?? null
+  } catch (e) {
+    console.error('Gagal baca role_id user login:', e)
+    return null
+  }
+}
+
+const loggedInRoleId = getLoggedInRoleId()
+const canAssignSales = computed(() => Number(loggedInRoleId) !== 2)
 
 // ── VIEW MODE (all / mine / incomplete) — config statis buat tab ──
 const viewModes = [
   { key: 'all',        icon: 'table-list',            label: 'Semua Data',        desc: 'Menampilkan seluruh data product population tanpa filter.',                     color: '#6366f1' },
-  { key: 'mine',       icon: 'user-check',             label: 'Customer-Product Population Saya',     desc: 'Data yang sudah di-assign ke sales yang login.',                                 color: '#16a34a' },
+  { key: 'mine',       icon: 'user-check',             label: 'Customer Saya',     desc: 'Data yang sudah di-assign ke sales yang login.',                                 color: '#16a34a' },
   { key: 'incomplete', icon: 'triangle-exclamation',   label: 'Data Belum Lengkap',desc: 'Data yang belum ada nama customer dan belum ada PIC/sales sama sekali.',        color: '#ef4444' },
 ]
 const activeViewInfo = () => viewModes.find(v => v.key === store.view)
@@ -331,7 +354,11 @@ function toggleAssignSelectAll() {
 }
 
 async function submitBulkAssign() {
-  if (!assignTargetUser.value) {
+  // Cek eksplisit ke '' / null / undefined (bukan cuma falsy check) supaya
+  // kalau suatu saat ada id sales bernilai 0, validasi ini nggak salah
+  // nganggep "belum pilih". Ini juga jaga-jaga kalau normalisasi data sales
+  // di store berubah bentuk lagi ke depannya.
+  if (assignTargetUser.value === '' || assignTargetUser.value === null || assignTargetUser.value === undefined) {
     showToast('error', 'Pilih sales tujuan terlebih dahulu.')
     return
   }
@@ -393,7 +420,46 @@ async function submitBulkAssign() {
       </p>
     </div>
 
-    
+    <!-- ═══ TOOLBAR TOP ═══ -->
+    <!-- <div class="toolbar-top">
+      <div class="toolbar-left">
+        <div class="drop-wrap">
+          <button class="btn-toolbar btn-purple" @click="showExportProductPopulations = !showExportProductPopulations">
+            <font-awesome-icon icon="upload" /> Exports
+            <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+          </button>
+          <div class="drop-menu" :class="{ show: showExportProductPopulations }">
+            <div class="drop-label">Export Data</div>
+            <button class="drop-item" @click="exportCSV">
+              <font-awesome-icon icon="file-csv" style="color:#22c55e" /> Export CSV
+            </button>
+            <button class="drop-item" @click="exportExcel">
+              <font-awesome-icon icon="file-excel" style="color:#16a34a" /> Export Excel
+            </button>
+            <button class="drop-item" @click="exportPDF">
+              <font-awesome-icon icon="file-pdf" style="color:#ef4444" /> Export PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="drop-wrap">
+          <button class="btn-toolbar btn-purple" @click="showImportProductPopulations = !showImportProductPopulations">
+            <font-awesome-icon icon="download" /> Imports
+            <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+          </button>
+          <div class="drop-menu" :class="{ show: showImportProductPopulations }">
+            <div class="drop-label">Import Data</div>
+            <button class="drop-item">
+              <font-awesome-icon icon="file-csv" style="color:#22c55e" /> Import CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-toolbar btn-orange" @click="store.resetFilters()">
+        <font-awesome-icon icon="rotate-left" /> Reset
+      </button>
+    </div> -->
 
     <!-- ═══ CONTROLS ROW ═══ -->
     <div class="controls-card">
@@ -548,10 +614,12 @@ async function submitBulkAssign() {
             </td>
             <td class="td-muted">{{ store.formatDate(item.created_at) }}</td>
             <td class="td-actions">
-              <button v-if="canUpdate" class="act-btn act-edit" title="Edit" @click="openEditModal(item)">
+              <!-- Tab "Data Belum Lengkap": cukup tombol Detail, Edit/Hapus
+                   disembunyikan meskipun user punya hak canUpdate/canDelete. -->
+              <button v-if="canUpdate && store.view !== 'incomplete'" class="act-btn act-edit" title="Edit" @click="openEditModal(item)">
                 <font-awesome-icon icon="pen-to-square" />
               </button>
-              <button v-if="canDelete" class="act-btn act-delete" title="Hapus" @click="openDeleteModal(item)">
+              <button v-if="canDelete && store.view !== 'incomplete'" class="act-btn act-delete" title="Hapus" @click="openDeleteModal(item)">
                 <font-awesome-icon icon="trash-can" />
               </button>
               <button v-if="canView" class="act-btn act-info" title="Detail" @click="openDetailModal(item.id)">
@@ -699,7 +767,9 @@ async function submitBulkAssign() {
           <input v-model="formData.mechanical_seal_drawing_no" class="form-input" placeholder="e.g. MSD-0021" />
         </div>
 
-        <div class="form-group">
+        <!-- Khusus admin/manager: Sales nggak boleh liat/ubah PIC biar nggak
+             bisa iseng reassign data ke sales lain lewat form edit. -->
+        <div v-if="canAssignSales" class="form-group">
           <label>PIC / Sales yang menangani</label>
           <div class="pic-checkbox-grid">
             <label v-for="s in salesSelectData" :key="s.id" class="pic-checkbox">
@@ -760,6 +830,12 @@ async function submitBulkAssign() {
 
       <div v-if="loadingUnassigned" class="state-wrap">
         <div class="spinner-custom"></div>
+      </div>
+
+      <!-- Beda dari list kosong karena sudah lengkap: ini fetch-nya sendiri gagal (403/500/dst) -->
+      <div v-else-if="errorUnassignedFetch" class="assign-fetch-error">
+        <font-awesome-icon icon="triangle-exclamation" />
+        {{ errorUnassignedFetch }}
       </div>
 
       <div v-else-if="!unassignedData.length" class="empty-state assign-empty">
@@ -1057,6 +1133,12 @@ async function submitBulkAssign() {
 /* ── ASSIGN SALES MODAL ── */
 .assign-info { font-size: 0.84rem; color: var(--text-muted); margin: 0 0 14px; line-height: 1.6; }
 .assign-empty { padding: 30px 10px; }
+.assign-fetch-error {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px; border-radius: 8px;
+  background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+  font-size: 0.84rem; font-weight: 500;
+}
 .assign-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--border-main); }
 .assign-select-all { background: transparent; border: none; padding: 0; }
 .assign-target { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
