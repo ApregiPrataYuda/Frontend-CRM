@@ -623,9 +623,9 @@ const handleStoreBulk = async () => {
             <button  v-if="canCreate" class="btn-toolbar btn-purple" @click="openAddModal">
               <font-awesome-icon icon="plus" /> Add Leads
             </button>
-            <button v-if="canCreate" class="btn-toolbar btn-purple" style="background:#7c3aed" @click="openBulkModal">
+            <!-- <button v-if="canCreate" class="btn-toolbar btn-purple" style="background:#7c3aed" @click="openBulkModal">
               <font-awesome-icon icon="layer-group" /> Add Bulk
-            </button>
+            </button> -->
           </template>
         </div>
 
@@ -1286,18 +1286,18 @@ const handleStoreBulk = async () => {
       </template>
     </AppModal>
 
-    ═══ MODAL BULK ADD ═══
-    <!-- <AppModal
+    <!-- ═══ MODAL BULK ADD ═══ -->
+    <AppModal
       :show="isBulkModalVisible"
       title="Add Bulk Leads"
       icon="layer-group"
       size="lg"
       @close="closeBulkModal"
     >
-      <div class="form-container-gap"> -->
+      <div class="form-container-gap">
 
         <!-- Error global -->
-        <!-- <div v-if="bulkError" class="alert alert-danger py-2 mb-0" style="font-size:0.85rem">
+        <div v-if="bulkError" class="alert alert-danger py-2 mb-0" style="font-size:0.85rem">
           <font-awesome-icon icon="triangle-exclamation" /> {{ bulkError }}
         </div>
 
@@ -1306,14 +1306,14 @@ const handleStoreBulk = async () => {
           <button type="button" class="btn-toolbar btn-purple" @click="addRow">
             <font-awesome-icon icon="plus" /> Add Row
           </button>
-        </div> -->
+        </div>
 
         <!-- Rows -->
-        <!-- <div v-for="(row, index) in bulkRows" :key="row._key"
+        <div v-for="(row, index) in bulkRows" :key="row._key"
           class="bulk-row-card"
-        > -->
+        >
           <!-- Row header -->
-          <!-- <div class="bulk-row-header">
+          <div class="bulk-row-header">
             <span class="bulk-row-num">{{ index + 1 }}</span>
             <span class="td-muted" style="font-size:0.82rem">{{ row.company_name || 'New leads...' }}</span>
             <button type="button" class="act-btn act-delete ms-auto"
@@ -1323,10 +1323,10 @@ const handleStoreBulk = async () => {
             >
               <font-awesome-icon icon="trash-can" />
             </button>
-          </div> -->
+          </div>
 
           <!-- Fields -->
-          <!-- <div class="p-3">
+          <div class="p-3">
             <div class="row g-2">
 
               <div class="col-12 form-group company-search-wrap">
@@ -1401,17 +1401,17 @@ const handleStoreBulk = async () => {
                   <option value="">-- Select Industry --</option>
                   <option v-for="ind in industrySelectData" :key="ind.id" :value="ind.id">{{ ind.name }}</option>
                 </select>
-              </div> -->
+              </div>
 
-              <!-- <div class="col-6 form-group">
+              <div class="col-6 form-group">
                 <label>Category</label>
                 <select v-model="row.lead_category_id" class="form-input form-select">
                   <option value="">-- Select Category --</option>
                   <option v-for="cat in categorySelectData" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                 </select>
-              </div> -->
+              </div>
 
-              <!-- <div class="col-12 form-group">
+              <div class="col-12 form-group">
                 <label>Lead Source</label>
                 <div class="segment-group">
                   <button
@@ -1451,7 +1451,7 @@ const handleStoreBulk = async () => {
           {{ bulkLoading ? `Saving ${bulkRows.length} data...` : `Save ${bulkRows.length} Data` }}
         </button>
       </template>
-    </AppModal> -->
+    </AppModal>
 
 
     <!-- ═══ TOAST ═══ -->

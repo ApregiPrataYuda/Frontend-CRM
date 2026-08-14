@@ -669,22 +669,32 @@ async function openDeleteBranchModal(item) {
   }
 }
 
-// Capitalize Words, kecuali PT, TBK, dst
+// ── CAPITALIZE HELPER (unified) ──────────────────────────
 const COMPANY_ABBREVIATIONS = ['PT', 'CV', 'UD', 'TBK', 'PD', 'CO', 'LTD', 'INC']
-function capitalizeWords(str) {
+function capitalize(str, mode = 'words', useAbbreviations = false) {
+  if (!str) return str
+
+  if (mode === 'sentences') {
+    let result = str.charAt(0).toUpperCase() + str.slice(1)
+    return result.replace(/([.!?]\s+)([a-z])/g, (m, p1, p2) => p1 + p2.toUpperCase())
+  }
+
   return str
     .toLowerCase()
     .split(' ')
     .map(word => {
       if (!word) return word
-
-      const cleanWord = word.replace(/\./g, '').toUpperCase()
-      if (COMPANY_ABBREVIATIONS.includes(cleanWord)) {
-        return word.toUpperCase()
+      if (useAbbreviations) {
+        const cleanWord = word.replace(/\./g, '').toUpperCase()
+        if (COMPANY_ABBREVIATIONS.includes(cleanWord)) return word.toUpperCase()
       }
       return word.charAt(0).toUpperCase() + word.slice(1)
     })
     .join(' ')
+}
+
+function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations = false) {
+  target[field] = capitalize(e.target.value, mode, useAbbreviations)
 }
 
 </script>
@@ -1114,12 +1124,12 @@ function capitalizeWords(str) {
 
           <div v-if="!store.matchedCompany" class="cs-wrap">
             <input
-              v-model="formData.company_name"
+              :value="formData.company_name"
               class="form-input"
               :class="{ 'input-error': getError('company_name') }"
               placeholder="PT. Example"
-              @input="store.searchCompanyName(formData.company_name)"
-            />
+              @input="onCapitalizedInput($event, formData, 'company_name', 'words', true); 
+                      store.searchCompanyName(formData.company_name)" />
             <div v-if="store.companySuggestions.length" class="cs-dropdown">
               <div class="cs-list">
                 <div
@@ -1158,18 +1168,21 @@ function capitalizeWords(str) {
         <template v-if="store.matchedCompany">
   <div class="form-group">
     <label>Branch Name <span class="required">*</span></label>
-    <input v-model="branchFormData.branch_name" class="form-input" placeholder="Contoh: Cabang Bandung" />
+    <input :value="branchFormData.branch_name" class="form-input" placeholder="Contoh: Cabang Bandung"
+           @input="onCapitalizedInput($event, branchFormData, 'branch_name')" />
     <span v-if="getError('branch_name')" class="form-error">{{ getError('branch_name') }}</span>
   </div>
 
   <div class="form-group">
     <label>City</label>
-    <input v-model="branchFormData.city" class="form-input" placeholder="Contoh: Bandung" />
+    <input :value="branchFormData.city" class="form-input" placeholder="Contoh: Bandung" 
+            @input="onCapitalizedInput($event, branchFormData, 'city')" />
   </div>
 
   <div class="form-group">
     <label>Branch Address</label>
-    <textarea v-model="branchFormData.address" class="form-input form-textarea" rows="2" placeholder="Alamat lengkap cabang..." />
+    <textarea :value="branchFormData.address" class="form-input form-textarea" rows="2" placeholder="Alamat lengkap cabang..." 
+              @input="onCapitalizedInput($event, branchFormData, 'address', 'sentences')" />
   </div>
 </template>
 
@@ -1209,10 +1222,11 @@ function capitalizeWords(str) {
                 <div class="form-group">
                   <label>Name <span class="required">*</span></label>
                   <input
-                    v-model="contact.name"
+                    :value="contact.name"
                     class="form-input"
                     :class="{ 'input-error': getContactError(index, 'name') }"
                     placeholder="Nama kontak"
+                    @input="onCapitalizedInput($event, contact, 'name')"
                   />
                   <span v-if="getContactError(index, 'name')" class="form-error">
                     {{ getContactError(index, 'name') }}
@@ -1220,7 +1234,8 @@ function capitalizeWords(str) {
                 </div>
                 <div class="form-group">
                   <label>Position</label>
-                  <input v-model="contact.position" class="form-input" placeholder="Purchasing, Finance, dll" />
+                  <input :value="contact.position" class="form-input" placeholder="Purchasing, Finance, dll"
+                          @input="onCapitalizedInput($event, contact, 'position')" />
                 </div>
               </div>
 
@@ -1387,14 +1402,16 @@ function capitalizeWords(str) {
 
         <div v-if="!store.matchedCompany" class="form-group">
           <label>Address</label>
-          <textarea v-model="formData.address" class="form-input form-textarea" rows="2"
-            placeholder="Alamat lengkap..." />
+          <textarea :value="formData.address" class="form-input form-textarea" rows="2"
+            placeholder="Alamat lengkap..."
+            @input="onCapitalizedInput($event, formData, 'address', 'sentences')" />
         </div>
 
         <div v-if="!store.matchedCompany" class="form-group">
           <label>Notes</label>
-          <textarea v-model="formData.notes" class="form-input form-textarea" rows="2"
-            placeholder="Catatan tambahan..." />
+          <textarea :value="formData.notes" class="form-input form-textarea" rows="2"
+            placeholder="Catatan tambahan..." 
+            @input="onCapitalizedInput($event, formData, 'notes', 'sentences')" />
         </div>
 
       </div>
