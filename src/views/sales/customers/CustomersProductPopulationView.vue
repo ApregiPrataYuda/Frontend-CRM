@@ -23,7 +23,7 @@ const {
   salesSelectData,
   customerSuggestions, searchingCustomer,
 
-  unassignedData, loadingUnassigned, searchUnassigned,
+  unassignedData, loadingUnassigned, searchUnassigned, errorUnassignedFetch,
   assigningSales, errorAssign,
 } = storeToRefs(store)
 
@@ -393,7 +393,46 @@ async function submitBulkAssign() {
       </p>
     </div>
 
-    
+    <!-- ═══ TOOLBAR TOP ═══ -->
+    <div class="toolbar-top">
+      <div class="toolbar-left">
+        <div class="drop-wrap">
+          <button class="btn-toolbar btn-purple" @click="showExportProductPopulations = !showExportProductPopulations">
+            <font-awesome-icon icon="upload" /> Exports
+            <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+          </button>
+          <div class="drop-menu" :class="{ show: showExportProductPopulations }">
+            <div class="drop-label">Export Data</div>
+            <button class="drop-item" @click="exportCSV">
+              <font-awesome-icon icon="file-csv" style="color:#22c55e" /> Export CSV
+            </button>
+            <button class="drop-item" @click="exportExcel">
+              <font-awesome-icon icon="file-excel" style="color:#16a34a" /> Export Excel
+            </button>
+            <button class="drop-item" @click="exportPDF">
+              <font-awesome-icon icon="file-pdf" style="color:#ef4444" /> Export PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="drop-wrap">
+          <button class="btn-toolbar btn-purple" @click="showImportProductPopulations = !showImportProductPopulations">
+            <font-awesome-icon icon="download" /> Imports
+            <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+          </button>
+          <div class="drop-menu" :class="{ show: showImportProductPopulations }">
+            <div class="drop-label">Import Data</div>
+            <button class="drop-item">
+              <font-awesome-icon icon="file-csv" style="color:#22c55e" /> Import CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-toolbar btn-orange" @click="store.resetFilters()">
+        <font-awesome-icon icon="rotate-left" /> Reset
+      </button>
+    </div>
 
     <!-- ═══ CONTROLS ROW ═══ -->
     <div class="controls-card">
@@ -762,6 +801,12 @@ async function submitBulkAssign() {
         <div class="spinner-custom"></div>
       </div>
 
+      <!-- Beda dari list kosong karena sudah lengkap: ini fetch-nya sendiri gagal (403/500/dst) -->
+      <div v-else-if="errorUnassignedFetch" class="assign-fetch-error">
+        <font-awesome-icon icon="triangle-exclamation" />
+        {{ errorUnassignedFetch }}
+      </div>
+
       <div v-else-if="!unassignedData.length" class="empty-state assign-empty">
         <h5 class="empty-title" style="font-size:1rem">Semua data customer sudah ada PIC-nya.</h5>
       </div>
@@ -1057,6 +1102,12 @@ async function submitBulkAssign() {
 /* ── ASSIGN SALES MODAL ── */
 .assign-info { font-size: 0.84rem; color: var(--text-muted); margin: 0 0 14px; line-height: 1.6; }
 .assign-empty { padding: 30px 10px; }
+.assign-fetch-error {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px; border-radius: 8px;
+  background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+  font-size: 0.84rem; font-weight: 500;
+}
 .assign-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--border-main); }
 .assign-select-all { background: transparent; border: none; padding: 0; }
 .assign-target { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

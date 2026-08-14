@@ -305,15 +305,10 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
   const unassignedData          = ref([])
   const loadingUnassigned       = ref(false)
   const searchUnassigned        = ref('')
-  // Beda dari "list kosong karena semua sudah ada PIC": ini nyimpen
-  // pesan kalau fetch-nya sendiri GAGAL (403/500/dst), supaya modal
-  // nggak salah nampilin "sudah lengkap" pas sebenarnya error.
-  const errorUnassignedFetch    = ref(null)
   let   unassignedSearchTimeout = null
 
   const fetchUnassigned = async () => {
-    loadingUnassigned.value    = true
-    errorUnassignedFetch.value = null
+    loadingUnassigned.value = true
     try {
       const envelope = await productPopulationsServices.getUnassigned(
         searchUnassigned.value ? { search: searchUnassigned.value } : {}
@@ -321,9 +316,7 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
       unassignedData.value = envelope.data ?? []
     } catch (error) {
       console.error('Gagal fetch unassigned product population:', error)
-      unassignedData.value       = []
-      errorUnassignedFetch.value = error.response?.data?.message
-        || 'Gagal memuat data, coba lagi.'
+      unassignedData.value = []
     } finally {
       loadingUnassigned.value = false
     }
@@ -402,7 +395,7 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
     searchCustomerName,
 
     // unassigned + assign sales (khusus admin/manager)
-    unassignedData, loadingUnassigned, searchUnassigned, errorUnassignedFetch,
+    unassignedData, loadingUnassigned, searchUnassigned,
     fetchUnassigned, searchUnassignedWithDelay,
     assigningSales, errorAssign, assignSales,
   }
