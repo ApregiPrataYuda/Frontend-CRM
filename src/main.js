@@ -194,7 +194,8 @@ import {
   faHashtag,
   faCommentDots,
   faHeading,
-  faMoneyBillTransfer
+  faMoneyBillTransfer,
+  faUserSlash
   
 
 } from '@fortawesome/free-solid-svg-icons'
@@ -378,7 +379,8 @@ library.add(
   faHashtag,
   faCommentDots,
   faHeading,
-  faMoneyBillTransfer
+  faMoneyBillTransfer,
+  faUserSlash,
 
 )
 

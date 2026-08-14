@@ -360,6 +360,17 @@ const routes = [
         }
       },
 
+       {
+        path: 'customer-population',
+        name: 'Customer Population',
+
+        component: () =>
+        import('@/views/sales/customers/CustomersProductPopulationView.vue'),
+        meta: {
+          role: [2], title: 'Customer Population'
+        }
+      },
+
 
 
       {
