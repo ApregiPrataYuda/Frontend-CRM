@@ -15,6 +15,7 @@ const { isDark } = useTheme()
 const form = ref({
   email: '',
   password: '',
+  remember: false,
 })
 
 const showPassword = ref(false)
@@ -84,7 +85,7 @@ async function handleLogin() {
         </div>
 
         <div class="login-card">
-
+          
           <Transition name="fade">
            <div v-if="authStore.error" class="error-box">
               {{ authStore.error }}
@@ -105,14 +106,14 @@ async function handleLogin() {
               <label>Password</label>
               <div class="input-wrapper">
                 <font-awesome-icon :icon="['fas', 'lock']" class="input-icon" />
-                <input
-                  v-model="form.password"
-                  :type="showPassword ? 'text' : 'password'"
-                  placeholder="••••••••"
+                <input 
+                  v-model="form.password" 
+                  :type="showPassword ? 'text' : 'password'" 
+                  placeholder="••••••••" 
                 />
-                <button
-                  type="button"
-                  class="toggle-password"
+                <button 
+                  type="button" 
+                  class="toggle-password" 
                   @click="showPassword = !showPassword"
                 >
                   <font-awesome-icon v-if="showPassword" :icon="['fas', 'eye-slash']" />
@@ -122,10 +123,10 @@ async function handleLogin() {
             </div>
 
             <div class="form-options">
-              <router-link to="/maps-tracking" class="maps-shortcut-btn">
-                <font-awesome-icon :icon="['fas', 'map-location-dot']" />
-                <span>Live Location Sales</span>
-              </router-link>
+              <label class="remember-me">
+                <input v-model="form.remember" type="checkbox" />
+                <span>Remember me</span>
+              </label>
               <router-link to="/forgot-password">Forgot Password?</router-link>
             </div>
 
@@ -138,13 +139,13 @@ async function handleLogin() {
               <span>{{ authStore.loading ? 'Signing In...' : 'Sign In' }}</span>
             </button>
 
-
+           
 
           </form>
         </div>
 
         <!-- <div class="login-footer">
-          Belum punya akun?
+          Belum punya akun? 
           <router-link to="/register" class="auth-link">Daftar sekarang</router-link>
         </div> -->
 
@@ -286,7 +287,7 @@ async function handleLogin() {
   background: var(--bg-card, #ffffff);
   border-radius: 20px;
   padding: 40px;
-  box-shadow:
+  box-shadow: 
     0 4px 6px -1px rgba(0, 0, 0, 0.02),
     0 10px 15px -3px rgba(210, 214, 219, 0.25),
     0 20px 25px -5px rgba(210, 214, 219, 0.08);
@@ -363,50 +364,29 @@ async function handleLogin() {
 }
 
 /* ========================================
-   OPTIONS (Maps Shortcut & Forgot Password)
+   OPTIONS (Remember Me & Forgot Password)
 ======================================== */
 .form-options {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
-  gap: 12px;
 }
 
-/* Tombol outline kecil menuju halaman Realtime Maps, menggantikan checkbox
-   "Remember me" yang sebelumnya ada di sini. */
-.maps-shortcut-btn {
-  display: inline-flex;
+.remember-me {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  background: rgba(99, 102, 241, 0.06);
-  color: #6366f1;
-  font-size: 0.82rem;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: all 0.18s ease;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
 }
 
-.maps-shortcut-btn:hover {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: rgba(99, 102, 241, 0.5);
-  transform: translateY(-1px);
-}
-
-.maps-shortcut-btn svg {
-  font-size: 0.85rem;
-}
-
-.form-options a:not(.maps-shortcut-btn) {
+.form-options a {
   font-size: 0.88rem;
   color: #6366f1;
   text-decoration: none;
   font-weight: 600;
-  white-space: nowrap;
 }
 
 /* ========================================
@@ -506,6 +486,7 @@ async function handleLogin() {
 }
 
 .login-page.dark-theme .login-header p,
+.login-page.dark-theme .remember-me,
 .login-page.dark-theme .login-footer {
   color: var(--login-muted);
 }
@@ -514,11 +495,6 @@ async function handleLogin() {
   background: var(--login-card);
   border-color: var(--login-border);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35);
-}
-
-.login-page.dark-theme .maps-shortcut-btn {
-  background: rgba(99, 102, 241, 0.14);
-  border-color: rgba(99, 102, 241, 0.4);
 }
 
 .login-page.dark-theme .input-wrapper input {

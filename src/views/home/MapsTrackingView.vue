@@ -1,10 +1,15 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick, markRaw } from 'vue'
+import { useRouter } from 'vue-router'
 import { useHomeFrontendStore } from '@/stores/homeFrontendStore'
 
 // ── DARK MODE LOKAL ──
 const isDark = ref(false)
 const toggleTheme = () => { isDark.value = !isDark.value }
+
+// ── ROUTER ──
+const router = useRouter()
+const goToLogin = () => router.push('/login')
 
 // ── STORE ──
 const store = useHomeFrontendStore()
@@ -19,9 +24,22 @@ const pollingInterval     = ref(null)
 const lastUpdated         = ref('-')
 const isExporting         = ref(false)
 
+// ── RESPONSIVE HELPER ──
+// Konsep layout SAMA persis di semua ukuran layar (sidebar + peta berdampingan,
+// legend = kartu pojok kanan atas). Yang beda hanya default state-nya di mobile,
+// supaya peta tetap jadi fokus utama dan tidak ada yang menutupi peta.
+const isMobileViewport = () => typeof window !== 'undefined' && window.innerWidth <= 768
+
 // ── UI STATE ──
 const selectedVisit    = ref(null)
-const sidebarCollapsed = ref(false)
+// Di mobile, sidebar default collapsed (persis seperti saat user menekan tombol
+// collapse di desktop) supaya peta langsung terlihat penuh saat halaman dibuka.
+const sidebarCollapsed = ref(isMobileViewport())
+// BARU: toolbar filter (Date/Sales/Status/Type/Reset/dll) bisa "di-split" —
+// dilipat jadi cuma satu handle tipis supaya peta dapat ruang vertikal lebih
+// lebar, lalu tap handle-nya lagi untuk membuka filter itu kembali. Default
+// terlipat di mobile (layar sempit), tapi tetap terbuka di desktop.
+const toolbarCollapsed = ref(isMobileViewport())
 const search           = ref('')
 const selectedSalesId  = ref('')
 const selectedStatus   = ref('')
@@ -35,6 +53,20 @@ const showDateFilter   = ref(false)
 const showSalesFilter  = ref(false)
 const showStatusFilter = ref(false)
 const showTypeFilter   = ref(false) // ⬅️ BARU
+
+// ── LEGEND ──
+// Legend tetap kartu pojok kanan atas seperti di desktop (konsepnya tidak berubah).
+// Di mobile saja, defaultnya disembunyikan di balik tombol toggle kecil supaya
+// tidak langsung menutupi marker/peta begitu halaman dibuka.
+const legendOpen = ref(!isMobileViewport())
+const toggleLegend = () => { legendOpen.value = !legendOpen.value }
+const handleViewportResize = () => {
+  // Kalau user memutar layar / resize melewati breakpoint ke desktop, tampilkan lagi
+  if (!isMobileViewport()) {
+    legendOpen.value = true
+    toolbarCollapsed.value = false
+  }
+}
 
 // ── COMPUTED — dari store ──
 const visits = computed(() => store.visibleMapMarkers)
@@ -92,10 +124,6 @@ const typeBadgeClass = (type) => {
   if (type === 'BRANCH') return 'badge-branch'
   return 'badge-customer' // HEAD_OFFICE / CUSTOMER (lama)
 }
-// const typeLabel = (type) => {
-//   if (type === 'HEAD_OFFICE') return 'HEAD OFFICE'
-//   return type
-// }
 const typeLabel = (type) => {
   if (type === 'HEAD_OFFICE') return 'HEAD OFFICE CUSTOMER'
   if (type === 'BRANCH')      return 'BRANCH CUSTOMER'
@@ -112,6 +140,46 @@ const formatTime = (dt) => {
   if (!dt) return '-'
   return new Date(dt).toLocaleString('id-ID', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })
 }
+// BARU: label hasil kunjungan (customer_response) dari backend
+const customerResponseLabel = (val) => {
+  const map = {
+    potential_customers:   'Calon Pelanggan Potensial',
+    consideration_stage:   'Tahap Pertimbangan',
+    prospective_customers: 'Calon Pelanggan Prospektif',
+    failed:                'Gagal / Tidak Berlanjut',
+    convert_to_customer:   'Berhasil Jadi Customer',
+  }
+  return map[val] || val
+}
+
+// BARU: notes / complaint_detail / potential_order_detail diisi lewat editor
+// Tiptap di form input visit, jadi isinya HTML (<p>, <strong>, <ul>, dll),
+// bukan teks polos. Kalau ditampilkan lewat {{ }} biasa, tag-nya ikut
+// kelihatan mentah. Fungsi ini dipakai dengan v-html supaya HTML-nya
+// dirender jadi teks/format normal, dengan sanitasi ringan (buang
+// <script>, atribut on*, dan href javascript:) untuk jaga-jaga.
+const sanitizeRichText = (html) => {
+  if (!html) return ''
+  return String(html)
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+="[^"]*"/gi, '')
+    .replace(/\son\w+='[^']*'/gi, '')
+    .replace(/href\s*=\s*"javascript:[^"]*"/gi, 'href="#"')
+}
+
+// BARU: label jenis follow up / kunjungan selanjutnya
+const followUpTypeLabel = (type) => {
+  const map = {
+    CALL:     'Telepon',
+    EMAIL:    'Email',
+    WHATSAPP: 'WhatsApp',
+    MEETING:  'Meeting',
+    VISIT:    'Kunjungan Langsung',
+    OTHER:    'Lainnya',
+  }
+  return map[type] || type
+}
+
 const calcDuration = (checkIn, checkOut) => {
   const diff = new Date(checkOut) - new Date(checkIn)
   const mins = Math.floor(diff / 60000)
@@ -156,8 +224,12 @@ onMounted(async () => {
   lastUpdated.value = new Date().toLocaleTimeString('id-ID')
   initGoogleMaps()
   startPolling()
+  window.addEventListener('resize', handleViewportResize)
 })
-onUnmounted(() => stopPolling())
+onUnmounted(() => {
+  stopPolling()
+  window.removeEventListener('resize', handleViewportResize)
+})
 
 // ── GOOGLE MAPS ──
 const initGoogleMaps = () => {
@@ -412,7 +484,8 @@ const legends = [
     </div>
 
     <!-- TOOLBAR -->
-    <div class="toolbar-top">
+    <div class="toolbar-top" :class="{ collapsed: toolbarCollapsed }">
+      <div class="toolbar-content" v-show="!toolbarCollapsed">
       <div class="toolbar-left">
 
         <!-- Date Filter -->
@@ -507,14 +580,6 @@ const legends = [
               @click="selectedType = 'LEAD'; showTypeFilter = false">
               <span class="type-badge badge-lead">LEAD</span>
             </button>
-            <!-- <button class="drop-item" :class="{ active: selectedType === 'HEAD_OFFICE' }"
-              @click="selectedType = 'HEAD_OFFICE'; showTypeFilter = false">
-              <span class="type-badge badge-customer">HEAD OFFICE</span>
-            </button>
-            <button class="drop-item" :class="{ active: selectedType === 'BRANCH' }"
-              @click="selectedType = 'BRANCH'; showTypeFilter = false">
-              <span class="type-badge badge-branch">BRANCH</span>
-            </button> -->
             <button class="drop-item" :class="{ active: selectedType === 'HEAD_OFFICE' }"
               @click="selectedType = 'HEAD_OFFICE'; showTypeFilter = false">
               <span class="type-badge badge-customer">{{ typeLabel('HEAD_OFFICE') }}</span>
@@ -532,6 +597,10 @@ const legends = [
         <font-awesome-icon icon="rotate-left" /> Reset
       </button>
 
+      <button class="btn-toolbar btn-outline" @click="goToLogin">
+        <font-awesome-icon icon="right-to-bracket" /> Login
+      </button>
+
       <div class="toolbar-right">
         <div v-for="s in statusSummary" :key="s.label" class="stat-pill" :class="s.cls">
           <span class="pill-dot"></span>
@@ -544,6 +613,20 @@ const legends = [
           <font-awesome-icon icon="download" /> {{ isExporting ? 'Exporting...' : 'Export Map' }}
         </button>
       </div>
+      </div>
+
+      <!-- BARU: handle untuk melipat/split toolbar filter — tap untuk
+           menyembunyikan seluruh baris filter supaya peta jadi lebih lebar,
+           tap lagi untuk membuka filter itu kembali. -->
+      <button
+        class="toolbar-collapse-handle"
+        @click="toolbarCollapsed = !toolbarCollapsed"
+        :title="toolbarCollapsed ? 'Tampilkan Filter' : 'Sembunyikan Filter'"
+      >
+        <span class="handle-grip"></span>
+        <font-awesome-icon :icon="toolbarCollapsed ? 'chevron-down' : 'chevron-up'" />
+        <span>{{ toolbarCollapsed ? 'Tampilkan Filter' : 'Sembunyikan Filter' }}</span>
+      </button>
     </div>
 
     <!-- MAIN LAYOUT -->
@@ -559,6 +642,7 @@ const legends = [
             <em class="sidebar-count">{{ filteredVisits.length }}</em>
           </span>
           <button class="collapse-btn" @click="sidebarCollapsed = !sidebarCollapsed">
+            <span v-if="!sidebarCollapsed" class="collapse-btn-label">Geser</span>
             <font-awesome-icon :icon="sidebarCollapsed ? 'chevron-right' : 'chevron-left'" />
           </button>
         </div>
@@ -627,7 +711,18 @@ const legends = [
           </button>
         </div>
 
-        <div class="map-legend-card">
+        <!-- Tombol toggle legend: hanya tampak di mobile (lihat media query).
+             Legend card-nya sendiri konsepnya sama seperti desktop (kartu pojok
+             kanan atas), cuma di mobile defaultnya tersembunyi di balik tombol ini. -->
+        <button
+          class="legend-toggle-btn"
+          @click="toggleLegend"
+          :title="legendOpen ? 'Sembunyikan Legenda' : 'Tampilkan Legenda'"
+        >
+          <font-awesome-icon :icon="legendOpen ? 'xmark' : 'layer-group'" />
+        </button>
+
+        <div class="map-legend-card" :class="{ 'legend-open': legendOpen }">
           <div class="drop-label">Status</div>
           <div v-for="l in legends" :key="l.label" class="legend-row">
             <span class="legend-dot" :style="{ background: l.color }"></span>
@@ -636,8 +731,8 @@ const legends = [
           <div class="legend-divider"></div>
           <div class="drop-label">Type</div>
           <div class="legend-row"><span class="type-badge badge-lead">LEAD</span></div>
-         <div class="legend-row"><span class="type-badge badge-customer">{{ typeLabel('HEAD_OFFICE') }}</span></div>
-<div class="legend-row"><span class="type-badge badge-branch">{{ typeLabel('BRANCH') }}</span></div>
+          <div class="legend-row"><span class="type-badge badge-customer">{{ typeLabel('HEAD_OFFICE') }}</span></div>
+          <div class="legend-row"><span class="type-badge badge-branch">{{ typeLabel('BRANCH') }}</span></div>
         </div>
       </div>
 
@@ -716,6 +811,23 @@ const legends = [
                 <span class="detail-label">Contact</span>
                 <span class="detail-value">{{ selectedVisit.target_contact }}</span>
               </div>
+
+              <!-- BARU: no. telepon kontak, klik untuk langsung telepon -->
+              <div class="detail-row" v-if="selectedVisit.target_phone">
+                <span class="detail-label">Telepon</span>
+                <a :href="`tel:${selectedVisit.target_phone}`" class="detail-value detail-link">
+                  {{ selectedVisit.target_phone }}
+                </a>
+              </div>
+
+              <!-- BARU: email kontak, klik untuk langsung buka email client -->
+              <div class="detail-row" v-if="selectedVisit.target_email">
+                <span class="detail-label">Email</span>
+                <a :href="`mailto:${selectedVisit.target_email}`" class="detail-value detail-link">
+                  {{ selectedVisit.target_email }}
+                </a>
+              </div>
+
               <div class="detail-row">
                 <span class="detail-label">Lokasi</span>
                 <span class="detail-value" style="text-align:right;max-width:60%">{{ selectedVisit.gps_snapshot ?? '-' }}</span>
@@ -753,6 +865,83 @@ const legends = [
               <font-awesome-icon icon="clock" />
               Durasi: <strong>{{ calcDuration(selectedVisit.check_in_at, selectedVisit.check_out_at) }}</strong>
             </div>
+
+            <!-- BARU: foto kunjungan (diambil sales saat check-in) -->
+            <template v-if="selectedVisit.photo_url">
+              <div class="modal-section-title">Foto Kunjungan</div>
+              <a :href="selectedVisit.photo_url" target="_blank" class="visit-photo-link">
+                <img :src="selectedVisit.photo_url" alt="Foto kunjungan" class="visit-photo-img" />
+              </a>
+            </template>
+
+            <!-- BARU: hasil kunjungan (notes + response sales setelah check-out) -->
+            <template v-if="selectedVisit.notes || selectedVisit.customer_response">
+              <div class="modal-section-title">Hasil Kunjungan</div>
+              <div class="detail-list">
+                <div class="detail-row" v-if="selectedVisit.customer_response">
+                  <span class="detail-label">Hasil</span>
+                  <span class="detail-value">{{ customerResponseLabel(selectedVisit.customer_response) }}</span>
+                </div>
+                <div class="detail-row" v-if="selectedVisit.notes">
+                  <span class="detail-label">Catatan</span>
+                  <div
+                    class="detail-value rich-text"
+                    style="text-align:right;max-width:60%"
+                    v-html="sanitizeRichText(selectedVisit.notes)"
+                  ></div>
+                </div>
+              </div>
+            </template>
+
+            <!-- BARU: jadwal & catatan kunjungan selanjutnya (dari follow up
+                 yang dibuat otomatis saat sales check-out) -->
+            <template v-if="selectedVisit.next_visit_at || selectedVisit.next_visit_notes">
+              <div class="modal-section-title">Kunjungan Selanjutnya</div>
+              <div class="next-visit-card">
+                <div class="next-visit-row" v-if="selectedVisit.next_visit_at">
+                  <font-awesome-icon icon="calendar-days" />
+                  <div>
+                    <div class="next-visit-date">{{ formatTime(selectedVisit.next_visit_at) }}</div>
+                    <div class="next-visit-type" v-if="selectedVisit.next_visit_type">
+                      {{ followUpTypeLabel(selectedVisit.next_visit_type) }}
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="next-visit-notes rich-text"
+                  v-if="selectedVisit.next_visit_notes"
+                  v-html="sanitizeRichText(selectedVisit.next_visit_notes)"
+                ></div>
+              </div>
+            </template>
+
+            <!-- BARU: info komplain, kalau ada -->
+            <div class="alert-box alert-danger" v-if="selectedVisit.has_complaint">
+              <font-awesome-icon icon="triangle-exclamation" />
+              <div>
+                <strong>Ada Komplain</strong>
+                <div class="rich-text" v-html="sanitizeRichText(selectedVisit.complaint_detail)"></div>
+              </div>
+            </div>
+
+            <!-- BARU: info potensi order, kalau ada -->
+            <div class="alert-box alert-success" v-if="selectedVisit.has_potential_order">
+              <font-awesome-icon icon="circle-info" />
+              <div>
+                <strong>Ada Potensi Order</strong>
+                <div class="rich-text" v-html="sanitizeRichText(selectedVisit.potential_order_detail)"></div>
+              </div>
+            </div>
+
+            <!-- BARU: file bukti check-out, kalau sales upload dokumen -->
+            <a
+              v-if="selectedVisit.check_out_file_url"
+              :href="selectedVisit.check_out_file_url"
+              target="_blank"
+              class="checkout-file-link"
+            >
+              <font-awesome-icon icon="paperclip" /> Lihat File Bukti Check-out
+            </a>
           </div>
 
           <div class="modal-footer-btns">
@@ -856,14 +1045,31 @@ const legends = [
 
 /* ── TOOLBAR ── */
 .toolbar-top {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; flex-direction: column;
   background: var(--bg-card); border: 1px solid var(--border-main);
-  border-radius: 10px; padding: 12px 16px;
-  box-shadow: 0 1px 3px var(--shadow-color); flex-wrap: wrap; gap: 8px;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px var(--shadow-color);
   transition: background 0.3s, border-color 0.3s; flex-shrink: 0;
+}
+.toolbar-content {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px; padding: 12px 16px;
 }
 .toolbar-left  { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .toolbar-right { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* BARU: handle "split" untuk melipat/membuka toolbar filter */
+.toolbar-collapse-handle {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 6px 0; border: none; border-top: 1px solid var(--border-main);
+  background: transparent; color: var(--text-muted); cursor: pointer;
+  font-size: 0.72rem; font-weight: 600; border-radius: 0 0 10px 10px;
+  transition: all 0.18s ease;
+}
+.toolbar-collapse-handle:hover { color: #6366f1; background: rgba(99,102,241,0.06); }
+.toolbar-top.collapsed .toolbar-collapse-handle { border-top: none; }
+.handle-grip { width: 28px; height: 3px; border-radius: 3px; background: var(--border-main); }
+.toolbar-collapse-handle:hover .handle-grip { background: #6366f1; }
 
 .btn-toolbar { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border: none; border-radius: 8px; font-size: 0.83rem; font-weight: 600; cursor: pointer; transition: all 0.18s ease; white-space: nowrap; }
 .btn-purple { background: #6366f1; color: #fff; }
@@ -873,6 +1079,8 @@ const legends = [
 .btn-green:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-orange { background: #f59e0b; color: #fff; }
 .btn-orange:hover { background: #d97706; }
+.btn-outline { background: transparent; color: var(--text-muted); border: 1px solid var(--border-main); }
+.btn-outline:hover { border-color: #6366f1; color: #6366f1; background: rgba(99,102,241,0.06); }
 .btn-arrow  { font-size: 0.6rem; opacity: 0.7; }
 
 /* ── DROPDOWN ── */
@@ -924,7 +1132,7 @@ const legends = [
   width: 300px; background: var(--bg-card);
   border-right: 1px solid var(--border-main);
   display: flex; flex-direction: column;
-  transition: width 0.3s ease, background 0.3s;
+  transition: width 0.3s ease, max-height 0.3s ease, background 0.3s;
   flex-shrink: 0; overflow: hidden; min-height: 0;
 }
 .map-sidebar.collapsed { width: 48px; }
@@ -932,8 +1140,9 @@ const legends = [
 .sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 12px; border-bottom: 1px solid var(--border-main); min-height: 52px; flex-shrink: 0; }
 .sidebar-title { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .sidebar-count { color: #6366f1; font-style: normal; font-size: 0.8rem; background: rgba(99,102,241,0.1); padding: 1px 8px; border-radius: 20px; }
-.collapse-btn { background: var(--bg-input); border: 1px solid var(--border-main); color: var(--text-muted); width: 28px; height: 28px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; font-size: 0.75rem; }
+.collapse-btn { background: var(--bg-input); border: 1px solid var(--border-main); color: var(--text-muted); min-width: 28px; height: 28px; padding: 0 8px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; transition: all 0.2s; font-size: 0.75rem; }
 .collapse-btn:hover { border-color: #6366f1; color: #6366f1; }
+.collapse-btn-label { font-size: 0.74rem; font-weight: 600; white-space: nowrap; }
 
 .sidebar-search { display: flex; border-bottom: 1px solid var(--border-main); flex-shrink: 0; }
 .search-input-map { flex: 1; padding: 10px 12px; border: none; background: transparent; color: var(--text-primary); font-size: 0.84rem; outline: none; }
@@ -990,6 +1199,7 @@ const legends = [
 }
 .error-icon { font-size: 2rem; color: #ef4444; }
 
+/* ── LEGEND ── */
 .map-legend-card {
   position: absolute; top: 16px; right: 16px;
   background: var(--bg-card); border: 1px solid var(--border-main);
@@ -1001,6 +1211,17 @@ const legends = [
 .legend-row:last-child { margin-bottom: 0; }
 .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .legend-divider { border-top: 1px solid var(--border-main); margin: 8px 0; }
+
+/* Tombol toggle & tombol tutup legend: disembunyikan di desktop, hanya
+   dipakai di mobile (lihat media query di bawah) */
+.legend-toggle-btn {
+  display: none;
+  position: absolute; top: 16px; right: 16px; z-index: 15;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--bg-card); border: 1px solid var(--border-main);
+  color: #6366f1; align-items: center; justify-content: center;
+  font-size: 1rem; cursor: pointer; box-shadow: 0 4px 12px var(--shadow-color);
+}
 
 /* ── MODAL ── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(3px); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -1036,6 +1257,8 @@ const legends = [
 .detail-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
 .detail-value { font-size: 0.84rem; color: var(--text-primary); text-align: right; }
 .mono { font-family: monospace; font-weight: 700; color: #6366f1; font-size: 0.8rem; }
+.detail-link { color: #6366f1; text-decoration: none; font-weight: 600; }
+.detail-link:hover { text-decoration: underline; }
 
 .modal-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 16px 0 10px; }
 .modal-timeline { display: flex; align-items: center; margin-bottom: 14px; }
@@ -1054,6 +1277,48 @@ const legends = [
 .duration-card svg { color: #6366f1; }
 .duration-card strong { color: var(--text-primary); }
 
+/* BARU: foto kunjungan, alert komplain/potensi order, file check-out */
+.visit-photo-link { display: block; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-main); margin-bottom: 14px; }
+.visit-photo-img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
+
+.alert-box { display: flex; align-items: flex-start; gap: 10px; border-radius: 10px; padding: 10px 12px; font-size: 0.82rem; margin-bottom: 12px; }
+.alert-box svg { margin-top: 2px; flex-shrink: 0; }
+.alert-box strong { display: block; margin-bottom: 2px; }
+.alert-box p { margin: 0; color: var(--text-muted); }
+
+/* BARU: konten hasil render HTML dari editor Tiptap (notes, complaint_detail,
+   potential_order_detail) — reset margin bawaan <p>/<ul>/<ol> supaya rapi
+   di dalam kartu/detail-row yang sempit. */
+.rich-text { line-height: 1.5; }
+.rich-text :deep(p) { margin: 0 0 6px; }
+.rich-text :deep(p:last-child) { margin-bottom: 0; }
+.rich-text :deep(ul),
+.rich-text :deep(ol) { margin: 0 0 6px; padding-left: 18px; }
+.rich-text :deep(strong) { color: var(--text-primary); }
+.rich-text :deep(a) { color: #6366f1; }
+.alert-danger { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #ef4444; }
+.alert-danger svg { color: #ef4444; }
+.alert-success { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: #16a34a; }
+.alert-success svg { color: #16a34a; }
+
+.checkout-file-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.82rem; font-weight: 600; color: #6366f1;
+  text-decoration: none; margin-top: 4px;
+}
+.checkout-file-link:hover { text-decoration: underline; }
+
+/* BARU: kartu jadwal & catatan kunjungan selanjutnya (follow up) */
+.next-visit-card {
+  background: rgba(99,102,241,0.05); border: 1px solid rgba(99,102,241,0.15);
+  border-radius: 10px; padding: 12px; margin-bottom: 12px;
+}
+.next-visit-row { display: flex; align-items: flex-start; gap: 10px; }
+.next-visit-row svg { color: #6366f1; margin-top: 2px; flex-shrink: 0; }
+.next-visit-date { font-size: 0.88rem; font-weight: 700; color: var(--text-primary); }
+.next-visit-type { font-size: 0.74rem; color: var(--text-muted); margin-top: 1px; }
+.next-visit-notes { font-size: 0.82rem; color: var(--text-muted); margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border-main); }
+
 .modal-footer-btns { display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border-main); }
 .btn-cancel { padding: 8px 18px; background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-main); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
 .btn-cancel:hover { background: var(--border-main); color: var(--text-primary); }
@@ -1062,4 +1327,60 @@ const legends = [
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; transform: scale(0.97); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE / MOBILE FRIENDLY
+   Konsepnya SAMA seperti layar lebar: toolbar di
+   atas, sidebar + peta tetap berdampingan (row),
+   legend tetap kartu pojok kanan atas. Yang
+   disesuaikan cuma ukuran & default state supaya
+   peta tidak tertutup: sidebar default collapsed
+   (sama seperti tombol collapse di desktop) dan
+   legend default disembunyikan di balik tombol
+   toggle kecil.
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .page-root .h-100 { padding: 10px; gap: 8px; }
+
+  .breadcrumb-card { padding: 12px 14px; }
+  .breadcrumb-title { font-size: 1rem; }
+
+  /* Toolbar: PENTING — jangan pakai overflow-x:auto di sini. Container dengan
+     overflow-x auto otomatis meng-clip dropdown (.drop-menu) yang posisinya
+     absolute di bawah tombol, jadi menu Date/Sales/Status/Type jadi
+     kepotong & terlihat "tidak berfungsi" walau tombolnya tetap ke-klik.
+     Solusinya: biarkan wrap (turun baris), bukan discroll. */
+  .toolbar-content { padding: 10px; gap: 8px; }
+  .toolbar-left { flex-wrap: wrap; width: 100%; }
+  .btn-toolbar { padding: 7px 10px; font-size: 0.78rem; }
+  .toolbar-right { width: 100%; justify-content: space-between; }
+  .last-update { display: none; } /* hemat tempat, info live tetap ada di ikon rotate export */
+  .drop-menu, .drop-wide { min-width: 0; width: calc(100vw - 40px); max-width: 320px; }
+  .toolbar-collapse-handle span:last-child { font-size: 0.7rem; }
+
+  /* Sidebar & peta TETAP berdampingan (row) seperti desktop — tidak ditumpuk.
+     Sidebar cuma dibuat lebih ramping dan default collapsed supaya peta
+     langsung dapat porsi layar yang besar. */
+  .map-sidebar { width: 240px; }
+  .map-sidebar.collapsed { width: 36px; }
+  .sidebar-title { font-size: 0.8rem; }
+  .sidebar-count { font-size: 0.74rem; }
+
+  /* Legend: tetap kartu pojok kanan atas seperti desktop, hanya defaultnya
+     disembunyikan di balik tombol bulat kecil supaya tidak menutupi peta. */
+  .legend-toggle-btn { display: flex; width: 34px; height: 34px; font-size: 0.85rem; top: 10px; right: 10px; }
+  .map-legend-card {
+    display: none;
+    top: 10px; right: 52px;
+    min-width: 140px; max-width: 58vw;
+    padding: 10px 12px;
+  }
+  .map-legend-card.legend-open { display: block; }
+  .legend-row { font-size: 0.76rem; margin-bottom: 5px; }
+
+  /* Modal detail: manfaatkan lebar layar penuh */
+  .modal-overlay { padding: 12px; }
+  .modal-card { max-width: 100%; max-height: 90vh; }
+  .modal-body { max-height: 50vh; }
+}
 </style>

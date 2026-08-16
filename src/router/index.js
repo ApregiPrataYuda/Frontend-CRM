@@ -383,6 +383,17 @@ const routes = [
         }
       },
 
+      {
+        path: 'sales-target-visit',
+        name: 'My Target Visit',
+
+        component: () =>
+        import('@/views/sales/visit/TargetSalesView.vue'),
+        meta: {
+          role: [2], title: 'My Target Visit'
+        }
+      },
+
 
 
       {
@@ -400,6 +411,8 @@ const routes = [
 
       
 
+      
+
       /* ========================================
          MANAGER
       ========================================= */
@@ -414,6 +427,32 @@ const routes = [
 
         meta: {
           role: [3], title: 'Manager Home'
+        }
+      },
+
+      {
+        path: 'activity-sales-reports',
+
+        name: 'Activity Sales',
+
+        component: () =>
+          import('@/views/manager/activity/salesActivityView.vue'),
+
+        meta: {
+          role: [3], title: 'Activity Sales'
+        }
+      },
+
+      {
+        path: 'manager-target-visit',
+
+        name: 'Target Visit',
+
+        component: () =>
+          import('@/views/manager/visits/targetVisitView.vue'),
+
+        meta: {
+          role: [3], title: 'Target Visit'
         }
       },
 

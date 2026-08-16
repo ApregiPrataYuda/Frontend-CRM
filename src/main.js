@@ -195,7 +195,11 @@ import {
   faCommentDots,
   faHeading,
   faMoneyBillTransfer,
-  faUserSlash
+  faUserSlash,
+  faTags,
+  faSatelliteDish,
+  faCalendarWeek,
+  faPaperclip
   
 
 } from '@fortawesome/free-solid-svg-icons'
@@ -381,6 +385,10 @@ library.add(
   faHeading,
   faMoneyBillTransfer,
   faUserSlash,
+  faTags,
+  faSatelliteDish,
+  faCalendarWeek,
+  faPaperclip
 
 )
 
