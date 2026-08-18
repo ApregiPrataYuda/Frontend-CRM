@@ -28,6 +28,7 @@ onMounted(async () => {
 // ── DROPDOWN OPEN/CLOSE STATE ──────────────
 const showRangeMenu   = ref(false)
 const showFilterMenu  = ref(false)
+const showStatusMenu  = ref(false)
 const showExportMenu  = ref(false)
 const showPerPageMenu = ref(false)
 const showSortByMenu  = ref(false)
@@ -35,6 +36,9 @@ const showSortDirMenu = ref(false)
 
 const typeFilterLabel = () =>
   store.typeOptions.find(o => o.value === store.typeFilter)?.label ?? 'Semua Tipe'
+
+const statusFilterLabel = () =>
+  store.statusOptions.find(o => o.value === store.statusFilter)?.label ?? 'Semua Status'
 
 const sortByLabel = () =>
   store.sortOptions.find(o => o.value === store.sort.column)?.label ?? 'Waktu'
@@ -90,16 +94,18 @@ async function exportExcel() {
       'No':               idx + 1,
       'Sales':             a.sales_name,
       'Aktivitas':         getBadgeLabel(a.activity_type),
+      'No Ref':            a.ref_code || '-',
       'Target':            a.target_name || '-',
       'Keterangan Target': a.target_note || '',
       'Tanggal':           a.activity_date,
       'Waktu':             a.activity_time,
+      'Status':            getStatusLabel(a.status),
       'Catatan':           a.note ? a.note.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '',
     }))
 
     const worksheet = XLSX.utils.json_to_sheet(sheetData)
     worksheet['!cols'] = [
-      { wch: 5 }, { wch: 22 }, { wch: 12 }, { wch: 28 }, { wch: 16 }, { wch: 12 }, { wch: 8 }, { wch: 45 },
+      { wch: 5 }, { wch: 22 }, { wch: 12 }, { wch: 14 }, { wch: 28 }, { wch: 16 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 45 },
     ]
 
     const workbook = XLSX.utils.book_new()
@@ -307,6 +313,18 @@ function closeDetailModal() {
               <button v-for="opt in store.typeOptions" :key="opt.value" class="drop-item"
                 :class="{ active: store.typeFilter === opt.value }"
                 @click="store.changeTypeFilter(opt.value); showFilterMenu = false">{{ opt.label }}</button>
+            </div>
+          </div>
+
+          <div class="drop-wrap">
+            <button class="btn-select" @click="showStatusMenu = !showStatusMenu">
+              <font-awesome-icon icon="list-check" /> {{ statusFilterLabel() }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+            </button>
+            <div class="drop-menu" :class="{ show: showStatusMenu }">
+              <div class="drop-label">Status</div>
+              <button v-for="opt in store.statusOptions" :key="opt.value" class="drop-item"
+                :class="{ active: store.statusFilter === opt.value }"
+                @click="store.changeStatusFilter(opt.value); showStatusMenu = false">{{ opt.label }}</button>
             </div>
           </div>
 
@@ -549,21 +567,23 @@ function closeDetailModal() {
             <th style="width:56px">NO.</th>
             <th>SALES</th>
             <th style="width:140px">AKTIVITAS</th>
+            <th style="width:110px">NO REF</th>
             <th>TARGET</th>
             <th style="width:100px">TANGGAL</th>
             <th style="width:90px">WAKTU</th>
+            <th style="width:110px">STATUS</th>
             <th>CATATAN</th>
             <th style="width:90px; text-align:center">ACTIONS</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="store.loadingActivities">
-            <td colspan="8" class="td-center">
+            <td colspan="10" class="td-center">
               <font-awesome-icon icon="spinner" spin /> Memuat data...
             </td>
           </tr>
           <tr v-else-if="store.activitiesData.length === 0">
-            <td colspan="8" class="td-center">
+            <td colspan="10" class="td-center">
               <div class="empty-state">
                 <font-awesome-icon icon="inbox" class="empty-icon" />
                 <div>Tidak ada aktivitas yang cocok dengan filter/pencarian</div>
@@ -583,9 +603,13 @@ function closeDetailModal() {
                 <font-awesome-icon :icon="getBadgeIcon(a.activity_type)" /> {{ getBadgeLabel(a.activity_type) }}
               </span>
             </td>
+            <td class="td-muted mono">{{ a.ref_code || '-' }}</td>
             <td>{{ a.target_name || '-' }} <span v-if="a.target_note" class="td-muted">({{ a.target_note }})</span></td>
             <td class="td-muted">{{ fmtShortDate(a.activity_date) }}</td>
             <td class="td-muted">{{ a.activity_time }}</td>
+            <td>
+              <span class="result-chip" :class="getStatusClass(a.status)">{{ getStatusLabel(a.status) }}</span>
+            </td>
             <td class="td-note">{{ a.note }}</td>
             <td class="td-actions">
               <button class="act-btn act-info" title="Detail" @click="openDetailModal(a)">
@@ -640,7 +664,12 @@ function closeDetailModal() {
             style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid var(--border-main);"
           />
           <div style="flex:1;">
-            <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">{{ store.activityDetail.sales_name }}</div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">{{ store.activityDetail.sales_name }}</span>
+              <span v-if="store.activityDetail.no_reference || store.activityDetail.visit_code || store.activityDetail.follow_up_code" class="ref-code-chip">
+                # {{ store.activityDetail.no_reference || store.activityDetail.visit_code || store.activityDetail.follow_up_code }}
+              </span>
+            </div>
             <div style="font-size:0.78rem; color:var(--text-muted);">
               <span class="activity-badge" :class="getBadgeClass(detailType)">
                 <font-awesome-icon :icon="getBadgeIcon(detailType)" /> {{ getBadgeLabel(detailType) }}
@@ -753,18 +782,20 @@ function closeDetailModal() {
             <span class="detail-label">Subjek</span>
             <span class="detail-value">{{ store.activityDetail.subject }}</span>
           </div>
-          <div v-if="store.activityDetail.scheduled_time || store.activityDetail.completed_time">
-            <div class="detail-section-title" style="margin-top:10px;"><font-awesome-icon icon="clock" /> Timeline</div>
-            <div class="timeline-grid" style="grid-template-columns: repeat(2, 1fr);">
-              <div class="timeline-chip">
-                <div class="timeline-chip-label">Jadwal</div>
-                <div class="timeline-chip-value">{{ store.activityDetail.scheduled_time || '–' }}</div>
+          <div v-if="store.activityDetail.next_follow_up_at">
+            <div class="detail-section-title" style="margin-top:10px;"><font-awesome-icon icon="calendar-plus" /> Follow Up Selanjutnya</div>
+            <div class="next-visit-card">
+              <div class="next-visit-row">
+                <span class="next-visit-date"><font-awesome-icon icon="calendar-day" /> {{ store.formatDate(store.activityDetail.next_follow_up_at) }}</span>
+                <span v-if="store.activityDetail.follow_up_type" class="next-visit-type">{{ store.activityDetail.follow_up_type }}</span>
               </div>
-              <div class="timeline-chip">
-                <div class="timeline-chip-label">Selesai</div>
-                <div class="timeline-chip-value">{{ store.activityDetail.completed_time || 'Belum' }}</div>
+              <div v-if="store.activityDetail.completed_time" class="next-visit-notes">
+                <font-awesome-icon icon="circle-check" /> Sudah diselesaikan pukul {{ store.activityDetail.completed_time }}
               </div>
             </div>
+          </div>
+          <div v-else class="empty-detail-note">
+            <font-awesome-icon icon="circle-info" /> Belum ada jadwal follow up selanjutnya.
           </div>
 
           <div v-if="store.activityDetail.response || store.activityDetail.notes">
@@ -1127,6 +1158,7 @@ function closeDetailModal() {
 .td-center { text-align: center; padding: 40px; color: var(--text-muted); }
 .td-actions { text-align: center; }
 .td-note { color: var(--text-muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mono { font-family: monospace; font-size: 0.8rem; }
 .row-sales { display: flex; align-items: center; gap: 8px; }
 .row-sales img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
 .row-sales span { font-weight: 600; }
@@ -1269,6 +1301,16 @@ function closeDetailModal() {
 .detail-value a { color: #6366f1; text-decoration: none; }
 .detail-value a:hover { text-decoration: underline; }
 .font-semibold { font-weight: 600; }
+.ref-code-chip {
+  font-family: monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6366f1;
+  background: rgba(99,102,241,0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
 
 /* ===== DETAIL AKTIVITAS ===== */
 .detail-section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }

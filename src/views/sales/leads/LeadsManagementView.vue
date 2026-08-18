@@ -1,8 +1,10 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import AppModal from '@/components/AppModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { masterLeadsStore } from '@/stores/leadsStore'
+import { useVisitDataStore } from '@/stores/visitSalesStore'
+import { useLeadsVisitStore } from '@/stores/leadsVisitStore'
 import { usePermissionStore } from '@/stores/PermissionStore'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -10,6 +12,7 @@ import { storeToRefs } from 'pinia'
 
 // ── STORE ──
 const leadsStore = masterLeadsStore()
+
 const {
   leadsData, loadingLeads, searchLeads,
   pagination, sort, mode,
@@ -17,6 +20,13 @@ const {
   leadsDetail, loadingDetail,
   industrySelectData, categorySelectData, companyNameSelectData
 } = storeToRefs(leadsStore)
+
+// ── VISIT (reuse logic dari Sales Visit page — jangan diubah, cuma dipasang ulang di sini) ──
+const visitDataStore  = useVisitDataStore()
+const leadsVisitStore = useLeadsVisitStore()
+
+const { activeVisitLeadId, activeVisitId, loadingVisitNow } = storeToRefs(visitDataStore)
+const { activeLeadPhase } = storeToRefs(leadsVisitStore)
 
 // ── CONFIRM COMPOSABLE ──
 const { confirm } = useConfirm()
@@ -47,8 +57,6 @@ const sortByLabel = computed(() =>
 )
 
 // ── VIEW MODE (CARD / TABLE) ──────────────────────────
-// Default: card. Preference disimpan di localStorage supaya tetap
-// diingat ketika user reload halaman.
 const VIEW_MODE_KEY = 'leads_view_mode'
 const viewMode = ref(localStorage.getItem(VIEW_MODE_KEY) || 'card')
 
@@ -57,7 +65,6 @@ function setViewMode(m) {
   localStorage.setItem(VIEW_MODE_KEY, m)
 }
 
-// Palet warna avatar + helper inisial nama, dipakai di card view
 const avatarPalette = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#ec4899', '#14b8a6', '#8b5cf6']
 function getInitials(name) {
   if (!name) return '?'
@@ -72,11 +79,6 @@ function getAvatarColor(name) {
 }
 
 // ── VALIDASI NOMOR TELEPON (DINAMIS) ───────────────────
-// Mendukung berbagai format:
-//   - HP            : 08123456789, +6281234567890
-//   - Telepon kantor: 021-5551234, (021) 555-1234
-//   - Dengan ext.   : 021-5551234 ext 123, 0215551234 x45
-// Fungsi-fungsi ini dipakai bareng di form Add, Edit, dan Bulk Add.
 function sanitizePhoneValue(raw) {
   return (raw ?? '').replace(/[^0-9+\-.\s()extEXTkKsS]/g, '')
 }
@@ -117,7 +119,6 @@ const fieldValidators = {
 
 const requiredFields = ['company_name', 'contact_name', 'email', 'phone', 'lead_source']
 
-// Ambil pesan error: prioritaskan error dari backend, baru client-side (jika sudah touched)
 function getFieldError(data, touched, field) {
   const serverErr = getError(field)
   if (serverErr) return serverErr
@@ -201,16 +202,16 @@ function getError(field) {
 }
 
 // ── MODAL COMPANY NAME DITEMUKAN ──
-const openAddModal  = () => { 
-  resetForm(); 
-  leadsStore.clearCompanySuggestions(); 
-  isAddModalVisible.value = true 
-}
-const closeAddModal = () => { 
-  isAddModalVisible.value = false; 
-  resetForm(); 
-  leadsStore.clearCompanySuggestions() 
-}
+const openAddModal  = () => {
+   resetForm();
+   leadsStore.clearCompanySuggestions();
+   isAddModalVisible.value = true
+ }
+const closeAddModal = () => {
+   isAddModalVisible.value = false;
+   resetForm();
+   leadsStore.clearCompanySuggestions()
+ }
 
 // ── CEK COMPANY NAME (autocomplete) ──
 const showCompanySuggestions    = ref(false)
@@ -418,6 +419,276 @@ const handleDelete = async (lead) => {
   }
 }
 
+// ════════════════════════════════════════════════════════════
+// VISIT NOW (shortcut dari list, reuse startVisit dari Sales Visit)
+// ════════════════════════════════════════════════════════════
+const showVisitNowModal = ref(false)
+const selectedVisitLead = ref(null)
+
+function isRowActive(lead) {
+  return !!activeVisitLeadId.value && activeVisitLeadId.value === lead.id
+}
+
+function openVisitNow(lead) {
+  selectedVisitLead.value = lead
+  showVisitNowModal.value = true
+}
+
+function closeVisitNowModal() {
+  if (loadingVisitNow.value) return
+  showVisitNowModal.value = false
+  selectedVisitLead.value = null
+}
+
+async function confirmVisitNow() {
+  if (!selectedVisitLead.value) return
+  const { success, message } = await visitDataStore.startVisit(selectedVisitLead.value.id)
+  if (success) {
+    showToast('success', message)
+    closeVisitNowModal()
+    await restoreActiveLeadVisit() // ← langsung tarik status terbaru, biar tombol ganti tanpa refresh
+  } else {
+    showToast('error', message)
+  }
+}
+
+async function restoreActiveLeadVisit() {
+  try {
+    await visitDataStore.fetchVisits(visitDataStore.buildUrl())
+    const activeLeadVisit = visitDataStore.visitsData.find(
+      v => v.visit_type === 'LEAD' && v.check_out_at === null
+    )
+    if (activeLeadVisit) {
+      visitDataStore.activeVisitLeadId = activeLeadVisit.lead_id
+      visitDataStore.activeVisitId     = activeLeadVisit.id
+      activeLeadPhase.value = activeLeadVisit.check_in_at ? 'checked_in' : 'visiting'
+    } else {
+      visitDataStore.activeVisitLeadId = null
+      visitDataStore.activeVisitId     = null
+      activeLeadPhase.value = null
+    }
+  } catch (err) {
+    console.error('Gagal restore status visit aktif:', err)
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// CAMERA + GPS (copy persis dari Sales Visit page)
+// ════════════════════════════════════════════════════════════
+const videoRef          = ref(null)
+const canvasRef         = ref(null)
+const cameraStream      = ref(null)
+const capturedPhoto     = ref(null)
+const currentLocation   = ref({ latitude: null, longitude: null, address: '' })
+const isGettingLocation = ref(false)
+const locationReady     = ref(false)
+const loadingCheckIn    = ref(false)
+const currentDateTime   = ref('')
+let   clockInterval     = null
+
+function updateCurrentDateTime() {
+  currentDateTime.value = new Date().toLocaleString('id-ID', {
+    day: '2-digit', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
+}
+
+onMounted(() => {
+  updateCurrentDateTime()
+  clockInterval = setInterval(updateCurrentDateTime, 1000)
+  restoreActiveLeadVisit()
+})
+onUnmounted(() => {
+  clearInterval(clockInterval)
+  stopCamera()
+})
+
+async function startCamera() {
+  try {
+    stopCamera()
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    })
+    cameraStream.value = stream
+    await nextTick()
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream
+      await videoRef.value.play()
+    }
+  } catch (err) { console.error('Camera error:', err) }
+}
+
+function stopCamera() {
+  if (cameraStream.value) {
+    cameraStream.value.getTracks().forEach(t => t.stop())
+    cameraStream.value = null
+  }
+}
+
+async function getCurrentLocation() {
+  isGettingLocation.value = true
+  locationReady.value     = false
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      async pos => {
+        currentLocation.value.latitude  = pos.coords.latitude
+        currentLocation.value.longitude = pos.coords.longitude
+        try {
+          const r    = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`)
+          const data = await r.json()
+          currentLocation.value.address = data.display_name || 'Lokasi tidak ditemukan'
+          locationReady.value = true
+        } catch {
+          currentLocation.value.address = 'Lokasi gagal diambil'
+          locationReady.value = false
+        }
+        isGettingLocation.value = false
+        resolve()
+      },
+      err => { isGettingLocation.value = false; locationReady.value = false; reject(err) },
+      { enableHighAccuracy: true }
+    )
+  })
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ')
+  let line = ''
+  for (let n = 0; n < words.length; n++) {
+    const testLine  = line + words[n] + ' '
+    const testWidth = ctx.measureText(testLine).width
+    if (testWidth > maxWidth && n > 0) {
+      ctx.fillText(line, x, y); line = words[n] + ' '; y += lineHeight
+    } else { line = testLine }
+  }
+  ctx.fillText(line, x, y)
+}
+
+async function capturePhoto() {
+  const canvas = canvasRef.value
+  const video  = videoRef.value
+  if (!canvas || !video) return
+  const ctx = canvas.getContext('2d')
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+  const overlayH = 120
+  const gradient = ctx.createLinearGradient(0, canvas.height - overlayH, 0, canvas.height)
+  gradient.addColorStop(0, 'rgba(0,0,0,0)')
+  gradient.addColorStop(1, 'rgba(0,0,0,0.85)')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, canvas.height - overlayH, canvas.width, overlayH)
+
+  ctx.fillStyle = '#ffffff'
+  ctx.font = 'bold 28px Arial'
+  ctx.fillText(`${selectedVisitLead.value?.company_name || 'Visit Sales'}`, 20, canvas.height - 75)
+  ctx.font = '20px Arial'
+  ctx.fillText(`${currentDateTime.value}`, 20, canvas.height - 45)
+  ctx.font = '18px Arial'
+  wrapText(ctx, `${currentLocation.value.address || 'Location unavailable'}`, 20, canvas.height - 18, canvas.width - 40, 22)
+
+  capturedPhoto.value = canvas.toDataURL('image/jpeg', 1)
+  stopCamera()
+}
+
+async function retakePhoto() {
+  capturedPhoto.value = null
+  await startCamera()
+}
+
+// ════════════════════════════════════════════════════════════
+// CHECK IN
+// ════════════════════════════════════════════════════════════
+const showCheckInModal = ref(false)
+
+async function checkIn(lead) {
+  selectedVisitLead.value = lead
+  capturedPhoto.value = null
+  showCheckInModal.value = true
+  await nextTick(); await startCamera(); await getCurrentLocation()
+}
+
+function closeCheckInModal() {
+  showCheckInModal.value = false; capturedPhoto.value = null; stopCamera()
+}
+
+async function submitCheckIn() {
+  if (!activeVisitId.value) { showToast('error', 'Visit belum dimulai. Lakukan "Visit Now" terlebih dahulu.'); return }
+  loadingCheckIn.value = true
+  try {
+    const response = await fetch(capturedPhoto.value)
+    const blob     = await response.blob()
+    const file     = new File([blob], `checkin-${Date.now()}.jpg`, { type: 'image/jpeg' })
+    const formData = new FormData()
+    formData.append('latitude',     currentLocation.value.latitude)
+    formData.append('longitude',    currentLocation.value.longitude)
+    formData.append('gps_snapshot', currentLocation.value.address)
+    formData.append('photo',        file)
+    const result = await visitDataStore.submitCheckIn(activeVisitId.value, formData)
+    if (result.success) {
+      showToast('success', result.message)
+      closeCheckInModal()
+      await restoreActiveLeadVisit()
+    } else { showToast('error', result.message) }
+  } catch (err) { console.error(err); showToast('error', 'Gagal check in')
+  } finally { loadingCheckIn.value = false }
+}
+
+// ════════════════════════════════════════════════════════════
+// CHECK OUT (lebih simpel dari Customer — cuma notes + response)
+// ════════════════════════════════════════════════════════════
+const showCheckOutModal    = ref(false)
+const checkOutNotes        = ref('')
+const checkOutResponse     = ref('')
+const loadingLeadCheckOut  = ref(false)
+
+const leadResponseOptions = [
+  { value: 'potential_customers',   label: 'Potential Customers',   icon: 'seedling',     color: 'emerald' },
+  { value: 'consideration_stage',   label: 'Consideration Stage',   icon: 'comments',     color: 'blue'    },
+  { value: 'prospective_customers', label: 'Prospective Customers', icon: 'star',         color: 'indigo'  },
+  { value: 'failed',                label: 'Failed',                icon: 'circle-xmark', color: 'rose'    },
+  { value: 'convert_to_customer',   label: 'Convert To Customer',   icon: 'rocket',       color: 'amber'   },
+]
+
+const isLeadCheckOutValid     = computed(() => checkOutNotes.value.trim().length > 0 && checkOutResponse.value !== '')
+const selectedLeadResponseOpt = computed(() => leadResponseOptions.find(o => o.value === checkOutResponse.value) ?? null)
+
+function openCheckOutModal(lead) {
+  selectedVisitLead.value = lead
+  checkOutNotes.value = ''
+  checkOutResponse.value = ''
+  showCheckOutModal.value = true
+}
+
+function closeCheckOutModal() {
+  if (loadingLeadCheckOut.value) return
+  showCheckOutModal.value = false
+  selectedVisitLead.value = null
+  checkOutNotes.value = ''
+  checkOutResponse.value = ''
+}
+
+async function submitLeadCheckOut() {
+  if (!isLeadCheckOutValid.value) return
+  const visitId = activeVisitId.value
+  if (!visitId) { showToast('error', 'Visit ID tidak ditemukan.'); return }
+
+  loadingLeadCheckOut.value = true
+  const result = await visitDataStore.submitCheckOut(visitId, {
+    notes: checkOutNotes.value, customer_response: checkOutResponse.value,
+  })
+  loadingLeadCheckOut.value = false
+
+  if (result.success) {
+    showToast('success', result.message ?? 'Check out success!')
+    closeCheckOutModal()
+    await restoreActiveLeadVisit()
+  } else {
+    showToast('error', result.message)
+  }
+}
+
 // ═══════════════════════════════════════════
 // BULK ADD
 // ═══════════════════════════════════════════
@@ -532,39 +803,6 @@ const handleStoreBulk = async () => {
           </button>
         </div>
 
-        <!-- EXPORT Fitur ini belum diimplementasikan -->
-        <!-- <div class="drop-wrap">
-          <button class="btn-toolbar btn-purple" @click="showExportMenu = !showExportMenu">
-            <font-awesome-icon icon="upload" /> Exports
-            <font-awesome-icon icon="chevron-down" class="btn-arrow" />
-          </button>
-          <div class="drop-menu" :class="{ show: showExportMenu }">
-            <div class="drop-label">Export Data</div>
-            <button class="drop-item" @click="exportCSV">
-              <font-awesome-icon icon="file-csv" style="color:#22c55e" /> Export CSV
-            </button>
-            <button class="drop-item" @click="showExportMenu = false">
-              <font-awesome-icon icon="file-excel" style="color:#16a34a" /> Export Excel
-            </button>
-            <button class="drop-item" @click="showExportMenu = false">
-              <font-awesome-icon icon="file-pdf" style="color:#ef4444" /> Export PDF
-            </button>
-          </div>
-        </div> -->
-
-        <!-- IMPORT Fitur ini belum diimplementasikan-->
-        <!-- <div class="drop-wrap">
-          <button class="btn-toolbar btn-purple" @click="showImportMenu = !showImportMenu">
-            <font-awesome-icon icon="download" /> Imports
-            <font-awesome-icon icon="chevron-down" class="btn-arrow" />
-          </button>
-          <div class="drop-menu" :class="{ show: showImportMenu }">
-            <div class="drop-label">Import Data</div>
-            <button class="drop-item">
-              <font-awesome-icon icon="file-csv" style="color:#22c55e" /> Import CSV
-            </button>
-          </div>
-        </div> -->
       </div>
 
       <!-- RESET -->
@@ -598,7 +836,7 @@ const handleStoreBulk = async () => {
             </div>
           </div>
 
-          <!-- ═══ VIEW MODE TOGGLE (CARD / TABLE) ═══ -->
+          <!-- VIEW MODE TOGGLE (CARD / TABLE) -->
           <div class="view-toggle">
             <button
               class="view-toggle-btn"
@@ -623,9 +861,6 @@ const handleStoreBulk = async () => {
             <button  v-if="canCreate" class="btn-toolbar btn-purple" @click="openAddModal">
               <font-awesome-icon icon="plus" /> Add Leads
             </button>
-            <!-- <button v-if="canCreate" class="btn-toolbar btn-purple" style="background:#7c3aed" @click="openBulkModal">
-              <font-awesome-icon icon="layer-group" /> Add Bulk
-            </button> -->
           </template>
         </div>
 
@@ -677,7 +912,7 @@ const handleStoreBulk = async () => {
       </div>
     </div>
 
-    <!-- ═══ CONTENT: CARD VIEW / TABLE VIEW ═══ -->
+    <!-- CONTENT: CARD VIEW / TABLE VIEW -->
     <div class="content-card flex-grow-1 overflow-auto mb-3">
 
       <!-- LOADING (shared) -->
@@ -697,7 +932,7 @@ const handleStoreBulk = async () => {
         </div>
       </div>
 
-      <!-- ═══ CARD VIEW (DEFAULT) ═══ -->
+      <!-- CARD VIEW (DEFAULT) -->
       <div v-else-if="viewMode === 'card'" class="customer-grid">
         <div v-for="lead in leadsData" :key="lead.id" class="customer-card">
           <div class="cc-top">
@@ -757,12 +992,43 @@ const handleStoreBulk = async () => {
               <button v-if="canView" class="act-btn act-info" title="Detail" @click="openDetailModal(lead.id)">
                 <font-awesome-icon icon="circle-info" />
               </button>
+
+              <!-- VISIT (3-state: Visit Now / Check In / Check Out) -->
+              <template v-if="!isRowActive(lead)">
+                <button
+                  v-if="canCreate"
+                  class="act-btn act-visit"
+                  :disabled="loadingVisitNow || !!activeVisitLeadId"
+                  :title="activeVisitLeadId ? 'Selesaikan visit aktif dahulu' : 'Visit'"
+                  @click="openVisitNow(lead)"
+                >
+                  <font-awesome-icon icon="location-dot" />
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  v-if="activeLeadPhase === 'visiting'"
+                  class="act-btn act-checkin"
+                  title="Check In"
+                  @click="checkIn(lead)"
+                >
+                  <font-awesome-icon icon="right-to-bracket" />
+                </button>
+                <button
+                  v-if="activeLeadPhase === 'checked_in'"
+                  class="act-btn act-checkout"
+                  title="Check Out"
+                  @click="openCheckOutModal(lead)"
+                >
+                  <font-awesome-icon icon="right-from-bracket" />
+                </button>
+              </template>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ═══ TABLE VIEW ═══ -->
+      <!-- TABLE VIEW -->
       <table v-else class="data-table">
         <thead>
           <tr>
@@ -774,7 +1040,7 @@ const handleStoreBulk = async () => {
             <th>Lead Source</th>
             <th>Status Lead</th>
             <th v-if="mode === 'assigned'">Assigned By</th>
-            <th style="width:160px; text-align:center">Actions</th>
+            <th style="width:190px; text-align:center">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -823,8 +1089,6 @@ const handleStoreBulk = async () => {
               <small class="td-muted">{{ lead.assigned_name ?? '-' }}</small>
             </td>
 
-            
-
             <!-- Actions -->
             <td class="td-actions">
               <template v-if="mode === 'master'">
@@ -838,6 +1102,37 @@ const handleStoreBulk = async () => {
               <button v-if="canView" class="act-btn act-info" title="Detail" @click="openDetailModal(lead.id)">
                <font-awesome-icon icon="circle-info" />
               </button>
+
+              <!-- VISIT (3-state: Visit Now / Check In / Check Out) -->
+              <template v-if="!isRowActive(lead)">
+                <button
+                  v-if="canCreate"
+                  class="act-btn act-visit"
+                  :disabled="loadingVisitNow || !!activeVisitLeadId"
+                  :title="activeVisitLeadId ? 'Selesaikan visit aktif dahulu' : 'Visit'"
+                  @click="openVisitNow(lead)"
+                >
+                  <font-awesome-icon icon="location-dot" />
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  v-if="activeLeadPhase === 'visiting'"
+                  class="act-btn act-checkin"
+                  title="Check In"
+                  @click="checkIn(lead)"
+                >
+                  <font-awesome-icon icon="right-to-bracket" />
+                </button>
+                <button
+                  v-if="activeLeadPhase === 'checked_in'"
+                  class="act-btn act-checkout"
+                  title="Check Out"
+                  @click="openCheckOutModal(lead)"
+                >
+                  <font-awesome-icon icon="right-from-bracket" />
+                </button>
+              </template>
             </td>
           </tr>
         </tbody>
@@ -870,8 +1165,7 @@ const handleStoreBulk = async () => {
       </div>
     </div>
 
-
-    <!-- ═══ MODAL ADD ═══ -->
+    <!-- MODAL ADD -->
     <AppModal
       :show="isAddModalVisible"
       title="Add Leads"
@@ -962,7 +1256,6 @@ const handleStoreBulk = async () => {
           </small>
         </div>
 
-        <!-- <div class="row g-2"> -->
           <div class="form-group">
             <label>Industry</label>
             <select v-model="formData.industry_id" class="form-input form-select"
@@ -972,16 +1265,6 @@ const handleStoreBulk = async () => {
             </select>
             <small v-if="getError('industry_id')" class="text-danger">{{ getError('industry_id') }}</small>
           </div>
-          <!-- <div class="col-6 form-group">
-            <label>Category</label>
-            <select v-model="formData.lead_category_id" class="form-input form-select"
-              :class="{ 'is-invalid': getError('lead_category_id') }">
-              <option value="">-- Select Category --</option>
-              <option v-for="cat in categorySelectData" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-            </select>
-            <small v-if="getError('lead_category_id')" class="text-danger">{{ getError('lead_category_id') }}</small>
-          </div> -->
-        <!-- </div> -->
 
         <div class="form-group">
           <label>Lead Source <span style="color:#ef4444">*</span></label>
@@ -1008,8 +1291,8 @@ const handleStoreBulk = async () => {
 
         <div class="form-group">
           <label>Notes</label>
-          <textarea :value="formData.notes" class="form-input form-textarea" rows="2" placeholder="Catatan tambahan..." 
-            @input="onSentenceInput($event, formData, 'notes')">
+          <textarea :value="formData.notes" class="form-input form-textarea" rows="2" placeholder="Catatan tambahan..."
+             @input="onSentenceInput($event, formData, 'notes')">
           </textarea>
         </div>
 
@@ -1025,8 +1308,7 @@ const handleStoreBulk = async () => {
       </template>
     </AppModal>
 
-
-    <!-- ═══ MODAL EDIT ═══ -->
+    <!-- MODAL EDIT -->
     <AppModal
       :show="isEditModalVisible"
       title="Edit Leads"
@@ -1085,8 +1367,8 @@ const handleStoreBulk = async () => {
           <div class="col-6 form-group">
             <label>Contact Name <span style="color:#ef4444">*</span></label>
             <input :value="editData.contact_name" class="form-input" placeholder="John Doe" :class="{ 'is-invalid': getFieldError(editData, editTouched, 'contact_name') }"
-              @input="onContactNameInput($event, editData)" @blur="editTouched.contact_name = true" 
-            />
+              @input="onContactNameInput($event, editData)" @blur="editTouched.contact_name = true"
+             />
             <small v-if="getFieldError(editData, editTouched, 'contact_name')" class="text-danger">
               {{ getFieldError(editData, editTouched, 'contact_name') }}
             </small>
@@ -1112,14 +1394,13 @@ const handleStoreBulk = async () => {
           <label>Email <span style="color:#ef4444">*</span></label>
           <input v-model="editData.email" type="email" class="form-input" placeholder="email@example.com"
             :class="{ 'is-invalid': getFieldError(editData, editTouched, 'email') }"
-            @blur="editTouched.email = true" 
-          />
+            @blur="editTouched.email = true"
+           />
           <small v-if="getFieldError(editData, editTouched, 'email')" class="text-danger">
             {{ getFieldError(editData, editTouched, 'email') }}
           </small>
         </div>
 
-        <!-- <div class="row g-2"> -->
           <div class="form-group">
             <label>Industry</label>
             <select v-model="editData.industry_id" class="form-input form-select"
@@ -1129,16 +1410,6 @@ const handleStoreBulk = async () => {
             </select>
             <small v-if="getError('industry_id')" class="text-danger">{{ getError('industry_id') }}</small>
           </div>
-          <!-- <div class="col-6 form-group">
-            <label>Category</label>
-            <select v-model="editData.lead_category_id" class="form-input form-select"
-              :class="{ 'is-invalid': getError('lead_category_id') }">
-              <option value="">-- Select Category --</option>
-              <option v-for="cat in categorySelectData" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-            </select>
-            <small v-if="getError('lead_category_id')" class="text-danger">{{ getError('lead_category_id') }}</small>
-          </div> -->
-        <!-- </div> -->
 
         <div class="form-group">
           <label>Lead Source <span style="color:#ef4444">*</span></label>
@@ -1182,8 +1453,7 @@ const handleStoreBulk = async () => {
       </template>
     </AppModal>
 
-
-    <!-- ═══ MODAL DETAIL ═══ -->
+    <!-- MODAL DETAIL -->
     <AppModal
       :show="isDetailModalVisible"
       title="Lead Detail"
@@ -1191,7 +1461,6 @@ const handleStoreBulk = async () => {
       size="md"
       @close="closeDetailModal"
     >
-      <!-- Loading state -->
       <div v-if="loadingDetail" class="d-flex flex-column align-items-center gap-2 py-4">
         <div class="spinner-border text-primary" role="status"></div>
         <span class="text-muted" style="font-size:0.85rem">Memuat detail...</span>
@@ -1252,7 +1521,7 @@ const handleStoreBulk = async () => {
       </template>
     </AppModal>
 
-    <!-- ═══ MODAL NOTIF COMPANY SUDAH TERDAFTAR ═══ -->
+    <!-- MODAL NOTIF COMPANY SUDAH TERDAFTAR -->
     <AppModal
       :show="isCompanyModalVisible"
       title=""
@@ -1286,7 +1555,7 @@ const handleStoreBulk = async () => {
       </template>
     </AppModal>
 
-    <!-- ═══ MODAL BULK ADD ═══ -->
+    <!-- MODAL BULK ADD -->
     <AppModal
       :show="isBulkModalVisible"
       title="Add Bulk Leads"
@@ -1453,8 +1722,190 @@ const handleStoreBulk = async () => {
       </template>
     </AppModal>
 
+    <!-- MODAL VISIT CONFIRMATION -->
+    <AppModal
+      :show="showVisitNowModal && !!selectedVisitLead"
+      title="Visit Confirmation"
+      icon="map-pin"
+      size="sm"
+      @close="closeVisitNowModal"
+    >
+      <div v-if="selectedVisitLead" class="form-container-gap">
+        <div class="visit-confirm-box">
+          <p class="detail-label" style="margin-bottom:6px">Lead yang akan dikunjungi</p>
+          <p style="font-weight:700; font-size:0.95rem">{{ selectedVisitLead.company_name }}</p>
+          <p class="td-muted">{{ selectedVisitLead.contact_name }} · {{ selectedVisitLead.address ?? '-' }}</p>
+        </div>
+        <div class="detail-list">
+          <div class="detail-row">
+            <span class="detail-label">Phone</span>
+            <span class="detail-value">{{ selectedVisitLead.phone ?? '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status</span>
+            <span class="detail-value">{{ selectedVisitLead.lead_status ?? 'New' }}</span>
+          </div>
+        </div>
+        <div class="visit-warning-box">
+          <font-awesome-icon icon="triangle-exclamation" />
+          Setelah visit dimulai, sistem akan mencatat waktu kunjungan secara otomatis.
+        </div>
+      </div>
+      <template #footer>
+        <button class="btn-cancel" @click="closeVisitNowModal" :disabled="loadingVisitNow">Cancel</button>
+        <button class="btn-save" @click="confirmVisitNow" :disabled="loadingVisitNow">
+          <font-awesome-icon v-if="loadingVisitNow" icon="spinner" spin />
+          <font-awesome-icon v-else icon="map-pin" />
+          {{ loadingVisitNow ? 'Processing...' : 'Yes, Visit Now' }}
+        </button>
+      </template>
+    </AppModal>
 
-    <!-- ═══ TOAST ═══ -->
+    <!-- MODAL CHECK IN -->
+    <AppModal
+      :show="showCheckInModal"
+      title="Check In Lead"
+      icon="right-to-bracket"
+      size="xl"
+      @close="closeCheckInModal"
+    >
+      <div class="checkin-grid">
+        <div class="camera-section">
+          <div class="camera-wrap">
+            <video v-if="!capturedPhoto" ref="videoRef" autoplay playsinline muted class="camera-video"></video>
+            <img v-else :src="capturedPhoto" class="camera-video" />
+            <div v-if="!capturedPhoto" class="live-badge">
+              <span class="live-dot"></span> LIVE CAMERA
+            </div>
+          </div>
+          <button
+            v-if="!capturedPhoto"
+            @click="capturePhoto"
+            :disabled="!locationReady || isGettingLocation"
+            class="btn-save" style="width:100%; padding:14px; justify-content:center; margin-top:10px"
+          >
+            <template v-if="isGettingLocation">
+              <font-awesome-icon icon="spinner" spin /> Detecting GPS...
+            </template>
+            <template v-else>
+              <font-awesome-icon icon="camera" /> Take Photo
+            </template>
+          </button>
+          <button
+            v-if="capturedPhoto"
+            @click="retakePhoto"
+            class="btn-cancel" style="width:100%; padding:14px; text-align:center; margin-top:10px"
+          >
+            <font-awesome-icon icon="rotate" /> Retake Photo
+          </button>
+        </div>
+
+        <div class="form-container-gap">
+          <div class="detail-list">
+            <div class="detail-row">
+              <span class="detail-label">Date & Time</span>
+              <span class="detail-value">{{ currentDateTime }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Company</span>
+              <span class="detail-value">{{ selectedVisitLead?.company_name ?? '-' }}</span>
+            </div>
+            <div class="detail-row" style="flex-direction:column; align-items:flex-start; gap:4px">
+              <span class="detail-label">Location GPS</span>
+              <div v-if="isGettingLocation" class="td-muted">
+                <font-awesome-icon icon="spinner" spin /> Detecting location...
+              </div>
+              <div v-else-if="locationReady" style="font-size:0.84rem; color:var(--text-primary)">
+                {{ currentLocation.address }}
+              </div>
+              <div v-else style="font-size:0.84rem; color:#ef4444">
+                <font-awesome-icon icon="circle-exclamation" /> Failed to get location
+              </div>
+            </div>
+          </div>
+          <div v-if="capturedPhoto" class="visit-confirm-box" style="color:#065f46; background:#d1fae5; border-color:#6ee7b7;">
+            <font-awesome-icon icon="circle-check" /> Photo berhasil diambil. Siap untuk submit.
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <button class="btn-cancel" @click="closeCheckInModal">Cancel</button>
+        <button
+          class="btn-save"
+          @click="submitCheckIn"
+          :disabled="loadingCheckIn || !capturedPhoto"
+        >
+          <font-awesome-icon v-if="loadingCheckIn" icon="spinner" spin />
+          <font-awesome-icon v-else icon="cloud-arrow-up" />
+          {{ loadingCheckIn ? 'Submitting...' : 'Submit Check In' }}
+        </button>
+      </template>
+    </AppModal>
+
+    <canvas ref="canvasRef" style="display:none"></canvas>
+
+    <!-- MODAL CHECK OUT -->
+    <AppModal
+      :show="showCheckOutModal"
+      title="Check Out Visit"
+      icon="right-from-bracket"
+      size="md"
+      @close="closeCheckOutModal"
+    >
+      <div class="form-container-gap">
+        <div v-if="selectedVisitLead" class="visit-confirm-box">
+          <p style="font-weight:700">{{ selectedVisitLead.company_name }}</p>
+          <p class="td-muted">{{ selectedVisitLead.contact_name }}</p>
+        </div>
+        <div class="form-group">
+          <label>Notes on Visit Results <span style="color:#ef4444">*</span></label>
+          <textarea
+            v-model="checkOutNotes"
+            rows="4"
+            placeholder="Write a note here..."
+            class="form-input form-textarea"
+          ></textarea>
+        </div>
+        <div class="form-group">
+          <label>Update Status (Response Lead) <span style="color:#ef4444">*</span></label>
+          <div class="response-grid">
+            <button
+              v-for="opt in leadResponseOptions" :key="opt.value"
+              type="button"
+              @click="checkOutResponse = opt.value"
+              class="response-btn"
+              :class="checkOutResponse === opt.value ? `response-active-${opt.color}` : ''"
+            >
+              <font-awesome-icon :icon="opt.icon" />
+              <span>{{ opt.label }}</span>
+            </button>
+          </div>
+        </div>
+        <div v-if="selectedLeadResponseOpt" class="visit-info-box">
+          <font-awesome-icon :icon="selectedLeadResponseOpt.icon" />
+          <span><strong>{{ selectedLeadResponseOpt.label }}</strong>
+            <span v-if="selectedLeadResponseOpt.value === 'convert_to_customer'"> - Lead akan dikonversi menjadi Customer.</span>
+            <span v-else-if="selectedLeadResponseOpt.value === 'failed'"> - Status lead akan diubah menjadi Failed.</span>
+            <span v-else> - Follow up otomatis akan dibuat dalam 3 hari.</span>
+          </span>
+        </div>
+      </div>
+      <template #footer>
+        <button class="btn-cancel" @click="closeCheckOutModal" :disabled="loadingLeadCheckOut">Cancel</button>
+        <button
+          class="btn-save"
+          @click="submitLeadCheckOut"
+          :disabled="!isLeadCheckOutValid || loadingLeadCheckOut"
+        >
+          <font-awesome-icon v-if="loadingLeadCheckOut" icon="spinner" spin />
+          <font-awesome-icon v-else icon="cloud-arrow-up" />
+          {{ loadingLeadCheckOut ? 'Saving...' : 'Save Check Out' }}
+        </button>
+      </template>
+    </AppModal>
+
+    <!-- TOAST -->
     <Teleport to="body">
       <Transition name="toast">
         <div v-if="toast.show" class="toast-wrapper">
@@ -1634,7 +2085,6 @@ const handleStoreBulk = async () => {
 .perpage-opt { padding: 5px 10px; border: 1px solid var(--border-main); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font-size: 0.82rem; cursor: pointer; }
 .perpage-opt.active { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 700; }
 
-
 .state-wrap { display: flex; justify-content: center; padding: 40px 0; }
 .spinner-custom { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -1659,7 +2109,7 @@ const handleStoreBulk = async () => {
 .cc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .cc-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px dashed var(--border-main); }
 .cc-date { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
-.cc-actions { display: flex; gap: 4px; }
+.cc-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 
 /* ===== DATA TABLE ===== */
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
@@ -1682,6 +2132,13 @@ const handleStoreBulk = async () => {
 .act-delete:hover { background: #ef4444; color: #fff; }
 .act-info   { color: #6366f1; border-color: #6366f1; }
 .act-info:hover   { background: #6366f1; color: #fff; }
+.act-visit               { color: #0d9488; border-color: #0d9488; }
+.act-visit:hover:not(:disabled) { background: #0d9488; color: #fff; }
+.act-visit:disabled      { opacity: 0.4; cursor: not-allowed; }
+.act-checkin        { color:#10b981; border-color:#10b981; }
+.act-checkin:hover   { background:#10b981; color:#fff; }
+.act-checkout       { color:#ef4444; border-color:#ef4444; }
+.act-checkout:hover  { background:#ef4444; color:#fff; }
 
 /* ===== PAGINATION ===== */
 .pagination-card {
@@ -1769,6 +2226,36 @@ const handleStoreBulk = async () => {
 .toast-leave-active { transition: all 0.2s ease-in; }
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-12px) scale(0.96); }
 
+/* ══════════ VISIT (Visit Now / Check In / Check Out) ══════════ */
+.visit-confirm-box { background: var(--bg-input); border: 1px solid var(--border-main); border-radius: 10px; padding: 14px 16px; }
+.visit-warning-box  { display:flex; align-items:flex-start; gap:8px; padding:10px 14px; background:#fffbeb; border:1px solid #fcd34d; border-radius:8px; font-size:0.82rem; color:#92400e; }
+.visit-info-box     { display:flex; align-items:flex-start; gap:8px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; font-size:0.82rem; color:#1e40af; }
+
+.checkin-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media (max-width: 640px) { .checkin-grid { grid-template-columns:1fr; } }
+.camera-section { display:flex; flex-direction:column; }
+.camera-wrap { position:relative; border-radius:16px; overflow:hidden; background:#000; aspect-ratio:16/9; }
+.camera-video { width:100%; height:100%; object-fit:cover; display:block; }
+.live-badge { position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:#ef4444; color:#fff; border-radius:99px; font-size:0.72rem; font-weight:700; }
+.live-dot { width:7px; height:7px; border-radius:50%; background:#fff; animation:ping-anim 1s infinite; }
+@keyframes ping-anim { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.response-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.response-btn {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 12px; border-radius:10px;
+  border:1.5px solid var(--border-main);
+  background:var(--bg-input); cursor:pointer;
+  font-size:0.82rem; font-weight:500; transition:all 0.18s;
+  color:var(--text-primary); text-align:left;
+}
+.response-btn:hover { border-color:#6366f1; color:#6366f1; }
+.response-active-emerald { border-color:#10b981 !important; background:#d1fae5 !important; color:#065f46 !important; }
+.response-active-blue    { border-color:#3b82f6 !important; background:#dbeafe !important; color:#1e40af !important; }
+.response-active-indigo  { border-color:#6366f1 !important; background:#e0e7ff !important; color:#3730a3 !important; }
+.response-active-rose    { border-color:#ef4444 !important; background:#fee2e2 !important; color:#991b1b !important; }
+.response-active-amber   { border-color:#f59e0b !important; background:#fef3c7 !important; color:#92400e !important; }
+
 /* ═══════════ RESPONSIVE / MOBILE ═══════════ */
 @media (max-width: 768px) {
   .breadcrumb-card { padding: 12px 14px; }
@@ -1800,7 +2287,6 @@ const handleStoreBulk = async () => {
 @media (max-width: 576px) {
   .customer-grid { grid-template-columns: 1fr; padding: 10px; gap: 10px; }
 
-  /* Cegah nama company & status badge bertabrakan di kartu */
   .customer-card { padding: 12px; gap: 8px; }
   .cc-avatar { width: 38px; height: 38px; font-size: 0.78rem; }
   .cc-name { white-space: normal; overflow: visible; text-overflow: unset; line-height: 1.3; font-size: 0.88rem; }

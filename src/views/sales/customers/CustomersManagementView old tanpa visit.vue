@@ -1,11 +1,8 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import AppModal from '@/components/AppModal.vue'
-import RichTextEditor from '@/components/RichTextEditor.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { useCustomersStore } from '@/stores/customersStore'
-import { useVisitDataStore } from '@/stores/visitSalesStore'
-import { useCustomersVisitStore } from '@/stores/customersVisitStore'
 import { usePermissionStore } from '@/stores/PermissionStore'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -14,10 +11,6 @@ const { confirm } = useConfirm()
 const store       = useCustomersStore()
 const permission  = usePermissionStore()
 const route       = useRoute()
-
-// ── VISIT (reuse logic dari Sales Visit page — jangan diubah, cuma dipasang ulang di sini) ──
-const visitDataStore      = useVisitDataStore()
-const customersVisitStore = useCustomersVisitStore()
 
 const {
   customersData, loadingCustomers, searchCustomers,
@@ -29,17 +22,14 @@ const {
   companySuggestions, searchingCompany, matchedCompany,
 } = storeToRefs(store)
 
-const { activeVisitCustomersId, activeVisitCustId, loadingVisitNow } = storeToRefs(visitDataStore)
-const { activeCustomerPhase } = storeToRefs(customersVisitStore)
-
-// ── PERMISSIONS ─────────────────────────────────────────
+// ── PERMISSIONS ───────────────────────────────────────
 const currentUrl = computed(() => route.path.replace('/app', ''))
 const canCreate  = computed(() => permission.canCreate(currentUrl.value))
 const canUpdate  = computed(() => permission.canUpdate(currentUrl.value))
 const canDelete  = computed(() => permission.canDelete(currentUrl.value))
 const canView    = computed(() => permission.canView(currentUrl.value))
 
-// ── VIEW MODE (CARD / TABLE) ────────────────────────────
+// ── VIEW MODE (CARD / TABLE) ──────────────────────────
 const VIEW_MODE_KEY = 'customers_view_mode'
 const viewMode = ref(localStorage.getItem(VIEW_MODE_KEY) || 'card')
 
@@ -61,7 +51,7 @@ function getAvatarColor(name) {
   return avatarPalette[Math.abs(hash) % avatarPalette.length]
 }
 
-// ── LIFECYCLE ─────────────────────────────────────────────
+// ── LIFECYCLE ─────────────────────────────────────────
 onMounted(async () => {
   await store.fetchCustomers()
   await store.fetchIndustrySelect()
@@ -79,7 +69,7 @@ onUnmounted(() => {
   if (toastTimer) clearTimeout(toastTimer)
 })
 
-// ── TOOLBAR TOGGLES ───────────────────────────────────────
+// ── TOOLBAR TOGGLES ───────────────────────────────────
 const showExportCustomers  = ref(false)
 const showImportCustomers  = ref(false)
 const showPerPageCustomers = ref(false)
@@ -93,7 +83,7 @@ const sortByOptions = [
 const sortByLabel = () =>
   sortByOptions.find(o => o.value === store.sort.column)?.label ?? 'Created Date'
 
-// ── EXPORT ────────────────────────────────────────────────
+// ── EXPORT ────────────────────────────────────────────
 function exportCSV() {
   const header = 'ID,Customer Code,Company Name,Contact,Email,Phone,Status,Converted,Created\n'
   const rows   = store.customersData.map(c =>
@@ -109,24 +99,29 @@ function exportCSV() {
 function exportExcel() { showExportCustomers.value = false }
 function exportPDF()   { showExportCustomers.value = false }
 
-// ── ERROR HELPER ──────────────────────────────────────────
+// ── ERROR HELPER ──────────────────────────────────────
 function getError(field) {
   if (!errorCustomers.value || typeof errorCustomers.value !== 'object') return null
   return errorCustomers.value[field]?.[0] ?? null
 }
 
-// ── CONTACT ERROR HELPER ──────────────────────────────────
+// ── CONTACT ERROR HELPER ──────────────────────────────
 function getContactError(index, field) {
   if (!errorCustomers.value || typeof errorCustomers.value !== 'object') return null
   return errorCustomers.value[`contacts.${index}.${field}`]?.[0] ?? null
 }
+
+// function isValidPhone(phone) {
+//   if (!phone || !phone.trim()) return true // nullable, boleh kosong
+//   return /^(\+62|62|0)8[0-9]{8,11}$/.test(phone.trim())
+// }
 
 function isValidPhone(phone) {
   if (!phone || !phone.trim()) return true // nullable, boleh kosong
   return /^[\+]?[0-9\-\s()]{8,20}$/.test(phone.trim())
 }
 
-// ── TOAST ─────────────────────────────────────────────────
+// ── TOAST ─────────────────────────────────────────────
 const toast      = ref({ show: false, type: '', message: '' })
 let   toastTimer = null
 
@@ -136,7 +131,7 @@ function showToast(type, message) {
   toastTimer  = setTimeout(() => { toast.value.show = false }, 3000)
 }
 
-// ── SELECT: INDUSTRY ──────────────────────────────────────
+// ── SELECT: INDUSTRY ──────────────────────────────────
 const isOpenIndustry   = ref(false)
 const searchIndustry   = ref('')
 const selectedIndustry = ref(null)
@@ -173,7 +168,7 @@ function handleIndustryClickOutside(e) {
   }
 }
 
-// ── SELECT: CATEGORY ──────────────────────────────────────
+// ── SELECT: CATEGORY ──────────────────────────────────
 const isOpenCategory   = ref(false)
 const searchCategory   = ref('')
 const selectedCategory = ref(null)
@@ -210,7 +205,7 @@ function handleCategoryClickOutside(e) {
   }
 }
 
-// ── SELECT: STATUS ─────────────────────────────────────────
+// ── SELECT: STATUS ────────────────────────────────────
 const isOpenStatusStatis   = ref(false)
 const searchStatusStatis   = ref('')
 const selectedStatusStatis = ref(null)
@@ -250,7 +245,7 @@ function handleStatusStatisClickOutside(e) {
   }
 }
 
-// ── DETAIL MODAL ────────────────────────────────────────────
+// ── DETAIL MODAL ──────────────────────────────────────
 const isDetailModalVisible = ref(false)
 
 async function openDetailModal(id) {
@@ -263,377 +258,26 @@ function closeDetailModal() {
   customersDetail.value      = null
 }
 
-// ════════════════════════════════════════════════════════════
-// VISIT NOW (shortcut dari list, reuse startVisitCustomers dari Sales Visit)
-// ════════════════════════════════════════════════════════════
-const showVisitNowModal = ref(false)
-const selectedVisitItem = ref(null)
+// ── DELETE ────────────────────────────────────────────
+// async function openDeleteModal(item) {
+//   const isConfirmed = await confirm({
+//     type       : 'danger',
+//     title      : 'Hapus Data Customer',
+//     message    : `Yakin ingin menghapus "${item.company_name}"?`,
+//     detail     : 'Tindakan ini tidak bisa dibatalkan dan akan menghapus data secara permanen.',
+//     confirmText: 'Yes, Delete',
+//     cancelText : 'Cancel',
+//   })
+//   if (isConfirmed) {
+//     try {
+//       await store.deleteCustomer(item.id)
+//       showToast('success', 'Customer berhasil dihapus!')
+//     } catch {
+//       showToast('error', 'Gagal menghapus, coba lagi.')
+//     }
+//   }
+// }
 
-function isBranchRow(item) {
-  return item.display_type === 'branch'
-}
-
-// aktif hanya berdasarkan customer_id (granularitas sama seperti di Sales Visit page —
-// sistem belum tau branch spesifik mana yang lagi divisit)
-// ── TRIGGER "FOLLOW UP JATUH TEMPO" ──
-// Backend (list customer) diharapkan ngirim 3 field tambahan per item:
-//   - followup_due       (boolean) : true kalau customer/branch ini punya minimal
-//                                     1 follow_ups PENDING yang follow_up_at-nya
-//                                     hari ini atau sudah lewat (overdue)
-//   - followup_due_date  (string 'YYYY-MM-DD') : tanggal follow-up PALING AWAL
-//                                     di antara yang pending itu
-//   - followup_overdue   (boolean) : true kalau followup_due_date < hari ini
-//                                     (dipakai buat bedain warna "Jatuh Tempo"
-//                                     vs "Overdue")
-// Kalau field ini belum ada di response (backend belum diupdate), item.followup_due
-// otomatis undefined/falsy, jadi badge & border merah nggak muncul -- aman,
-// nggak bikin error di frontend sambil nunggu backend-nya nyusul.
-function followUpDateLabel(item) {
-  return item.followup_due_date ? store.formatDate(item.followup_due_date) : ''
-}
-
-function isRowActive(item) {
-  const customerId = isBranchRow(item) ? item.customer?.id : item.id
-  return !!activeVisitCustomersId.value && activeVisitCustomersId.value === customerId
-}
-
-function openVisitNow(item) {
-  selectedVisitItem.value = item
-  showVisitNowModal.value = true
-}
-
-function closeVisitNowModal() {
-  if (loadingVisitNow.value) return
-  showVisitNowModal.value = false
-  selectedVisitItem.value = null
-}
-
-async function confirmVisitNow() {
-  const item = selectedVisitItem.value
-  if (!item) return
-
-  const customerId = isBranchRow(item) ? item.customer?.id : item.id
-  const branchId    = isBranchRow(item) ? item.branch?.id  : null
-
-  if (!customerId) {
-    showToast('error', 'Data customer tidak lengkap untuk memulai visit.')
-    return
-  }
-
-  const { success, message } = await visitDataStore.startVisitCustomers(customerId, branchId)
-  if (success) {
-    showToast('success', message)
-    closeVisitNowModal()
-    await restoreActiveCustomerVisit() // ← tarik ulang status biar tombol langsung ganti ke Check In, nggak perlu refresh
-  } else {
-    showToast('error', message)
-  }
-}
-
-async function restoreActiveCustomerVisit() {
-  try {
-    await visitDataStore.fetchVisits(visitDataStore.buildUrl())
-    const activeCustomerVisit = visitDataStore.visitsData.find(
-      v => v.visit_type === 'CUSTOMER' && v.check_out_at === null
-    )
-    if (activeCustomerVisit) {
-      visitDataStore.activeVisitCustomersId = activeCustomerVisit.customer_id
-      visitDataStore.activeVisitCustId      = activeCustomerVisit.id
-      activeCustomerPhase.value = activeCustomerVisit.check_in_at ? 'checked_in' : 'visiting'
-    } else {
-      visitDataStore.activeVisitCustomersId = null
-      visitDataStore.activeVisitCustId      = null
-      activeCustomerPhase.value = null
-    }
-  } catch (err) {
-    console.error('Gagal restore status visit aktif:', err)
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-// CAMERA + GPS (copy persis dari Sales Visit page)
-// ════════════════════════════════════════════════════════════
-const videoRef          = ref(null)
-const canvasRef         = ref(null)
-const cameraStream      = ref(null)
-const capturedPhoto     = ref(null)
-const currentLocation   = ref({ latitude: null, longitude: null, address: '' })
-const isGettingLocation = ref(false)
-const locationReady     = ref(false)
-const loadingCheckIn    = ref(false)
-const currentDateTime   = ref('')
-let   clockInterval     = null
-
-function updateCurrentDateTime() {
-  currentDateTime.value = new Date().toLocaleString('id-ID', {
-    day: '2-digit', month: 'long', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  })
-}
-
-onMounted(() => {
-  updateCurrentDateTime()
-  clockInterval = setInterval(updateCurrentDateTime, 1000)
-  restoreActiveCustomerVisit()
-})
-onUnmounted(() => {
-  clearInterval(clockInterval)
-  stopCamera()
-})
-
-async function startCamera() {
-  try {
-    stopCamera()
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false,
-    })
-    cameraStream.value = stream
-    await nextTick()
-    if (videoRef.value) {
-      videoRef.value.srcObject = stream
-      await videoRef.value.play()
-    }
-  } catch (err) { console.error('Camera error:', err) }
-}
-
-function stopCamera() {
-  if (cameraStream.value) {
-    cameraStream.value.getTracks().forEach(t => t.stop())
-    cameraStream.value = null
-  }
-}
-
-async function getCurrentLocation() {
-  isGettingLocation.value = true
-  locationReady.value     = false
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
-      async pos => {
-        currentLocation.value.latitude  = pos.coords.latitude
-        currentLocation.value.longitude = pos.coords.longitude
-        try {
-          const r    = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`)
-          const data = await r.json()
-          currentLocation.value.address = data.display_name || 'Lokasi tidak ditemukan'
-          locationReady.value = true
-        } catch {
-          currentLocation.value.address = 'Lokasi gagal diambil'
-          locationReady.value = false
-        }
-        isGettingLocation.value = false
-        resolve()
-      },
-      err => { isGettingLocation.value = false; locationReady.value = false; reject(err) },
-      { enableHighAccuracy: true }
-    )
-  })
-}
-
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(' ')
-  let line = ''
-  for (let n = 0; n < words.length; n++) {
-    const testLine  = line + words[n] + ' '
-    const testWidth = ctx.measureText(testLine).width
-    if (testWidth > maxWidth && n > 0) {
-      ctx.fillText(line, x, y); line = words[n] + ' '; y += lineHeight
-    } else { line = testLine }
-  }
-  ctx.fillText(line, x, y)
-}
-
-async function capturePhoto() {
-  const canvas = canvasRef.value
-  const video  = videoRef.value
-  if (!canvas || !video) return
-  const ctx = canvas.getContext('2d')
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-  const overlayH = 120
-  const gradient = ctx.createLinearGradient(0, canvas.height - overlayH, 0, canvas.height)
-  gradient.addColorStop(0, 'rgba(0,0,0,0)')
-  gradient.addColorStop(1, 'rgba(0,0,0,0.85)')
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, canvas.height - overlayH, canvas.width, overlayH)
-
-  ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 28px Arial'
-  ctx.fillText(`${selectedVisitItem.value?.company_name || 'Visit Sales'}`, 20, canvas.height - 75)
-  ctx.font = '20px Arial'
-  ctx.fillText(`${currentDateTime.value}`, 20, canvas.height - 45)
-  ctx.font = '18px Arial'
-  wrapText(ctx, `${currentLocation.value.address || 'Location unavailable'}`, 20, canvas.height - 18, canvas.width - 40, 22)
-
-  capturedPhoto.value = canvas.toDataURL('image/jpeg', 1)
-  stopCamera()
-}
-
-async function retakePhoto() {
-  capturedPhoto.value = null
-  await startCamera()
-}
-
-// ════════════════════════════════════════════════════════════
-// CHECK IN
-// ════════════════════════════════════════════════════════════
-const showCheckInModalCustomers = ref(false)
-
-async function checkInCustomer(item) {
-  selectedVisitItem.value = item
-  capturedPhoto.value = null
-  showCheckInModalCustomers.value = true
-  await nextTick(); await startCamera(); await getCurrentLocation()
-}
-
-function closeCheckInModalCustomers() {
-  showCheckInModalCustomers.value = false; capturedPhoto.value = null; stopCamera()
-}
-
-async function submitCheckInCustomers() {
-  if (!activeVisitCustId.value) { showToast('error', 'Visit belum dimulai. Lakukan "Visit Now" terlebih dahulu.'); return }
-  loadingCheckIn.value = true
-  try {
-    const response = await fetch(capturedPhoto.value)
-    const blob     = await response.blob()
-    const file     = new File([blob], `checkin-${Date.now()}.jpg`, { type: 'image/jpeg' })
-    const formData = new FormData()
-    formData.append('latitude',     currentLocation.value.latitude)
-    formData.append('longitude',    currentLocation.value.longitude)
-    formData.append('gps_snapshot', currentLocation.value.address)
-    formData.append('photo',        file)
-    const result = await visitDataStore.submitCheckInCustomer(activeVisitCustId.value, formData)
-    if (result.success) {
-      showToast('success', result.message)
-      closeCheckInModalCustomers()
-      await restoreActiveCustomerVisit() // ← samain sumber kebenarannya, biar konsisten sama Visit Now di atas
-    } else { showToast('error', result.message) }
-  } catch (err) { console.error(err); showToast('error', 'Failed check in customer')
-  } finally { loadingCheckIn.value = false }
-}
-
-// ════════════════════════════════════════════════════════════
-// CHECK OUT
-// ════════════════════════════════════════════════════════════
-const showCheckOutCustomerModal = ref(false)
-const loadingCustomerCheckOut   = ref(false)
-
-const customerResponses = [
-  { value: 'maintained', label: 'Relationship Maintained / ', desc: 'Regular Visit', icon: 'fa-solid fa-handshake' },
-  { value: 'improved', label: 'Growth Potential /', desc: 'Upsell Identified Additional, increase potential has been identified.', icon: 'fa-solid fa-arrow-trend-up' },
-  { value: 'complaint_handled', label: 'Outstanding Issue / ', desc: 'Issue requires further attention', icon: 'fa-solid fa-triangle-exclamation' },
-  { value: 'no_progress', label: 'No Progress', desc: 'Low engagement, negative feedback, or no significant progress', icon: 'fa-solid fa-circle-exclamation' },
-]
-const followUpTypes = ['CALL', 'VISIT', 'WHATSAPP', 'EMAIL', 'MEETING']
-
-function emptyCustomerCheckOutForm() {
-  return {
-    no_reference: '', notes: '', customer_response: '',
-    has_complaint: false, complaint_detail: '',
-    has_potential_order: false, potential_order_detail: '',
-    follow_up_at: '', follow_up_notes: '', follow_up_type: '',
-    check_out_file: null,
-  }
-}
-
-const customerCheckOutForms = ref([emptyCustomerCheckOutForm()])
-
-const tomorrowDateTime = computed(() => {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  d.setHours(0, 0, 0, 0)
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00`
-})
-
-function isRichTextEmpty(html) {
-  if (!html) return true
-  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim().length === 0
-}
-
-function isCustomerResultValid(form) {
-  if (!form.no_reference.trim() || isRichTextEmpty(form.notes) || !form.customer_response || !form.follow_up_at || !form.follow_up_type) return false
-  if (form.has_complaint && isRichTextEmpty(form.complaint_detail)) return false
-  if (form.has_potential_order && isRichTextEmpty(form.potential_order_detail)) return false
-  return true
-}
-
-const isCustomerCheckOutValid = computed(() =>
-  customerCheckOutForms.value.length > 0 && customerCheckOutForms.value.every(isCustomerResultValid)
-)
-
-function addCustomerCheckOutResult() {
-  customerCheckOutForms.value.push(emptyCustomerCheckOutForm())
-}
-
-function removeCustomerCheckOutResult(index) {
-  if (customerCheckOutForms.value.length === 1) return
-  customerCheckOutForms.value.splice(index, 1)
-}
-
-function onCheckOutFileChange(event, form) {
-  form.check_out_file = event.target.files?.[0] ?? null
-}
-
-function selectCustomerResponse(form, value) {
-  form.customer_response = value
-  form.has_complaint = ['complaint_handled', 'at_risk'].includes(value)
-  form.has_potential_order = ['upsell_identified', 'improved'].includes(value)
-  if (!form.has_complaint) form.complaint_detail = ''
-  if (!form.has_potential_order) form.potential_order_detail = ''
-}
-
-function openCustomerCheckOut(item) {
-  selectedVisitItem.value = item
-  customerCheckOutForms.value = [emptyCustomerCheckOutForm()]
-  showCheckOutCustomerModal.value = true
-}
-
-function closeCustomerCheckOutModal() {
-  if (loadingCustomerCheckOut.value) return
-  showCheckOutCustomerModal.value = false
-}
-
-async function submitCustomerCheckOut() {
-  const visitId = activeVisitCustId.value
-  if (!visitId) { showToast('error', 'Visit ID tidak ditemukan.'); return }
-  if (!isCustomerCheckOutValid.value) return
-
-  loadingCustomerCheckOut.value = true
-  try {
-    const formData = new FormData()
-    customerCheckOutForms.value.forEach((form, index) => {
-      const key = `results[${index}]`
-      formData.append(`${key}[no_reference]`, form.no_reference)
-      formData.append(`${key}[notes]`, form.notes)
-      formData.append(`${key}[customer_response]`, form.customer_response)
-      formData.append(`${key}[has_complaint]`, form.has_complaint ? '1' : '0')
-      formData.append(`${key}[complaint_detail]`, form.complaint_detail || '')
-      formData.append(`${key}[has_potential_order]`, form.has_potential_order ? '1' : '0')
-      formData.append(`${key}[potential_order_detail]`, form.potential_order_detail || '')
-      formData.append(`${key}[follow_up_at]`, form.follow_up_at)
-      formData.append(`${key}[follow_up_notes]`, form.follow_up_notes || '')
-      formData.append(`${key}[follow_up_type]`, form.follow_up_type)
-      if (form.check_out_file) formData.append(`${key}[check_out_file]`, form.check_out_file)
-    })
-
-    const result = await visitDataStore.submitCheckOutCustomers(visitId, formData)
-    if (result.success) {
-      showToast('success', result.message || 'Check out customer berhasil')
-      showCheckOutCustomerModal.value = false
-      customerCheckOutForms.value = [emptyCustomerCheckOutForm()]
-      await restoreActiveCustomerVisit() // ← reset status biar tombol balik jadi "Visit" lagi tanpa refresh
-    } else showToast('error', result.message || 'Gagal check out customer')
-  } catch (err) {
-    console.error(err)
-    showToast('error', 'Terjadi kesalahan saat check out customer')
-  } finally {
-    loadingCustomerCheckOut.value = false
-  }
-}
-
-// ── DELETE ────────────────────────────────────────────────
 async function openDeleteModal(item) {
   const isConfirmed = await confirm({
     type       : 'danger',
@@ -654,13 +298,15 @@ async function openDeleteModal(item) {
   }
 }
 
-// ── FORM ADD / EDIT ───────────────────────────────────────
+// ── FORM ADD / EDIT ───────────────────────────────────
 const isAddModalVisible = ref(false)
 const isEdit            = ref(false)
 const editId             = ref(null)
 const formLoading       = ref(false)
 const assignVisibility  = ref('PUBLIC')
 
+// contact_name, email, phone DIHAPUS dari sini — sekarang dikelola
+// terpisah lewat contactsForm (bisa banyak kontak)
 const defaultForm = {
   company_name     : '',
   customer_status  : '',
@@ -680,7 +326,7 @@ const branchFormData = ref({
   city        : '',
 })
 
-// ── CONTACTS (repeatable) ──────────────────────────────────
+// ── CONTACTS (repeatable) ──────────────────────────────
 const emptyContact = () => ({
   id         : null,
   name       : '',
@@ -697,9 +343,10 @@ function addContact() {
 }
 
 function removeContact(index) {
-  if (contactsForm.value.length === 1) return
+  if (contactsForm.value.length === 1) return // minimal 1 kontak
   const wasPrimary = contactsForm.value[index].is_primary
   contactsForm.value.splice(index, 1)
+  // kalau yang dihapus itu primary, jadikan kontak pertama primary
   if (wasPrimary && contactsForm.value.length) {
     contactsForm.value[0].is_primary = true
   }
@@ -750,17 +397,18 @@ function openAddModal() {
   isAddModalVisible.value = true
 }
 
+
 async function openEditModal(c) {
   isEdit.value = true
   editId.value = c.id
   resetForm()
 
   formLoading.value = true
-  await store.detailCustomer(c.id)
+  await store.detailCustomer(c.id)   // endpoint showCostumers() -> sudah include contacts
   formLoading.value = false
 
   const detail = store.customersDetail
-  if (!detail) return
+  if (!detail) return // safety, kalau fetch gagal
 
   formData.value = {
     company_name     : detail.company_name     ?? '',
@@ -803,7 +451,9 @@ function closeAddModal() {
   resetForm()
 }
 
+
 async function handleSave() {
+  // ── MODE: TAMBAH / EDIT CABANG (company sudah matched) ──
   if (store.matchedCompany) {
     const hasEmptyName = contactsForm.value.some(contact => !contact.name?.trim())
     if (hasEmptyName) {
@@ -811,11 +461,17 @@ async function handleSave() {
       return
     }
 
+    // ── VALIDASI FORMAT PHONE ──
+    // const hasInvalidPhone = contactsForm.value.some(contact => !isValidPhone(contact.phone))
+    // if (hasInvalidPhone) {
+    //   showToast('error', 'Format nomor telepon tidak valid. Gunakan 08xx, +628xx, atau 628xx.')
+    //   return
+    // }
     const hasInvalidPhone = contactsForm.value.some(contact => !isValidPhone(contact.phone))
-    if (hasInvalidPhone) {
-      showToast('error', 'Format nomor telepon tidak valid. Gunakan angka (boleh diawali +, mengandung strip, spasi, atau tanda kurung).')
-      return
-    }
+      if (hasInvalidPhone) {
+        showToast('error', 'Format nomor telepon tidak valid. Gunakan angka (boleh diawali +, mengandung strip, spasi, atau tanda kurung).')
+        return
+      }
 
     if (!contactsForm.value.some(contact => contact.is_primary)) {
       contactsForm.value[0].is_primary = true
@@ -855,12 +511,14 @@ async function handleSave() {
     return
   }
 
+  // ── VALIDASI KONTAK ──
   const hasEmptyName = contactsForm.value.some(c => !c.name?.trim())
   if (hasEmptyName) {
     showToast('error', 'Nama kontak wajib diisi untuk setiap kontak.')
     return
   }
 
+  // ── VALIDASI FORMAT PHONE ──
   const hasInvalidPhone = contactsForm.value.some(c => !isValidPhone(c.phone))
   if (hasInvalidPhone) {
     showToast('error', 'Format nomor telepon tidak valid. Gunakan 08xx, +628xx, atau 628xx.')
@@ -875,6 +533,7 @@ async function handleSave() {
   errorCustomers.value      = null
   formData.value.visibility = assignVisibility.value
 
+  // ── GABUNGKAN contacts ke payload ──
   const payload = {
     ...formData.value,
     contacts: contactsForm.value.map(c => ({
@@ -906,6 +565,7 @@ async function handleSave() {
   }
 }
 
+
 // ── MODAL: SUBMISSION STATUS (pending + rejected milik sales) ──
 const isSubmissionModalVisible = ref(false)
 async function openSubmissionModal() {
@@ -915,6 +575,7 @@ async function openSubmissionModal() {
 function closeSubmissionModal() {
   isSubmissionModalVisible.value = false
 }
+
 
 const isBranchEdit = ref(false)
 const branchEditId = ref(null)
@@ -933,11 +594,11 @@ async function openEditBranch(item) {
   })
 
   formLoading.value = true
-  await store.fetchBranches(item.customer.id)
+  await store.fetchBranches(item.customer.id)   // GET /customers/{id}/branches -> include contacts
   formLoading.value = false
 
   const fullBranch = store.branchesData.find(b => b.id === item.branch.id)
-  if (!fullBranch) return
+  if (!fullBranch) return // safety
 
   branchFormData.value = {
     branch_name: fullBranch.branch_name ?? '',
@@ -962,6 +623,29 @@ async function openEditBranch(item) {
   isAddModalVisible.value = true
 }
 
+// async function openDeleteBranchModal(item) {
+//   const branch = item.branch ?? item
+//   const isConfirmed = await confirm({
+//     type       : 'danger',
+//     title      : 'Hapus Cabang Customer',
+//     message    : `Yakin ingin menghapus cabang "${branch.branch_name}"?`,
+//     detail     : 'Tindakan ini tidak bisa dibatalkan dan akan menghapus cabang secara permanen.',
+//     confirmText: 'Yes, Delete',
+//     cancelText : 'Cancel',
+//   })
+
+//   if (!isConfirmed) return
+
+//   try {
+//     await store.deleteBranch(branch.id)
+//     await store.fetchSubmissions()
+//     showToast('success', 'Cabang customer berhasil dihapus!')
+//   } catch {
+//     showToast('error', 'Gagal menghapus cabang, coba lagi.')
+//   }
+// }
+
+
 async function openDeleteBranchModal(item) {
   const branch = item.branch ?? item
   const isConfirmed = await confirm({
@@ -985,7 +669,7 @@ async function openDeleteBranchModal(item) {
   }
 }
 
-// ── CAPITALIZE HELPER (unified) ──────────────────────────────
+// ── CAPITALIZE HELPER (unified) ──────────────────────────
 const COMPANY_ABBREVIATIONS = ['PT', 'CV', 'UD', 'TBK', 'PD', 'CO', 'LTD', 'INC']
 function capitalize(str, mode = 'words', useAbbreviations = false) {
   if (!str) return str
@@ -1012,12 +696,13 @@ function capitalize(str, mode = 'words', useAbbreviations = false) {
 function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations = false) {
   target[field] = capitalize(e.target.value, mode, useAbbreviations)
 }
+
 </script>
 
 <template>
   <div class="h-100 d-flex flex-column">
 
-    <!-- BREADCRUMB -->
+    <!-- ═══ BREADCRUMB ═══ -->
     <div class="breadcrumb-card mb-2">
       <div class="breadcrumb-left">
         <h4 class="breadcrumb-title">
@@ -1033,15 +718,46 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
       </div>
     </div>
 
-    <!-- TOOLBAR TOP -->
+    <!-- ═══ TOOLBAR TOP ═══ -->
     <div class="toolbar-top">
-      <div class="toolbar-left"></div>
+      <div class="toolbar-left">
+        <!-- <div class="drop-wrap">
+          <button class="btn-toolbar btn-purple" @click="showExportCustomers = !showExportCustomers">
+            <font-awesome-icon icon="upload" /> Exports
+            <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+          </button>
+          <div class="drop-menu" :class="{ show: showExportCustomers }">
+            <div class="drop-label">Export Data</div>
+            <button class="drop-item" @click="exportCSV">
+              <font-awesome-icon icon="file-csv" style="color:#22c55e" /> Export CSV
+            </button>
+            <button class="drop-item" @click="exportExcel">
+              <font-awesome-icon icon="file-excel" style="color:#16a34a" /> Export Excel
+            </button>
+            <button class="drop-item" @click="exportPDF">
+              <font-awesome-icon icon="file-pdf" style="color:#ef4444" /> Export PDF
+            </button>
+          </div>
+        </div> -->
+        <!-- <div class="drop-wrap">
+          <button class="btn-toolbar btn-purple" @click="showImportCustomers = !showImportCustomers">
+            <font-awesome-icon icon="download" /> Imports
+            <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+          </button>
+          <div class="drop-menu" :class="{ show: showImportCustomers }">
+            <div class="drop-label">Import Data</div>
+            <button class="drop-item">
+              <font-awesome-icon icon="file-csv" style="color:#22c55e" /> Import CSV
+            </button>
+          </div>
+        </div> -->
+      </div>
       <button class="btn-toolbar btn-orange" @click="store.resetFilters()">
         <font-awesome-icon icon="rotate-left" /> Refresh
       </button>
     </div>
 
-    <!-- CONTROLS ROW -->
+    <!-- ═══ CONTROLS ROW ═══ -->
     <div class="controls-card">
       <div class="controls-row">
         <div class="controls-left">
@@ -1067,7 +783,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
             </div>
           </div>
 
-          <!-- VIEW MODE TOGGLE (CARD / TABLE) -->
+          <!-- ═══ VIEW MODE TOGGLE (CARD / TABLE) ═══ -->
           <div class="view-toggle">
             <button
               class="view-toggle-btn"
@@ -1147,7 +863,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
       </div>
     </div>
 
-    <!-- CONTENT: CARD VIEW / TABLE VIEW -->
+    <!-- ═══ CONTENT: CARD VIEW / TABLE VIEW ═══ -->
     <div class="content-card flex-grow-1 overflow-auto mb-3">
 
       <!-- LOADING (shared) -->
@@ -1185,12 +901,9 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
         </div>
       </div>
 
-      <!-- CARD VIEW (DEFAULT) -->
+      <!-- ═══ CARD VIEW (DEFAULT) ═══ -->
       <div v-else-if="viewMode === 'card'" class="customer-grid">
-        <div
-          v-for="item in store.customersData" :key="item.row_key ?? item.id" class="customer-card"
-          :class="{ 'has-followup-due': item.followup_due }"
-        >
+        <div v-for="item in store.customersData" :key="item.row_key ?? item.id" class="customer-card">
           <div class="cc-top">
             <div class="cc-avatar" :style="{ background: getAvatarColor(item.company_name) }">
               {{ getInitials(item.company_name) }}
@@ -1206,13 +919,6 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
             <div class="cc-break"></div>
             <span class="status-badge cc-status" :class="store.getStatusConfig(item.customer_status).label">
               {{ item.customer_status ?? '-' }}
-            </span>
-          </div>
-
-          <div v-if="item.followup_due" class="followup-alert-row">
-            <span class="followup-due-badge" :class="{ overdue: item.followup_overdue }">
-              <font-awesome-icon icon="bell" />
-              {{ item.followup_overdue ? 'Follow Up Overdue' : 'Follow Up Jatuh Tempo' }} · {{ followUpDateLabel(item) }}
             </span>
           </div>
 
@@ -1233,7 +939,9 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
               <font-awesome-icon icon="industry" class="cc-icon" />
               <span>{{ item.industry_name ?? '-' }}</span>
             </div>
-            <div class="cc-row">
+            <!-- PIC (sales) — beda sumber tergantung head company atau branch -->
+
+          <div class="cc-row">
               <font-awesome-icon icon="user-tie" class="cc-icon" />
               <div>
                   <small class="text-muted d-block">Sales</small>
@@ -1257,6 +965,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
             <span v-if="item.branch_count > 0" class="detail-badge">
               <font-awesome-icon icon="code-branch" /> {{ item.branch_count }} Branch
             </span>
+            <!-- ── jumlah kontak (kalau lebih dari 1) ── -->
             <span v-if="item.contacts?.length > 1" class="detail-badge">
               <font-awesome-icon icon="address-book" /> {{ item.contacts.length }} Contact
             </span>
@@ -1284,43 +993,12 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
               <button v-if="canView" class="act-btn act-info"   title="Detail" @click="openDetailModal(item.id)">
                 <font-awesome-icon icon="circle-info" />
               </button>
-
-              <!-- VISIT (3-state: Visit Now / Check In / Check Out) -->
-              <template v-if="!isRowActive(item)">
-                <button
-                  v-if="canCreate"
-                  class="act-btn act-visit"
-                  :disabled="loadingVisitNow || !!activeVisitCustomersId"
-                  :title="activeVisitCustomersId ? 'Selesaikan visit aktif dahulu' : 'Visit'"
-                  @click="openVisitNow(item)"
-                >
-                  <font-awesome-icon icon="location-dot" />
-                </button>
-              </template>
-              <template v-else>
-                <button
-                  v-if="activeCustomerPhase === 'visiting'"
-                  class="act-btn act-checkin"
-                  title="Check In"
-                  @click="checkInCustomer(item)"
-                >
-                  <font-awesome-icon icon="right-to-bracket" />
-                </button>
-                <button
-                  v-if="activeCustomerPhase === 'checked_in'"
-                  class="act-btn act-checkout"
-                  title="Check Out"
-                  @click="openCustomerCheckOut(item)"
-                >
-                  <font-awesome-icon icon="right-from-bracket" />
-                </button>
-              </template>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TABLE VIEW -->
+      <!-- ═══ TABLE VIEW ═══ -->
       <table v-else class="data-table">
         <thead>
           <tr>
@@ -1332,14 +1010,11 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
             <th>Lead Info</th>
             <th>PIC</th>
             <th>Status</th>
-            <th style="width:170px; text-align:center">ACTIONS</th>
+            <th style="width:130px; text-align:center">ACTIONS</th>
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="(item, index) in store.customersData" :key="item.row_key ?? item.id" class="data-row"
-            :class="{ 'row-followup-due': item.followup_due }"
-          >
+          <tr v-for="(item, index) in store.customersData" :key="item.row_key ?? item.id" class="data-row">
             <td class="td-no">
               {{ (store.pagination.current_page - 1) * store.pagination.per_page + index + 1 }}.
             </td>
@@ -1351,10 +1026,6 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
                 {{ item.branch_name }} — {{ item.city }}
               </div>
               <div v-else class="td-sub">{{ item.industry_name ?? '-' }}</div>
-              <div v-if="item.followup_due" class="followup-due-badge sm" :class="{ overdue: item.followup_overdue }">
-                <font-awesome-icon icon="bell" />
-                {{ item.followup_overdue ? 'Overdue' : 'Jatuh Tempo' }} · {{ followUpDateLabel(item) }}
-              </div>
             </td>
             <td class="td-name">
               {{ item.contact_name }}
@@ -1376,14 +1047,16 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
                 <div class="td-sub">{{ item.lead_category_name ?? '-' }}</div>
               </template>
             </td>
+            <!-- PIC: kolom terpisah, sumber beda untuk head company vs branch -->
             <td class="td-name">
+              
               <template v-if="item.display_type === 'branch'">
-                <div class="td-sub">Branch Sales Owner</div>
-                <div>{{ item.assigned_name ?? '-' }}</div>
+                  <div class="td-sub">Branch Sales Owner</div>
+                  <div>{{ item.assigned_name ?? '-' }}</div>
               </template>
               <template v-else>
-                <div class="td-sub">Sales Head Company</div>
-                <div>{{ item.assigned_name ?? '-' }}</div>
+                  <div class="td-sub">Sales Head Company</div>
+                  <div>{{ item.assigned_name ?? '-' }}</div>
               </template>
             </td>
             <td class="td-name">
@@ -1410,44 +1083,13 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
               <button v-if="canView" class="act-btn act-info"   title="Detail" @click="openDetailModal(item.id)">
                 <font-awesome-icon icon="circle-info" />
               </button>
-
-              <!-- VISIT (3-state: Visit Now / Check In / Check Out) -->
-              <template v-if="!isRowActive(item)">
-                <button
-                  v-if="canCreate"
-                  class="act-btn act-visit"
-                  :disabled="loadingVisitNow || !!activeVisitCustomersId"
-                  :title="activeVisitCustomersId ? 'Selesaikan visit aktif dahulu' : 'Visit'"
-                  @click="openVisitNow(item)"
-                >
-                  <font-awesome-icon icon="location-dot" />
-                </button>
-              </template>
-              <template v-else>
-                <button
-                  v-if="activeCustomerPhase === 'visiting'"
-                  class="act-btn act-checkin"
-                  title="Check In"
-                  @click="checkInCustomer(item)"
-                >
-                  <font-awesome-icon icon="right-to-bracket" />
-                </button>
-                <button
-                  v-if="activeCustomerPhase === 'checked_in'"
-                  class="act-btn act-checkout"
-                  title="Check Out"
-                  @click="openCustomerCheckOut(item)"
-                >
-                  <font-awesome-icon icon="right-from-bracket" />
-                </button>
-              </template>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- PAGINATION -->
+    <!-- ═══ PAGINATION ═══ -->
     <div class="pagination-card">
       <div class="pagination-nav">
         <button class="btn-prev-next" :disabled="store.pagination.current_page === 1"
@@ -1465,7 +1107,8 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
       </div>
     </div>
 
-    <!-- MODAL ADD / EDIT -->
+
+    <!-- ═══ MODAL ADD / EDIT ═══ -->
     <AppModal
       :show="isAddModalVisible"
       :title="isBranchEdit ? 'Edit Customer Branch' : (store.matchedCompany ? 'Add New Branch' : (isEdit ? 'Edit Customer' : 'Add New Customer'))"
@@ -1475,6 +1118,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
     >
       <div class="form-container-gap">
 
+        <!-- ═══ COMPANY NAME (dengan autocomplete deteksi duplikat) ═══ -->
         <div class="form-group">
           <label>Company Name <span class="required">*</span></label>
 
@@ -1484,8 +1128,8 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
               class="form-input"
               :class="{ 'input-error': getError('company_name') }"
               placeholder="PT. Example"
-              @input="onCapitalizedInput($event, formData, 'company_name', 'words', true);
-                       store.searchCompanyName(formData.company_name)" />
+              @input="onCapitalizedInput($event, formData, 'company_name', 'words', true); 
+                      store.searchCompanyName(formData.company_name)" />
             <div v-if="store.companySuggestions.length" class="cs-dropdown">
               <div class="cs-list">
                 <div
@@ -1519,6 +1163,8 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
           <span v-if="getError('company_name')" class="form-error">{{ getError('company_name') }}</span>
         </div>
 
+        <!-- ═══ FORM CABANG (muncul HANYA kalau company existing dipilih) ═══ -->
+
         <template v-if="store.matchedCompany">
   <div class="form-group">
     <label>Branch Name <span class="required">*</span></label>
@@ -1529,17 +1175,19 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 
   <div class="form-group">
     <label>City</label>
-    <input :value="branchFormData.city" class="form-input" placeholder="Contoh: Bandung"
-             @input="onCapitalizedInput($event, branchFormData, 'city')" />
+    <input :value="branchFormData.city" class="form-input" placeholder="Contoh: Bandung" 
+            @input="onCapitalizedInput($event, branchFormData, 'city')" />
   </div>
 
   <div class="form-group">
     <label>Branch Address</label>
-    <textarea :value="branchFormData.address" class="form-input form-textarea" rows="2" placeholder="Alamat lengkap cabang..."
-               @input="onCapitalizedInput($event, branchFormData, 'address', 'sentences')" />
+    <textarea :value="branchFormData.address" class="form-input form-textarea" rows="2" placeholder="Alamat lengkap cabang..." 
+              @input="onCapitalizedInput($event, branchFormData, 'address', 'sentences')" />
   </div>
 </template>
 
+        <!-- ═══ KONTAK (repeatable, muncul HANYA saat mode customer baru/edit) ═══ -->
+        <!-- Kontak dipakai customer maupun branch -->
         <div class="form-group">
           <label>Contact <span class="required">*</span></label>
 
@@ -1618,6 +1266,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
           </button>
         </div>
 
+        <!-- Industry + Category -->
         <div v-if="!store.matchedCompany" class="form-row-2">
 
           <div class="form-group">
@@ -1703,6 +1352,19 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
         </div>
 
         <div v-if="!store.matchedCompany" class="form-row-2">
+          <!-- <div class="form-group">
+            <label>Visibility</label>
+            <div class="segment-group">
+              <button type="button" class="segment-btn" :class="{ active: assignVisibility === 'PUBLIC' }"
+                @click="assignVisibility = 'PUBLIC'">
+                <font-awesome-icon icon="globe" /> PUBLIC
+              </button>
+              <button type="button" class="segment-btn" :class="{ active: assignVisibility === 'PRIVATE' }"
+                @click="assignVisibility = 'PRIVATE'">
+                <font-awesome-icon icon="lock" /> PRIVATE
+              </button>
+            </div>
+          </div> -->
 
           <div class="form-group full-width">
             <label>Customer Status <span class="required">*</span></label>
@@ -1748,7 +1410,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
         <div v-if="!store.matchedCompany" class="form-group">
           <label>Notes</label>
           <textarea :value="formData.notes" class="form-input form-textarea" rows="2"
-            placeholder="Catatan tambahan..."
+            placeholder="Catatan tambahan..." 
             @input="onCapitalizedInput($event, formData, 'notes', 'sentences')" />
         </div>
 
@@ -1773,7 +1435,8 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
       </template>
     </AppModal>
 
-    <!-- MODAL DETAIL -->
+
+    <!-- ═══ MODAL DETAIL ═══ -->
     <AppModal :show="isDetailModalVisible" title="Customer Detail" icon="circle-info" size="md"
       @close="closeDetailModal">
       <div v-if="store.loadingDetail" style="display:flex;justify-content:center;padding:40px 0;">
@@ -1787,6 +1450,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
         </div>
         <div class="detail-list">
 
+          <!-- ═══ KONTAK (bisa banyak) ═══ -->
           <div class="detail-section-label">
             Contact <span v-if="store.customersDetail.contacts?.length">({{ store.customersDetail.contacts.length }})</span>
           </div>
@@ -1827,6 +1491,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
             <span class="detail-badge">{{ store.customersDetail.category_name ?? store.customersDetail.lead_category_name ?? '-' }}</span>
           </div>
 
+          <!-- ═══ PIC HEAD COMPANY (khusus induk, TIDAK dipakai ulang untuk cabang) ═══ -->
           <div class="detail-section-label">PIC Head Company</div>
           <div class="detail-row">
             <span class="detail-label">Sales Pemegang</span>
@@ -1888,6 +1553,8 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
               <div class="branch-item-row" v-if="branch.address">
                 <font-awesome-icon icon="location-dot" class="cc-icon" /> {{ branch.address }}
               </div>
+              <!-- ═══ PIC CABANG: prioritas assigned_name, fallback creator_name ═══ -->
+              <!-- TIDAK mewarisi owner_name/assigned_name dari head company -->
               <div class="branch-item-row">
                 <font-awesome-icon icon="user-tie" class="cc-icon" />
                 Sales Pemegang Cabang: {{ branch.assigned_name ?? branch.creator_name ?? 'Belum ditentukan' }}
@@ -1896,26 +1563,27 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
                 <font-awesome-icon icon="user" class="cc-icon" />
                 Dibuat oleh: {{ branch.creator_name }}
               </div>
+               <!-- ═══ KONTAK BRANCH (kalau backend sudah menyertakan branch.contacts) ═══ -->
+            <!-- ═══ KONTAK BRANCH ═══ -->
+<div v-if="branch.contacts?.length" class="branch-contacts-block">
+  <div class="branch-contacts-title">
+    <font-awesome-icon icon="address-book" />
+    Kontak Cabang <span v-if="branch.contacts.length > 1">({{ branch.contacts.length }})</span>
+  </div>
 
-            <div v-if="branch.contacts?.length" class="branch-contacts-block">
-   <div class="branch-contacts-title">
-     <font-awesome-icon icon="address-book" />
-     Kontak Cabang <span v-if="branch.contacts.length > 1">({{ branch.contacts.length }})</span>
-   </div>
-
-   <div v-for="ct in branch.contacts" :key="ct.id" class="branch-contact-mini">
-     <div class="bcm-top">
-       <span class="bcm-name">{{ ct.name }}</span>
-       <span v-if="ct.is_primary" class="detail-badge">Utama</span>
-       <span v-if="ct.position" class="bcm-position">{{ ct.position }}</span>
-     </div>
-     <div v-if="ct.phone" class="bcm-row">
-       <font-awesome-icon icon="phone" class="cc-icon" /> {{ ct.phone }}
-     </div>
-     <div v-if="ct.email" class="bcm-row">
-       <font-awesome-icon icon="envelope" class="cc-icon" /> {{ ct.email }}
-     </div>
-   </div>
+  <div v-for="ct in branch.contacts" :key="ct.id" class="branch-contact-mini">
+    <div class="bcm-top">
+      <span class="bcm-name">{{ ct.name }}</span>
+      <span v-if="ct.is_primary" class="detail-badge">Utama</span>
+      <span v-if="ct.position" class="bcm-position">{{ ct.position }}</span>
+    </div>
+    <div v-if="ct.phone" class="bcm-row">
+      <font-awesome-icon icon="phone" class="cc-icon" /> {{ ct.phone }}
+    </div>
+    <div v-if="ct.email" class="bcm-row">
+      <font-awesome-icon icon="envelope" class="cc-icon" /> {{ ct.email }}
+    </div>
+  </div>
 </div>
             </div>
           </div>
@@ -1939,255 +1607,8 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
       </template>
     </AppModal>
 
-    <!-- MODAL VISIT CONFIRMATION (reuse startVisitCustomers dari Sales Visit) -->
-    <AppModal
-      :show="showVisitNowModal && !!selectedVisitItem"
-      title="Visit Confirmation Customer"
-      icon="location-dot"
-      size="sm"
-      @close="closeVisitNowModal"
-    >
-      <div v-if="selectedVisitItem" class="form-container-gap">
-        <div class="visit-confirm-box">
-          <p class="detail-section-label" style="padding-top:0;border-top:none;margin-top:0">Customers to be visited</p>
-          <p style="font-weight:700; font-size:0.95rem">{{ selectedVisitItem.company_name }}</p>
-          <p v-if="isBranchRow(selectedVisitItem)" class="td-sub text-primary" style="margin-top:2px">
-            <font-awesome-icon icon="code-branch" />
-            {{ selectedVisitItem.branch_name }}<span v-if="selectedVisitItem.city"> — {{ selectedVisitItem.city }}</span>
-          </p>
-          <p v-else class="td-sub text-primary" style="margin-top:2px">
-            <font-awesome-icon icon="building" /> Head Office
-          </p>
-        </div>
-        <div class="detail-list">
-          <div class="detail-row">
-            <span class="detail-label">Contact</span>
-            <span class="detail-value">{{ selectedVisitItem.contact_name ?? '-' }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Status</span>
-            <span class="detail-value">{{ selectedVisitItem.customer_status ?? '-' }}</span>
-          </div>
-        </div>
-        <div class="visit-warning-box">
-          <font-awesome-icon icon="triangle-exclamation" />
-          Once the visit starts, the system will automatically record the visit time.
-        </div>
-      </div>
-      <template #footer>
-        <button class="btn-cancel" @click="closeVisitNowModal" :disabled="loadingVisitNow">Cancel</button>
-        <button class="btn-save" @click="confirmVisitNow" :disabled="loadingVisitNow">
-          <font-awesome-icon v-if="loadingVisitNow" icon="spinner" spin />
-          <font-awesome-icon v-else icon="location-dot" />
-          {{ loadingVisitNow ? 'Processing...' : 'Yes, Visit Now' }}
-        </button>
-      </template>
-    </AppModal>
 
-    <!-- MODAL CHECK IN CUSTOMER -->
-    <AppModal
-      :show="showCheckInModalCustomers"
-      title="Check In Customer"
-      icon="right-to-bracket"
-      size="xl"
-      @close="closeCheckInModalCustomers"
-    >
-      <div class="checkin-grid">
-        <div class="camera-section">
-          <div class="camera-wrap">
-            <video v-if="!capturedPhoto" ref="videoRef" autoplay playsinline muted class="camera-video"></video>
-            <img v-else :src="capturedPhoto" class="camera-video" />
-            <div v-if="!capturedPhoto" class="live-badge">
-              <span class="live-dot"></span> LIVE CAMERA
-            </div>
-          </div>
-          <button
-            v-if="!capturedPhoto"
-            @click="capturePhoto"
-            :disabled="!locationReady || isGettingLocation"
-            class="btn-save" style="width:100%; padding:14px; justify-content:center; margin-top:10px"
-          >
-            <template v-if="isGettingLocation">
-              <font-awesome-icon icon="spinner" spin /> Detecting GPS...
-            </template>
-            <template v-else>
-              <font-awesome-icon icon="camera" /> Take Photo
-            </template>
-          </button>
-          <button
-            v-if="capturedPhoto"
-            @click="retakePhoto"
-            class="btn-cancel" style="width:100%; padding:14px; text-align:center; margin-top:10px"
-          >
-            <font-awesome-icon icon="rotate" /> Retake Photo
-          </button>
-        </div>
-
-        <div class="form-container-gap">
-          <div class="detail-list">
-            <div class="detail-row">
-              <span class="detail-label">Date & Time</span>
-              <span class="detail-value">{{ currentDateTime }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Company</span>
-              <span class="detail-value">{{ selectedVisitItem?.company_name ?? '-' }}</span>
-            </div>
-            <div class="detail-row" style="flex-direction:column; align-items:flex-start; gap:4px">
-              <span class="detail-label">Location GPS</span>
-              <div v-if="isGettingLocation" class="td-muted">
-                <font-awesome-icon icon="spinner" spin /> Detecting location...
-              </div>
-              <div v-else-if="locationReady" style="font-size:0.84rem; color:var(--text-primary)">
-                {{ currentLocation.address }}
-              </div>
-              <div v-else style="font-size:0.84rem; color:#ef4444">
-                <font-awesome-icon icon="circle-exclamation" /> Failed to get location
-              </div>
-            </div>
-          </div>
-          <div v-if="capturedPhoto" class="visit-confirm-box" style="color:#065f46; background:#d1fae5; border-color:#6ee7b7;">
-            <font-awesome-icon icon="circle-check" /> Photo berhasil diambil. Siap untuk submit.
-          </div>
-        </div>
-      </div>
-
-      <template #footer>
-        <button class="btn-cancel" @click="closeCheckInModalCustomers">Cancel</button>
-        <button
-          class="btn-save"
-          @click="submitCheckInCustomers"
-          :disabled="loadingCheckIn || !capturedPhoto"
-        >
-          <font-awesome-icon v-if="loadingCheckIn" icon="spinner" spin />
-          <font-awesome-icon v-else icon="cloud-arrow-up" />
-          {{ loadingCheckIn ? 'Submitting...' : 'Submit Check In' }}
-        </button>
-      </template>
-    </AppModal>
-
-    <canvas ref="canvasRef" style="display:none"></canvas>
-
-    <!-- MODAL CHECK OUT CUSTOMER -->
-    <AppModal
-      :show="showCheckOutCustomerModal"
-      title="Check Out Customer"
-      icon="right-from-bracket"
-      size="lg"
-      @close="closeCustomerCheckOutModal"
-    >
-      <div class="form-container-gap">
-        <div v-if="selectedVisitItem" class="visit-confirm-box">
-          <p style="font-weight:700">{{ selectedVisitItem.company_name }}</p>
-          <p class="td-muted">{{ selectedVisitItem.contact_name }}</p>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px">
-          <div>
-            <p class="detail-section-label" style="border-top:none;padding-top:0;margin-top:0">Hasil Kunjungan</p>
-            <p class="td-muted" style="margin:3px 0 0">Satu form untuk setiap nomor referensi.</p>
-          </div>
-          <button type="button" class="btn-save" @click="addCustomerCheckOutResult">
-            <font-awesome-icon icon="plus" /> Tambah Form Check Out
-          </button>
-        </div>
-
-        <div
-          v-for="(form, index) in customerCheckOutForms"
-          :key="index"
-          class="visit-confirm-box"
-          style="display:flex; flex-direction:column; gap:14px"
-        >
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px">
-            <strong style="color:#ef4444">Form Check Out Customer {{ index + 1 }}</strong>
-            <button
-              v-if="customerCheckOutForms.length > 1"
-              type="button"
-              class="btn-cancel"
-              @click="removeCustomerCheckOutResult(index)"
-            > <font-awesome-icon icon="trash-can" /> Hapus</button>
-          </div>
-
-          <div class="form-group">
-            <label>No. Reference <span class="required">*</span></label>
-            <input v-model.trim="form.no_reference" type="text" maxlength="100" placeholder="Masukkan nomor referensi..." class="form-input" />
-          </div>
-
-          <div class="form-group">
-            <label>Upload File / Foto Check Out</label>
-            <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif" class="form-input" @change="onCheckOutFileChange($event, form)" />
-            <small v-if="form.check_out_file" class="td-muted">File dipilih: {{ form.check_out_file.name }}</small>
-          </div>
-
-          <div class="form-group">
-            <label>Notes on Visit Result <span class="required">*</span></label>
-            <RichTextEditor v-model="form.notes" placeholder="Write visit result here..." />
-          </div>
-
-          <div class="form-group">
-            <label>Customer Response <span class="required">*</span></label>
-            <div class="response-grid">
-              <button
-                v-for="item in customerResponses"
-                :key="item.value"
-                type="button"
-                class="response-btn"
-                :class="form.customer_response === item.value ? 'response-active-emerald' : ''"
-                @click="selectCustomerResponse(form, item.value)"
-              >
-                <font-awesome-icon :icon="item.icon.replace('fa-solid fa-', '')" />
-                <div><p style="font-weight:600; margin:0; font-size:0.84rem">{{ item.label }}</p><p style="font-size:0.72rem; color:var(--text-muted); margin:0">{{ item.desc }}</p></div>
-              </button>
-            </div>
-          </div>
-
-          <div v-if="form.has_complaint" class="form-group">
-            <label style="color:#ef4444">Complaint / Issue <span>*</span></label>
-            <RichTextEditor v-model="form.complaint_detail" placeholder="Describe customer complaint or issue..." />
-          </div>
-
-          <div v-if="form.has_potential_order" class="form-group">
-            <label style="color:#d97706">Additional Notes <span>*</span></label>
-            <RichTextEditor v-model="form.potential_order_detail" placeholder="Explain potential order or future plan..." />
-          </div>
-
-          <div class="form-group">
-            <label>Follow Up Date / Next Action Plan Date <span class="required">*</span></label>
-            <input v-model="form.follow_up_at" type="datetime-local" :min="tomorrowDateTime" class="form-input" />
-          </div>
-
-          <div class="form-group">
-            <label>Follow Up Type <span class="required">*</span></label>
-            <div style="display:flex; flex-wrap:wrap; gap:8px">
-              <button v-for="type in followUpTypes" :key="type" type="button" @click="form.follow_up_type = type" class="pill-btn" :class="{ active: form.follow_up_type === type }">{{ type }}</button>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Follow Up Notes</label>
-            <RichTextEditor v-model="form.follow_up_notes" placeholder="Write next follow up notes..." />
-          </div>
-
-          <span style="font-size:0.78rem; color:var(--text-muted)">{{ isCustomerResultValid(form) ? '✔️ form siap disimpan' : 'Lengkapi form referensi ini' }}</span>
-        </div>
-
-      </div>
-
-      <template #footer>
-        <button class="btn-cancel" @click="closeCustomerCheckOutModal" :disabled="loadingCustomerCheckOut">Cancel</button>
-        <button
-          class="btn-save"
-          @click="submitCustomerCheckOut"
-          :disabled="loadingCustomerCheckOut || !isCustomerCheckOutValid"
-        >
-          <font-awesome-icon v-if="loadingCustomerCheckOut" icon="spinner" spin />
-          <font-awesome-icon v-else icon="floppy-disk" />
-          {{ loadingCustomerCheckOut ? 'Saving...' : 'Save Check Out' }}
-        </button>
-      </template>
-    </AppModal>
-
-    <!-- TOAST -->
+    <!-- ═══ TOAST ═══ -->
     <Teleport to="body">
       <Transition name="toast">
         <div v-if="toast.show" class="toast-wrap">
@@ -2206,7 +1627,10 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 
   </div>
 
-  <!-- MODAL SUBMISSION STATUS -->
+
+
+
+  <!-- ═══ MODAL SUBMISSION STATUS ═══ -->
 <AppModal
   :show="isSubmissionModalVisible"
   title="Status Pengajuan Customer Saya"
@@ -2235,6 +1659,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
       class="submission-item"
     >
 
+      <!-- HEADER -->
       <div class="si-top">
         <div class="si-headinfo">
 
@@ -2304,6 +1729,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
         </span>
       </div>
 
+      <!-- BODY -->
       <div class="si-body">
 
         <div class="si-row">
@@ -2334,6 +1760,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 
       </div>
 
+      <!-- REJECT NOTE -->
       <div
         v-if="
           (
@@ -2368,6 +1795,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 
       </div>
 
+      <!-- PENDING -->
       <div
         v-if="
           (
@@ -2482,21 +1910,6 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 /* ── CARD VIEW ── */
 .customer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; padding: 16px; }
 .customer-card { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border-main); border-radius: 12px; background: var(--bg-card); padding: 14px; transition: all 0.18s ease; }
-/* ===== TRIGGER FOLLOW UP JATUH TEMPO/OVERDUE ===== */
-.customer-card.has-followup-due {
-  border: 2px solid #ef4444;
-  background: rgba(239, 68, 68, 0.04);
-  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.12), 0 1px 3px var(--shadow-color);
-}
-.followup-alert-row { margin-top: -2px; }
-.followup-due-badge {
-  display: inline-flex; align-items: center; gap: 5px; font-size: 0.7rem; font-weight: 700;
-  padding: 3px 10px; border-radius: 20px; white-space: nowrap;
-  background: rgba(239, 68, 68, 0.12); color: #ef4444;
-}
-.followup-due-badge.overdue { background: #ef4444; color: #fff; }
-.followup-due-badge.sm { margin-top: 5px; font-size: 0.66rem; padding: 2px 8px; }
-.row-followup-due { box-shadow: inset 4px 0 0 #ef4444; background: rgba(239, 68, 68, 0.035); }
 .customer-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.08); border-color: #6366f1; transform: translateY(-2px); }
 .cc-top { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
 .cc-avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
@@ -2511,7 +1924,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 .cc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .cc-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px dashed var(--border-main); }
 .cc-date { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
-.cc-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.cc-actions { display: flex; gap: 4px; }
 
 /* ── TABLE VIEW ── */
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
@@ -2537,13 +1950,6 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 .act-delete:hover { background: #ef4444; color: #fff; }
 .act-info         { color: #6366f1; border-color: #6366f1; }
 .act-info:hover   { background: #6366f1; color: #fff; }
-.act-visit               { color: #0d9488; border-color: #0d9488; }
-.act-visit:hover:not(:disabled) { background: #0d9488; color: #fff; }
-.act-visit:disabled      { opacity: 0.4; cursor: not-allowed; }
-.act-checkin        { color:#10b981; border-color:#10b981; }
-.act-checkin:hover   { background:#10b981; color:#fff; }
-.act-checkout       { color:#ef4444; border-color:#ef4444; }
-.act-checkout:hover  { background:#ef4444; color:#fff; }
 
 /* ── PAGINATION ── */
 .pagination-card { background: var(--bg-card); border-radius: 10px; padding: 14px 18px; box-shadow: 0 1px 3px var(--shadow-color); display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; gap: 12px; }
@@ -2597,7 +2003,9 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 .btn-add-contact { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 1px dashed #6366f1; border-radius: 8px; background: transparent; color: #6366f1; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
 .btn-add-contact:hover { background: rgba(99,102,241,0.06); }
 
-/* ── CUSTOM SELECT ── */
+/* ════════════════════════════════════════════════
+   CUSTOM SELECT — FIX DROPDOWN TEMBUS MODAL
+════════════════════════════════════════════════ */
 .cs-wrap { display: flex; flex-direction: column; }
 
 .custom-select {
@@ -2606,7 +2014,8 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
   border: 1px solid var(--border-main); border-radius: 8px;
   background: var(--bg-input); cursor: pointer; transition: border 0.18s;
 }
-.custom-select:hover, .custom-select.open { border-color: #6366f1; }
+.custom-select:hover,
+.custom-select.open { border-color: #6366f1; }
 .custom-select.has-error { border-color: #ef4444; background: #fef2f2; }
 
 .cs-placeholder { font-size: 0.875rem; color: var(--text-muted); flex: 1; }
@@ -2665,31 +2074,6 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 .detail-value { font-size: 0.85rem; font-weight: 500; color: var(--text-primary); text-align: right; }
 .detail-badge { font-size: 0.8rem; font-weight: 600; padding: 3px 10px; border-radius: 6px; background: rgba(99,102,241,0.1); color: #6366f1; border: 1px solid rgba(99,102,241,0.2); }
 
-/* ── VISIT (Visit Now / Check In / Check Out) ── */
-.visit-confirm-box { background: var(--bg-input); border: 1px solid var(--border-main); border-radius: 10px; padding: 14px 16px; }
-.visit-warning-box  { display:flex; align-items:flex-start; gap:8px; padding:10px 14px; background:#fffbeb; border:1px solid #fcd34d; border-radius:8px; font-size:0.82rem; color:#92400e; }
-
-.checkin-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-@media (max-width: 640px) { .checkin-grid { grid-template-columns:1fr; } }
-.camera-section { display:flex; flex-direction:column; }
-.camera-wrap { position:relative; border-radius:16px; overflow:hidden; background:#000; aspect-ratio:16/9; }
-.camera-video { width:100%; height:100%; object-fit:cover; display:block; }
-.live-badge { position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:6px; padding:4px 10px; background:#ef4444; color:#fff; border-radius:99px; font-size:0.72rem; font-weight:700; }
-.live-dot { width:7px; height:7px; border-radius:50%; background:#fff; animation:ping-anim 1s infinite; }
-@keyframes ping-anim { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-.response-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; }
-.response-btn {
-  display:flex; align-items:center; gap:8px;
-  padding:10px 12px; border-radius:10px;
-  border:1.5px solid var(--border-main);
-  background:var(--bg-input); cursor:pointer;
-  font-size:0.82rem; font-weight:500; transition:all 0.18s;
-  color:var(--text-primary); text-align:left;
-}
-.response-btn:hover { border-color:#6366f1; color:#6366f1; }
-.response-active-emerald { border-color:#10b981 !important; background:#d1fae5 !important; color:#065f46 !important; }
-
 /* ── TOAST ── */
 .toast-wrap { position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 260px; max-width: 360px; }
 .toast-box { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: 12px; border: 1px solid; box-shadow: 0 8px 24px rgba(0,0,0,0.12); position: relative; overflow: hidden; }
@@ -2704,6 +2088,8 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 .progress-success { background: #22c55e; }
 .progress-error   { background: #ef4444; }
 .progress-info    { background: #94a3b8; }
+
+
 
 .btn-submission { background: #f59e0b; color: #fff; position: relative; }
 .btn-submission:hover { background: #d97706; }
@@ -2720,6 +2106,7 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 .si-reject-label { font-weight: 700; margin-bottom: 2px; }
 .si-reject-text { line-height: 1.5; }
 .si-pending-note { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; color: #b45309; font-size: 0.8rem; }
+
 
 .branch-contacts-block {
   margin-top: 10px;

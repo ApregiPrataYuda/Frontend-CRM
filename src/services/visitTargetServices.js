@@ -44,4 +44,13 @@ export const visitTargetServices = {
     return response
   },
 
+  // duplikat semua target di `periodMonth` (format 'YYYY-MM-DD', tanggal 1)
+  // ke bulan berikutnya -- bulan tujuan dihitung otomatis di backend.
+  async duplicateNextMonth(periodMonth) {
+    const response = await api.post('/manager/visit-targets/duplicate-next-month', {
+      period_month: periodMonth,
+    })
+    return response
+  },
+
 }

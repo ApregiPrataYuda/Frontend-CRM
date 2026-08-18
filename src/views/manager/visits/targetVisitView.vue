@@ -106,6 +106,55 @@ function handleReset() {
   store.resetFilters()
 }
 
+// ── DUPLIKAT KE BULAN BERIKUTNYA ──
+// Hitung label bulan tujuan (buat teks konfirmasi & buat pindah tampilan
+// setelah sukses) murni dari string 'YYYY-MM' -- nggak pakai date-fns/dayjs,
+// cukup Date bawaan biar nggak nambah dependency baru.
+function nextMonthStr(monthStr) {
+  const [y, m] = monthStr.split('-').map(Number)
+  const d = new Date(y, m, 1) // m 1-based di sini otomatis jadi "bulan depan" krn Date bulan 0-based
+  const ny = d.getFullYear()
+  const nm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${ny}-${nm}`
+}
+function monthLabel(monthStr) {
+  const [y, m] = monthStr.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+}
+
+async function handleDuplicateNextMonth() {
+  if (store.targetsData.length === 0) {
+    toast.error('Tidak ada target visit di bulan ini untuk diduplikat.')
+    return
+  }
+
+  const targetMonth = nextMonthStr(store.periodMonth)
+
+  const isConfirmed = await confirm({
+    type       : 'info',
+    title      : 'Duplikat Target ke Bulan Berikutnya',
+    message    : `Duplikat semua target visit bulan ${monthLabel(store.periodMonth)} ke ${monthLabel(targetMonth)}?`,
+    detail     : 'Jumlah target & catatan disalin persis, progress bulan baru mulai dari 0. Kombinasi sales + customer/branch yang bulan depannya sudah punya target akan dilewati (tidak ditimpa).',
+    confirmText: 'Ya, Duplikat',
+    cancelText : 'Batal',
+  })
+  if (!isConfirmed) return
+
+  try {
+    const result = await store.duplicateToNextMonth()
+    const { created, skipped } = result.data
+    toast.success(
+      created > 0
+        ? `Berhasil duplikat ${created} target ke bulan berikutnya${skipped > 0 ? ` (${skipped} dilewati karena sudah ada)` : '.'}`
+        : `Tidak ada target baru yang dibuat -- semua (${skipped}) sudah ada di bulan tujuan.`
+    )
+    // langsung pindah tampilan ke bulan tujuan biar manager bisa langsung lihat hasilnya
+    store.changeMonth(targetMonth)
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Gagal duplikat target visit.')
+  }
+}
+
 // ── AVATAR ──
 const AVATAR_COLORS = ['6366f1', 'f59e0b', '0d9488', '8b5cf6', 'ec4899', '3b82f6']
 function colorForName(name) {
@@ -366,9 +415,21 @@ async function handleDelete(row) {
         </button>
       </div>
 
-      <button class="btn-toolbar btn-purple" @click="openCreateModal">
-        <font-awesome-icon icon="plus" /> Tambah Target
-      </button>
+      <div class="toolbar-right-group">
+        <button
+          class="btn-toolbar btn-teal"
+          :disabled="store.duplicating || store.loadingList || store.targetsData.length === 0"
+          title="Duplikat semua target di bulan ini ke bulan berikutnya"
+          @click="handleDuplicateNextMonth"
+        >
+          <font-awesome-icon v-if="store.duplicating" icon="spinner" spin />
+          <font-awesome-icon v-else icon="copy" />
+          Duplikat ke Bulan Depan
+        </button>
+        <button class="btn-toolbar btn-purple" @click="openCreateModal">
+          <font-awesome-icon icon="plus" /> Tambah Target
+        </button>
+      </div>
     </div>
 
     <div class="stat-grid mb-2">
@@ -770,7 +831,11 @@ async function handleDelete(row) {
 .btn-purple:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-orange { background: #f59e0b; color: #fff; }
 .btn-orange:hover { background: #d97706; }
+.btn-teal { background: #0d9488; color: #fff; }
+.btn-teal:hover:not(:disabled) { background: #0f766e; }
+.btn-teal:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-arrow { font-size: 0.6rem; opacity: 0.7; }
+.toolbar-right-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 .controls-card { background: var(--bg-card); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 1px 3px var(--shadow-color); }
 .controls-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }

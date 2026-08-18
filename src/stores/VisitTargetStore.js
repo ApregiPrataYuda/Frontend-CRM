@@ -75,9 +75,10 @@ export const useVisitTargetStore = defineStore('visitTarget', () => {
     { value: 'target_count',   label: 'Jumlah Target' },
   ])
 
-  // ── LOADING STATE FORM (create/update/delete) ──
+  // ── LOADING STATE FORM (create/update/delete/duplicate) ──
   const submitting = ref(false)
   const deleting = ref(false)
+  const duplicating = ref(false)
 
   // ── BUILD PARAMS (dipakai fetchList) ──
   const buildListParams = () => {
@@ -298,6 +299,25 @@ export const useVisitTargetStore = defineStore('visitTarget', () => {
     }
   }
 
+  // ── DUPLIKAT KE BULAN BERIKUTNYA ──
+  // Duplikat semua target di bulan yang LAGI DITAMPILKAN (periodMonthParam) ke
+  // bulan berikutnya. TIDAK memanggil refreshAll() di sini karena hasilnya ada
+  // di bulan LAIN (bulan depan), bukan bulan yang lagi aktif -- biar view yang
+  // memutuskan mau pindah tampilan ke bulan tujuan atau tetap di bulan ini
+  // (lihat handleDuplicateNextMonth() di visitTargetView.vue).
+  const duplicateToNextMonth = async () => {
+    duplicating.value = true
+    try {
+      const response = await visitTargetServices.duplicateNextMonth(periodMonthParam.value)
+      return response.data
+    } catch (error) {
+      console.error('Gagal duplikat target visit:', error)
+      throw error
+    } finally {
+      duplicating.value = false
+    }
+  }
+
   return {
     // state
     periodMonth, periodMonthParam,
@@ -305,12 +325,12 @@ export const useVisitTargetStore = defineStore('visitTarget', () => {
     targetsData, loadingList, errorList,
     searchQuery, statusFilter, statusOptions, salesIdFilter,
     pagination, sort, sortOptions,
-    submitting, deleting,
+    submitting, deleting, duplicating,
     // actions
     buildListParams,
     fetchSummary, fetchList, fetchByUrl, refreshAll,
     changeMonth, searchWithDelay, changeStatusFilter, changeSalesFilter,
     changePageSize, changeSorting, toggleSort, resetFilters,
-    createTarget, updateTarget, deleteTarget,
+    createTarget, updateTarget, deleteTarget, duplicateToNextMonth,
   }
 })

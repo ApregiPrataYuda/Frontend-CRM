@@ -38,6 +38,19 @@ export const useSalesActivityStore = defineStore('salesActivity', () => {
     { value: 'direct',   label: 'Direct' },
   ])
 
+  // ── FILTER STATUS (baru) ──
+  // Vocabulary sama kayak follow_ups.status (PENDING/DONE/CANCELLED/CLOSED);
+  // buat Visit, backend nurunin status DONE/PENDING dari check_out_at biar
+  // bisa ikut difilter bareng di dropdown yang sama.
+  const statusFilter = ref('all')
+  const statusOptions = ref([
+    { value: 'all',       label: 'Semua Status' },
+    { value: 'PENDING',   label: 'Pending' },
+    { value: 'DONE',      label: 'Selesai' },
+    { value: 'CANCELLED', label: 'Dibatalkan' },
+    { value: 'CLOSED',    label: 'Ditutup' },
+  ])
+
   const pagination = reactive({
     current_page: 1,
     per_page: 10,
@@ -108,6 +121,7 @@ export const useSalesActivityStore = defineStore('salesActivity', () => {
     })
 
     if (typeFilter.value && typeFilter.value !== 'all') params.append('type', typeFilter.value)
+    if (statusFilter.value && statusFilter.value !== 'all') params.append('status', statusFilter.value)
     if (searchActivity.value) params.append('search', searchActivity.value)
     if (pagination.current_page) params.append('page', pagination.current_page)
     if (pagination.per_page) params.append('per_page', pagination.per_page)
@@ -181,6 +195,7 @@ export const useSalesActivityStore = defineStore('salesActivity', () => {
       sort_dir: sort.direction,
     }
     if (typeFilter.value && typeFilter.value !== 'all') baseParams.type = typeFilter.value
+    if (statusFilter.value && statusFilter.value !== 'all') baseParams.status = statusFilter.value
     if (searchActivity.value) baseParams.search = searchActivity.value
 
     const allRows = []
@@ -249,6 +264,13 @@ export const useSalesActivityStore = defineStore('salesActivity', () => {
     fetchActivities(buildActivitiesUrl())
   }
 
+  // ── CHANGE STATUS FILTER (baru) ──
+  const changeStatusFilter = (val) => {
+    statusFilter.value = val
+    pagination.current_page = 1
+    fetchActivities(buildActivitiesUrl())
+  }
+
   // ── CHANGE PAGE SIZE ──
   const changePageSize = () => {
     pagination.current_page = 1
@@ -276,6 +298,7 @@ export const useSalesActivityStore = defineStore('salesActivity', () => {
   const resetFilters = () => {
     searchActivity.value = ''
     typeFilter.value = 'all'
+    statusFilter.value = 'all'
     pagination.per_page = 10
     pagination.current_page = 1
     sort.column = 'time'
@@ -318,6 +341,7 @@ export const useSalesActivityStore = defineStore('salesActivity', () => {
     summary, loadingSummary,
     activitiesData, loadingActivities, errorActivity,
     searchActivity, typeFilter, typeOptions,
+    statusFilter, statusOptions,
     pagination, sort, sortOptions,
     dayKey, rangePreset, rangePresetOptions, customRange, viewMode,
     activityDetail, loadingDetail,
@@ -327,7 +351,7 @@ export const useSalesActivityStore = defineStore('salesActivity', () => {
     fetchSummary, fetchActivities, refreshAll,
     fetchAllActivitiesForExport,
     selectDay, selectRangePreset, applyCustomRange,
-    searchWithDelay, changeTypeFilter, changePageSize,
+    searchWithDelay, changeTypeFilter, changeStatusFilter, changePageSize,
     changeSorting, toggleSort, resetFilters,
     fetchActivityDetail, formatDate,
   }

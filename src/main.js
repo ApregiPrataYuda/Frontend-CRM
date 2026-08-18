@@ -199,7 +199,8 @@ import {
   faTags,
   faSatelliteDish,
   faCalendarWeek,
-  faPaperclip
+  faPaperclip,
+  faCopy
   
 
 } from '@fortawesome/free-solid-svg-icons'
@@ -388,7 +389,8 @@ library.add(
   faTags,
   faSatelliteDish,
   faCalendarWeek,
-  faPaperclip
+  faPaperclip,
+  faCopy
 
 )
 
