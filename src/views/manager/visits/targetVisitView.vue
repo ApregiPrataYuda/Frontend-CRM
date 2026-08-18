@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import AppModal from '@/components/AppModal.vue'
-import { useVisitTargetStore } from '@/stores/visitTargetStore'
+import { useVisitTargetStore } from '@/stores/VisitTargetStore'
 import { usePermissionStore } from '@/stores/PermissionStore'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'

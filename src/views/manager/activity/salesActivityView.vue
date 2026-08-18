@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import * as XLSX from 'xlsx'
 import AppModal from '@/components/AppModal.vue'
-import { useSalesActivityStore } from '@/stores/salesActivityStore'
+import { useSalesActivityStore } from '@/stores/SalesActivityStore'
 import { usePermissionStore } from '@/stores/PermissionStore'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
