@@ -28,8 +28,8 @@ export const useProductStore = defineStore('product', () => {
   const sortOptions = ref([
     { value: 'name',          label: 'Nama Produk' },
     { value: 'default_code',  label: 'Kode / SKU' },
-    // { value: 'list_price',    label: 'Harga Jual' },
-    // { value: 'qty_available', label: 'Stok' },
+    { value: 'list_price',    label: 'Harga Jual' },
+    { value: 'qty_available', label: 'Stok' },
   ])
 
   // ── SYNC (manual, tombol "Sync Sekarang") ──
@@ -53,7 +53,17 @@ export const useProductStore = defineStore('product', () => {
   const fetchProducts = async (url = null) => {
     loadingProducts.value = true
     try {
-      const finalUrl = url || buildProductsUrl()
+      // SAFETY NET: next_page_url/prev_page_url dari Laravel paginator kadang
+      // ke-generate pakai http:// (bukan https://) kalau backend di belakang
+      // reverse proxy yang belum di-trust dengan benar -- browser nge-block
+      // ini sebagai "mixed content" karena halamannya sendiri udah https.
+      // Fix SEBENARNYA harus di backend (TrustProxies / URL::forceScheme di
+      // AppServiceProvider), ini cuma tameng biar pagination ga patah di
+      // frontend selagi itu belum dibenerin.
+      let finalUrl = url || buildProductsUrl()
+      if (typeof finalUrl === 'string' && finalUrl.startsWith('http://')) {
+        finalUrl = finalUrl.replace('http://', 'https://')
+      }
       const response = await productServices.getByUrl(finalUrl)
       const result = response.data
 
