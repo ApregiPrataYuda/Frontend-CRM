@@ -200,8 +200,10 @@ import {
   faSatelliteDish,
   faCalendarWeek,
   faPaperclip,
-  faCopy
-  
+  faCopy,
+  faBoxOpen,
+  faBoxesStacked,
+  faRuler
 
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -390,8 +392,10 @@ library.add(
   faSatelliteDish,
   faCalendarWeek,
   faPaperclip,
-  faCopy
-
+  faCopy,
+  faBoxOpen,
+  faBoxesStacked,
+  faRuler
 )
 
 const app = createApp(App)
