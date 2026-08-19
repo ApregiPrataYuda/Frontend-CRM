@@ -394,6 +394,17 @@ const routes = [
         }
       },
 
+      {
+        path: 'sales-target',
+        name: 'My Target Sales',
+
+        component: () =>
+        import('@/views/sales/target/mySalesTargetView.vue'),
+        meta: {
+          role: [2], title: 'My Target Sales'
+        }
+      },
+
 
 
       {
@@ -453,6 +464,19 @@ const routes = [
 
         meta: {
           role: [3], title: 'Target Visit'
+        }
+      },
+
+      {
+        path: 'manager-sales-target',
+
+        name: 'Sales Target',
+
+        component: () =>
+          import('@/views/manager/target/salesTargetManagementView.vue'),
+
+        meta: {
+          role: [3], title: 'Sales Target'
         }
       },
 
