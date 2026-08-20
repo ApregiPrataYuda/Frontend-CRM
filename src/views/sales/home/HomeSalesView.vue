@@ -34,10 +34,10 @@ onMounted(async () => {
     <div class="dashboard-header">
       <div>
         <h1 class="page-title">
-          Welcome Back, {{ fullNameUser }} 👋
+          Selamat Datang, {{ fullNameUser }} 👋
         </h1>
         <p class="page-subtitle">
-          Manage your leads and sales activities today.
+          Kelola pelanggan dan aktivitas follow up Anda.
         </p>
       </div>
     </div>
