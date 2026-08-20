@@ -437,7 +437,7 @@ const routes = [
           import('@/views/manager/home/HomeManagerView.vue'),
 
         meta: {
-          role: [3], title: 'Manager Home'
+          role: [3], title: 'Homes'
         }
       },
 

@@ -51,7 +51,7 @@ onMounted(async () => {
     <template v-else>
 
       <!-- WELCOME CARD -->
-      <div class="welcome-card">
+      <!-- <div class="welcome-card">
         <div class="welcome-body">
           <p class="welcome-month">{{ currentMonth }}</p>
           <p class="welcome-desc">
@@ -84,7 +84,7 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- STAT CARDS -->
       <div class="stats-grid">
@@ -258,7 +258,7 @@ onMounted(async () => {
       <div class="content-grid">
 
         <!-- TARGET VS AKTUAL -->
-        <div class="card">
+        <!-- <div class="card">
           <div class="card-header">
             <div class="card-title">
               <font-awesome-icon icon="fa-solid fa-chart-bar" style="color:#03c3ec" />
@@ -307,7 +307,7 @@ onMounted(async () => {
               <p>No data available</p>
             </div>
           </div>
-        </div>
+        </div> -->
 
         <!-- LEADERBOARD -->
         <div class="card">

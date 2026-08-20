@@ -94,6 +94,12 @@ const userRole = computed(() =>
     : 'User'
 )
 
+// Label role di bawah nama sengaja disembunyiin khusus buat Manager
+// (case-insensitive, jaga-jaga backend ngirim "Manager"/"manager"/"MANAGER").
+const isManagerRole = computed(() =>
+  (authStore.user?.role?.role || '').toLowerCase() === 'manager'
+)
+
 const pageTitle = computed(() => {
   return router.currentRoute.value.meta.title || router.currentRoute.value.name || 'PT SATU DUA'
 })
@@ -144,7 +150,7 @@ const pageTitle = computed(() => {
             </div>
             <div class="user-chip-info d-none d-md-block">
               <div class="user-chip-name">{{ userName }}</div>
-              <div class="user-chip-role">{{ userRole }}</div>
+              <div v-if="!isManagerRole" class="user-chip-role">{{ userRole }}</div>
             </div>
             <font-awesome-icon
               icon="chevron-down"

@@ -116,11 +116,11 @@ const fuIcon = (type) => {
       <!-- ── SUMMARY CARDS ── -->
       <div class="summary-grid">
 
-        <div class="sum-card sum-indigo">
+        <!-- <div class="sum-card sum-indigo">
           <div class="sum-icon">🎯</div>
           <div class="sum-val">{{ summary.leads_this_month ?? 0 }}</div>
           <div class="sum-lbl">Lead Bulan Ini</div>
-        </div>
+        </div> -->
 
         <div class="sum-card sum-green">
           <div class="sum-icon">🏆</div>
@@ -140,11 +140,11 @@ const fuIcon = (type) => {
           <div class="sum-lbl">Kunjungan Bulan Ini</div>
         </div>
 
-        <div class="sum-card sum-purple">
+        <!-- <div class="sum-card sum-purple">
           <div class="sum-icon">🤝</div>
           <div class="sum-val">{{ summary.deals_this_month ?? 0 }}</div>
           <div class="sum-lbl">Deals Bulan Ini</div>
-        </div>
+        </div> -->
 
         <div class="sum-card sum-red">
           <div class="sum-icon">⏰</div>
@@ -155,7 +155,7 @@ const fuIcon = (type) => {
       </div>
 
       <!-- ── CONVERSION STATS ── -->
-      <div class="conv-section">
+      <!-- <div class="conv-section">
         <div class="conv-card">
           <div class="conv-header">
             <h3>Konversi & Pencapaian</h3>
@@ -196,7 +196,7 @@ const fuIcon = (type) => {
 
           </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- ── MAIN GRID ── -->
       <div class="main-grid">

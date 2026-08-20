@@ -60,14 +60,6 @@ const userRole   = computed(() => {
   return r ? r.charAt(0).toUpperCase() + r.slice(1) : 'User'
 })
 
-// Label role di bawah nama (footer sidebar) sengaja disembunyiin khusus
-// buat Manager (case-insensitive, jaga-jaga backend ngirim
-// "Manager"/"manager"/"MANAGER") -- pola sama kayak yang dipasang di
-// Header.vue (chip user pojok kanan atas).
-const isManagerRole = computed(() =>
-  (authStore.user?.role?.role || '').toLowerCase() === 'manager'
-)
-
 /* ── BRAND LOGO ──
    Prioritas: appLogoSmall → appLogo → null (tampilkan ikon)
 */
@@ -206,7 +198,7 @@ const brandLogoUrl = computed(() => {
 
       <div class="user-info">
         <div class="user-name">{{ userName }}</div>
-        <div v-if="!isManagerRole" class="user-role">{{ userRole }}</div>
+        <div class="user-role">{{ userRole }}</div>
       </div>
 
       <button class="logout-btn" title="Logout" @click="authStore.logout">
