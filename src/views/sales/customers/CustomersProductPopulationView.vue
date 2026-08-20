@@ -1003,7 +1003,7 @@ async function submitBulkAssign() {
             <li>Tambah/edit data product population buat customer yang kamu pegang lewat tombol <strong>Add Data</strong>.</li>
             <li>Tab <strong>Customer Saya</strong> nunjukin data yang PIC-nya kamu.</li>
             <li>
-              Tab <strong>Data Belum Lengkap</strong> isinya data "yatim" — belum ada customer & belum ada PIC
+              Tab <strong>Data Belum Lengkap</strong> isinya data " " — belum ada customer & belum ada PIC
               sama sekali. Kamu cuma bisa lihat <strong>Detail</strong>-nya; edit/hapus data di tab ini cuma bisa
               dilakukan admin/manager, biar nggak diserobot atau salah pegang.
             </li>

@@ -1,37 +1,6 @@
 import { defineStore } from 'pinia'
 import { reassignSalesServices } from '@/services/reassignSalesServices'
 
-// ── HELPER: ambil path+query dari absolute URL ────────────────────────
-// next_page_url/prev_page_url dari Laravel paginator itu ABSOLUTE URL
-// (isinya domain lengkap, hasil generate dari APP_URL backend). Kalau
-// dipanggil apa adanya lewat axios, request-nya nembak LANGSUNG ke domain
-// itu -- bukan lewat baseURL/proxy yang dikonfigurasi di api.js buat
-// environment yang lagi jalan (local/staging/production). Kalau domain
-// di APP_URL beda origin sama domain frontend yang aktif, ini bisa kena
-// CORS block di satu environment tapi ga masalah di environment lain
-// (persis kasus "di local error, di server jalan" yang ketemu di
-// Product Population).
-//
-// Fix-nya: buang bagian domain-nya, sisain path+query doang, terus tetap
-// dipanggil lewat instance `api` yang sama kayak request awal (getAll()).
-// Jadi requestnya SELALU ngikut baseURL axios yang aktif di environment
-// manapun, ga peduli domain apa yang ke-embed di URL dari backend.
-//
-// NOTE: "/api" di depan path sengaja dibuang karena baseURL axios di
-// project ini udah include prefix itu (liat getAll() yang manggil
-// '/manager-reassign-sales' tanpa '/api' di depannya).
-function toRelativeUrl(absoluteUrl) {
-  if (!absoluteUrl) return absoluteUrl
-  try {
-    const parsed = new URL(absoluteUrl)
-    return parsed.pathname.replace(/^\/api/, '') + parsed.search
-  } catch (e) {
-    // Kalau ternyata bukan URL absolute (misal sudah relative path),
-    // biarin apa adanya -- ga perlu diapa-apain.
-    return absoluteUrl
-  }
-}
-
 export const useReassignSalesStore = defineStore('reassignSales', {
   state: () => ({
     customersData: [],
@@ -63,10 +32,8 @@ export const useReassignSalesStore = defineStore('reassignSales', {
       this.loadingCustomers = true
       this.errorCustomers = null
       try {
-        const relativeUrl = toRelativeUrl(url)
-
-        const res = relativeUrl
-          ? await reassignSalesServices.getByUrl(relativeUrl)
+        const res = url
+          ? await reassignSalesServices.getByUrl(url)
           : await reassignSalesServices.getAll({
               search: this.searchKeyword || undefined,
               per_page: this.pagination.per_page,
