@@ -64,7 +64,20 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
     loadingProductPopulations.value = true
 
     try {
-      const finalUrl = url || buildUrl()
+      // Safety net yang SAMA kayak productStore.js/salesTargetStore.js --
+      // jaga-jaga mixed content kalau next_page_url/prev_page_url yang
+      // dibalikin paginator Laravel ke-generate "http://" di production
+      // (biasa gara-gara APP_URL/trusted proxy belum pas), padahal
+      // frontend-nya dibuka lewat "https://". Browser bakal DIAM-DIAM
+      // nge-block request kayak gitu (cuma kelihatan di console sebagai
+      // "Mixed Content"), makanya tombol Next/Prev kelihatan "diem aja"
+      // pas diklik -- klik-nya kepanggil, tapi request-nya digagalkan
+      // browser sebelum sempet nyampe ke server.
+      let finalUrl = url || buildUrl()
+      if (typeof finalUrl === 'string' && finalUrl.startsWith('http://')) {
+        finalUrl = finalUrl.replace('http://', 'https://')
+      }
+
       const response = await productPopulationsServices.getByUrl(finalUrl)
       const result    = response.data
 
@@ -160,7 +173,7 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
 
   // ── UPDATE ────────────────────────────────────────
   // Dipakai juga oleh admin/manager buat "melengkapi" data yang tadinya
-  // masuk tab incomplete — begitu customer_id/user_id keisi lewat form
+  // masuk tab incomplete -- begitu customer_id/user_id keisi lewat form
   // edit yang sama, baris ini otomatis pindah tab pas fetchCounts() jalan.
   const updateProductPopulation = async (id, payload) => {
     updatingProductPopulations.value = true
@@ -268,10 +281,6 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
   // (leads), jadi field id/nama-nya nggak dijamin selalu literal "id"/"name".
   // Di-normalize di sini biar dropdown/checkbox PIC di komponen selalu bisa
   // pakai s.id & s.name dengan aman, apapun nama field asli dari API.
-  // (Ini juga akar dari bug "Pilih sales tujuan terlebih dahulu" yang selalu
-  // muncul walau sudah pilih nama di dropdown: nama-nya render benar karena
-  // salah satu field cocok, tapi :value="s.id" jadi undefined kalau field id
-  // aslinya bukan "id" — makanya assignTargetUser nggak pernah keisi.)
   const fetchSalesSelect = async () => {
     try {
       const data = await productPopulationsServices.getSales()
