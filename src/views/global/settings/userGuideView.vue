@@ -6,9 +6,14 @@ const authStore = useAuthStore()
 const storageUrl = import.meta.env.VITE_STORAGE_URL ?? ''
 
 // ── PETA USER GUIDE PER ROLE ────────────────────────────────────────
-// role_id 1 = Admin, 2 = Sales, 3 = Manager -- SAMA PERSIS sama mapping
-// role_id yang udah dipakai di tempat lain (SalesTargetController,
+// role_id 2 = Sales, 3 = Manager -- SAMA PERSIS sama mapping role_id
+// yang udah dipakai di tempat lain (SalesTargetController,
 // canManageTargets(), dll), jadi ga bikin konvensi baru.
+//
+// Sengaja CUMA 2 role ini yang disiapin guide-nya (role_id 1 = Admin
+// TIDAK dimasukkan) -- kalau ada user Admin buka halaman ini, otomatis
+// kena empty state "User Guide Belum Tersedia" (lihat activeGuide di
+// bawah), BUKAN coba nge-load PDF yang gak ada (yang bakal 404).
 //
 // File PDF-nya sengaja file STATIS (bukan record di DB), ditaruh manual
 // di server di:
@@ -22,13 +27,6 @@ const storageUrl = import.meta.env.VITE_STORAGE_URL ?? ''
 // Ganti/update PDF-nya nanti tinggal replace file fisiknya di server,
 // ga perlu redeploy kode ini.
 const GUIDE_MAP = {
-  1: {
-    label: 'Administrator',
-    file: 'user-guide-admin.pdf',
-    icon: 'user-shield',
-    color: '#6366f1',
-    desc: 'Panduan lengkap pengelolaan sistem, master data, dan approval untuk role Administrator.',
-  },
   2: {
     label: 'Sales',
     file: 'user-guide-sales.pdf',
