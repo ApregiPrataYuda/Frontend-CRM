@@ -420,6 +420,19 @@ const routes = [
         }
       },
 
+      {
+        path: 'user-guide',
+
+        name: 'User Guide',
+
+        component: () =>
+          import('@/views/global/settings/userGuideView.vue'),
+
+        meta: {
+          role: [2]
+        }
+      },
+
       
 
       

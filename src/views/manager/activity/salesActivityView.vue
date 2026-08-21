@@ -413,7 +413,7 @@ function closeDetailModal() {
     <div class="stat-grid mb-2">
       <div class="stat-tile">
         <div class="stat-tile-top">
-          <span class="stat-label">{{ store.viewMode === 'day' && store.dayKey === 'today' ? 'Sales Aktif' : 'Sales Beraktivitas' }}</span>
+          <span class="stat-label">{{ store.viewMode === 'day' && store.dayKey === 'today' ? 'Sales Sedang Aktif' : 'Sales Beraktivitas' }}</span>
           <span class="stat-icon" style="background:rgba(34,197,94,0.12);color:#22c55e"><font-awesome-icon icon="signal" /></span>
         </div>
         <div class="stat-value">{{ store.loadingSummary ? '–' : store.summary.stats.active_sales }}</div>
@@ -448,7 +448,7 @@ function closeDetailModal() {
     <div class="mb-2">
       <div class="section-title">
         <font-awesome-icon icon="satellite-dish" />
-        <span v-if="store.viewMode === 'day'">{{ store.dayKey === 'today' ? 'Sales Sedang Aktif' : 'Rekap Aktivitas Sales' }}</span>
+        <span v-if="store.viewMode === 'day'">{{ store.dayKey === 'today' ? 'Sales Aktif Hari Ini' : 'Rekap Aktivitas Sales' }}</span>
         <span v-else>Leaderboard Sales</span>
         <span class="count">{{ store.summary.roster.length }}</span>
         <span v-if="store.viewMode === 'day' && store.dayKey !== 'today'" class="hint">— histori, bukan status real-time</span>

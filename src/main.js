@@ -205,6 +205,7 @@ import {
   faBoxesStacked,
   faRuler,
   faCrosshairs,
+  faBook
 
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -397,7 +398,8 @@ library.add(
   faBoxOpen,
   faBoxesStacked,
   faRuler,
-  faCrosshairs
+  faCrosshairs,
+  faBook
 )
 
 const app = createApp(App)
