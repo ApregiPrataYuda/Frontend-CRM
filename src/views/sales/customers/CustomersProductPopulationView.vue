@@ -23,6 +23,9 @@ const {
   salesSelectData,
   customerSuggestions, searchingCustomer,
 
+  companySelectData, loadingCompanySelect,
+  selectedCompanyId, selectedCompanyName,
+
   unassignedData, loadingUnassigned, searchUnassigned, errorUnassignedFetch,
   assigningSales, errorAssign,
 } = storeToRefs(store)
@@ -40,6 +43,10 @@ const canView    = computed(() => permission.canView(currentUrl.value))
 //  1. Nampilin tombol "Assign Sales" di tab Semua Data.
 //  2. Nyembunyiin section "PIC / Sales yang menangani" di modal Add/Edit,
 //     biar Sales nggak bisa iseng reassign data ke sales lain.
+//  3. Nyembunyiin kolom "Pump Serial No" di tabel buat Sales -- data ini
+//     dianggap sensitif/rahasia dagang, cuma admin/manager yang boleh
+//     lihat di list. (Field-nya di form Add/Edit TETAP ada buat Sales,
+//     yang disembunyiin cuma kolom tabelnya.)
 //
 // NOTE: saya nggak punya visibility ke auth store project ini, jadi
 // role_id user yang login saya ambil dari localStorage key "user" —
@@ -71,11 +78,28 @@ const viewModes = [
 ]
 const activeViewInfo = () => viewModes.find(v => v.key === store.view)
 
+// Sales cuma boleh liat tab "Customer Saya" -- tab "Semua Data" (semua
+// customer, bukan cuma miliknya) dan "Data Belum Lengkap" (belum ada
+// PIC/customer sama sekali) disembunyikan total dari Sales, cuma
+// admin/manager (canAssignSales) yang bisa lihat & pindah ke 2 tab itu.
+const visibleViewModes = computed(() =>
+  canAssignSales.value ? viewModes : viewModes.filter(v => v.key === 'mine')
+)
+
 // ── LIFECYCLE ───────────────────────────────────────────
 onMounted(async () => {
+  if (!canAssignSales.value) {
+    // Paksa default view ke 'mine' dari awal buat Sales, jangan sampai
+    // sempat nge-fetch/nampilin "Semua Data" dulu baru di-switch manual.
+    // (Backend index()/customerSelect() juga udah dipaksa 'mine' buat
+    // role Sales, ini di frontend cuma biar nggak ada flash data yang
+    // salah pas awal load / biar dropdown company-nya langsung scoped bener.)
+    store.view = 'mine'
+  }
   await store.fetchProductPopulations()
   await store.fetchCounts()
   await store.fetchSalesSelect()
+  await store.fetchCompanySelect()
 })
 
 onUnmounted(() => {
@@ -88,6 +112,28 @@ const showImportProductPopulations  = ref(false)
 const showPerPageProductPopulations = ref(false)
 const showSortByProductPopulations  = ref(false)
 const showSortDirProductPopulations = ref(false)
+
+// ── DROPDOWN FILTER "PER COMPANY" (baru) ────────────────
+// BEDA dari customerSuggestions/searchCustomerName (yang cuma buat
+// autocomplete form Add/Edit) -- ini dropdown di TOOLBAR buat nge-filter
+// tabel supaya cuma nampilin data punya 1 customer tertentu aja. Isinya
+// dari companySelectData (di-scope per view aktif, lihat store), dan ada
+// pencarian kecil di dalam dropdown-nya sendiri (client-side filter,
+// bukan request baru ke server) buat jaga-jaga kalau company-nya banyak.
+const showCompanyFilterProductPopulations = ref(false)
+const companyFilterSearch                 = ref('')
+
+const filteredCompanySelect = computed(() => {
+  const q = companyFilterSearch.value.trim().toLowerCase()
+  if (!q) return store.companySelectData
+  return store.companySelectData.filter(c => (c.company_name || '').toLowerCase().includes(q))
+})
+
+function pickCompanyFilter(company) {
+  store.filterByCompany(company) // null = reset ke "Semua Company"
+  showCompanyFilterProductPopulations.value = false
+  companyFilterSearch.value = ''
+}
 
 // NOTE: value di sini harus persis sama dengan whitelist $allowedSort di
 // CustomersProductPopulation@index (pakai alias tabel "pp." di backend).
@@ -418,7 +464,7 @@ async function submitBulkAssign() {
     <div class="view-card mb-2">
       <div class="view-tabs">
         <button
-          v-for="v in viewModes" :key="v.key"
+          v-for="v in visibleViewModes" :key="v.key"
           class="view-tab" :class="{ active: store.view === v.key }"
           :style="store.view === v.key ? { '--tab-color': v.color } : {}"
           @click="store.changeView(v.key)"
@@ -497,6 +543,40 @@ async function submitBulkAssign() {
                     @click="store.pagination.per_page = opt; showPerPageProductPopulations = false; store.changePageSize()"
                   >{{ opt }}</button>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═══ DROPDOWN FILTER PER COMPANY (baru) ═══ -->
+          <div class="drop-wrap">
+            <button class="btn-select" @click="showCompanyFilterProductPopulations = !showCompanyFilterProductPopulations">
+              <font-awesome-icon icon="building" />
+              {{ store.selectedCompanyName || 'Semua Company' }}
+              <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+            </button>
+            <div class="drop-menu drop-company" :class="{ show: showCompanyFilterProductPopulations }">
+              <div class="drop-label">Filter per Company</div>
+              <input
+                v-model="companyFilterSearch"
+                type="text"
+                class="form-input"
+                style="margin-bottom:8px"
+                placeholder="Cari company..."
+              />
+              <div class="cs-list">
+                <button
+                  class="drop-item"
+                  :class="{ active: !store.selectedCompanyId }"
+                  @click="pickCompanyFilter(null)"
+                >Semua Company</button>
+                <button
+                  v-for="c in filteredCompanySelect" :key="c.id"
+                  class="drop-item"
+                  :class="{ active: store.selectedCompanyId === c.id }"
+                  @click="pickCompanyFilter(c)"
+                >{{ c.company_name }}</button>
+                <div v-if="store.loadingCompanySelect" class="td-sub" style="padding:6px 4px">Memuat...</div>
+                <div v-else-if="!filteredCompanySelect.length" class="td-sub" style="padding:6px 4px">Tidak ada company ditemukan.</div>
               </div>
             </div>
           </div>
@@ -585,7 +665,11 @@ async function submitBulkAssign() {
         <thead>
           <tr>
             <th style="width:56px">NO.</th>
-            <th>Pump Serial No</th>
+            <!-- "Pump Serial No" dianggap data sensitif -- cuma admin/manager
+                 (canAssignSales) yang boleh lihat kolom ini di tabel. Sales
+                 tetap bisa isi field-nya di form Add/Edit, cuma kolom
+                 tabelnya aja yang disembunyikan. -->
+            <th v-if="canAssignSales">Pump Serial No</th>
             <th>Customer</th>
             <th>Product</th>
             <th>Model / Tag No</th>
@@ -601,7 +685,7 @@ async function submitBulkAssign() {
             <td class="td-no">
               {{ (store.pagination.current_page - 1) * store.pagination.per_page + index + 1 }}.
             </td>
-            <td class="td-name"><span class="mono-text">{{ item.pump_serial_no || '-' }}</span></td>
+            <td v-if="canAssignSales" class="td-name"><span class="mono-text">{{ item.pump_serial_no || '-' }}</span></td>
             <td class="td-name">
               <span v-if="item.customer" class="fw-bold">{{ item.customer.name }}</span>
               <span v-else class="missing-badge"><font-awesome-icon icon="ban" /> Belum Ada Customer</span>
@@ -983,7 +1067,7 @@ async function submitBulkAssign() {
             <font-awesome-icon icon="table-list" /> 3 Tampilan Data
           </h5>
           <div class="help-view-list">
-            <div v-for="v in viewModes" :key="v.key" class="help-view-item">
+            <div v-for="v in visibleViewModes" :key="v.key" class="help-view-item">
               <span class="help-view-icon" :style="{ color: v.color }">
                 <font-awesome-icon :icon="v.icon" />
               </span>
@@ -997,16 +1081,22 @@ async function submitBulkAssign() {
 
         <div class="help-section">
           <h5 class="help-section-title">
+            <font-awesome-icon icon="building" /> Filter per Company
+          </h5>
+          <p class="help-list" style="margin:0; padding-left:0">
+            Dropdown "Semua Company" di toolbar bisa dipakai buat mempersempit tabel supaya cuma
+            nampilin data punya 1 customer tertentu. Daftar company di dropdown ini otomatis
+            menyesuaikan tab yang lagi aktif.
+          </p>
+        </div>
+
+        <div class="help-section">
+          <h5 class="help-section-title">
             <font-awesome-icon icon="user" /> Buat Sales
           </h5>
           <ul class="help-list">
             <li>Tambah/edit data product population buat customer yang kamu pegang lewat tombol <strong>Add Data</strong>.</li>
-            <li>Tab <strong>Customer Saya</strong> nunjukin data yang PIC-nya kamu.</li>
-            <li>
-              Tab <strong>Data Belum Lengkap</strong> isinya data " " — belum ada customer & belum ada PIC
-              sama sekali. Kamu cuma bisa lihat <strong>Detail</strong>-nya; edit/hapus data di tab ini cuma bisa
-              dilakukan admin/manager, biar nggak diserobot atau salah pegang.
-            </li>
+            <li>Tab <strong>Customer Saya</strong> nunjukin data yang PIC-nya kamu -- ini satu-satunya tampilan yang bisa Sales akses di halaman ini.</li>
           </ul>
         </div>
 
@@ -1166,6 +1256,10 @@ async function submitBulkAssign() {
 .perpage-opt { padding: 5px 10px; border: 1px solid var(--border-main); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font-size: 0.82rem; cursor: pointer; }
 .perpage-opt:hover { border-color: #6366f1; color: #6366f1; }
 .perpage-opt.active { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 700; }
+
+/* ── DROPDOWN FILTER PER COMPANY (baru) ── */
+.drop-company { min-width: 260px; max-width: 320px; }
+.drop-company .cs-list { max-height: 220px; overflow-y: auto; padding: 0; }
 
 /* ── TABLE ── */
 .content-card { background: var(--bg-card); border-radius: 10px; box-shadow: 0 1px 3px var(--shadow-color); overflow: auto; }

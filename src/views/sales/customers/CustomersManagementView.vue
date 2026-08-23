@@ -27,6 +27,7 @@ const {
   industrySelectData, categorySelectData,
   branchesData, loadingBranches,
   companySuggestions, searchingCompany, matchedCompany,
+  geocodingAddress,
 } = storeToRefs(store)
 
 const { activeVisitCustomersId, activeVisitCustId, loadingVisitNow } = storeToRefs(visitDataStore)
@@ -273,6 +274,16 @@ function isBranchRow(item) {
   return item.display_type === 'branch'
 }
 
+// Dipakai buat nge-nonaktifin tombol "Visit" kalau target-nya (customer
+// head office ATAU branch) belum punya titik lokasi sendiri -- DETEKSI DARI
+// latitude/longitude, samain konsepnya dengan hasCoordinates() di
+// SalesVisitData.vue. Untuk display_type 'branch', datanya nested di
+// item.branch (lihat CostumersResources.php), bukan di item langsung.
+function hasCoordinates(item) {
+  const target = isBranchRow(item) ? item.branch : item
+  return target?.latitude != null && target?.longitude != null
+}
+
 // aktif hanya berdasarkan customer_id (granularitas sama seperti di Sales Visit page —
 // sistem belum tau branch spesifik mana yang lagi divisit)
 // ── TRIGGER "FOLLOW UP JATUH TEMPO" ──
@@ -298,6 +309,10 @@ function isRowActive(item) {
 }
 
 function openVisitNow(item) {
+  if (!hasCoordinates(item)) {
+    showToast('error', 'Titik lokasi (Latitude/Longitude) belum diisi. Lengkapi dulu di Customer Master sebelum bisa divisit.')
+    return
+  }
   selectedVisitItem.value = item
   showVisitNowModal.value = true
 }
@@ -508,6 +523,18 @@ async function submitCheckInCustomers() {
       showToast('success', result.message)
       closeCheckInModalCustomers()
       await restoreActiveCustomerVisit() // ← samain sumber kebenarannya, biar konsisten sama Visit Now di atas
+    } else if (result.outsideRadius) {
+      // PHASE 3: GPS di luar radius customer/cabang — backend nolak total
+      // (422, gak ada lagi jalur konfirmasi), langsung tutup modal +
+      // tampilin pesan jarak & radius-nya biar sales tau harus ke lokasi
+      // yang benar dulu.
+      showToast('error', result.message)
+      closeCheckInModalCustomers()
+    } else if (result.missingCoordinates) {
+      // Customer/cabang belum punya Lat/Long sama sekali — gak ada yang
+      // bisa dikonfirmasi sales, harus dilengkapi dulu di Customer Master.
+      showToast('error', result.message)
+      closeCheckInModalCustomers()
     } else { showToast('error', result.message) }
   } catch (err) { console.error(err); showToast('error', 'Failed check in customer')
   } finally { loadingCheckIn.value = false }
@@ -670,6 +697,11 @@ const defaultForm = {
   notes            : '',
   address          : '',
   visibility       : 'PUBLIC',
+
+  // ── GEOLOKASI (auto-fill dari Address, bisa diedit manual) ──
+  latitude         : null,
+  longitude        : null,
+  radius_meter     : 100,
 }
 
 const formData = ref({ ...defaultForm })
@@ -678,6 +710,11 @@ const branchFormData = ref({
   branch_name : '',
   address     : '',
   city        : '',
+
+  // ── GEOLOKASI CABANG (disamain konsepnya dengan customer head company) ──
+  latitude    : null,
+  longitude   : null,
+  radius_meter: 100,
 })
 
 // ── CONTACTS (repeatable) ──────────────────────────────────
@@ -716,7 +753,7 @@ function pickExistingCompany(company) {
 function unlockCompany() {
   store.clearMatchedCompany()
   formData.value.company_name = ''
-  branchFormData.value = { branch_name: '', address: '', city: '' }
+  branchFormData.value = { branch_name: '', address: '', city: '', latitude: null, longitude: null, radius_meter: 100 }
 }
 
 function resetSelectState() {
@@ -734,7 +771,7 @@ function resetSelectState() {
 
 function resetForm() {
   formData.value       = { ...defaultForm }
-  branchFormData.value = { branch_name: '', address: '', city: '' }
+  branchFormData.value = { branch_name: '', address: '', city: '', latitude: null, longitude: null, radius_meter: 100 }
   contactsForm.value   = [ emptyContact() ]
   errorCustomers.value = null
   isBranchEdit.value   = false
@@ -771,6 +808,11 @@ async function openEditModal(c) {
     notes            : detail.notes            ?? '',
     address          : detail.address          ?? '',
     visibility       : detail.visibility       ?? 'PUBLIC',
+
+    // ── GEOLOKASI ──
+    latitude         : detail.latitude         ?? null,
+    longitude        : detail.longitude        ?? null,
+    radius_meter     : detail.radius_meter     ?? 100,
   }
 
   if (detail.contacts?.length) {
@@ -828,6 +870,12 @@ async function handleSave() {
         branch_name : branchFormData.value.branch_name,
         address     : branchFormData.value.address,
         city        : branchFormData.value.city,
+
+        // ── GEOLOKASI CABANG ──
+        latitude    : branchFormData.value.latitude,
+        longitude   : branchFormData.value.longitude,
+        radius_meter: branchFormData.value.radius_meter,
+
         contacts: contactsForm.value.map(contact => ({
           ...(contact.id ? { id: contact.id } : {}),
           name       : contact.name,
@@ -940,9 +988,14 @@ async function openEditBranch(item) {
   if (!fullBranch) return
 
   branchFormData.value = {
-    branch_name: fullBranch.branch_name ?? '',
-    address: fullBranch.address ?? '',
-    city: fullBranch.city ?? '',
+    branch_name : fullBranch.branch_name ?? '',
+    address     : fullBranch.address ?? '',
+    city        : fullBranch.city ?? '',
+
+    // ── GEOLOKASI CABANG ──
+    latitude    : fullBranch.latitude ?? null,
+    longitude   : fullBranch.longitude ?? null,
+    radius_meter: fullBranch.radius_meter ?? 100,
   }
 
   contactsForm.value = fullBranch.contacts?.length
@@ -1011,6 +1064,66 @@ function capitalize(str, mode = 'words', useAbbreviations = false) {
 
 function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations = false) {
   target[field] = capitalize(e.target.value, mode, useAbbreviations)
+}
+
+// ── GEOCODE ADDRESS → LATITUDE/LONGITUDE ──────────────────
+// Dipanggil lewat tombol "Cari Koordinat" di sebelah field Address (BUKAN
+// otomatis pas blur) -- biar jelas & gak bikin bingung sales kapan
+// persisnya sistem manggil API cari koordinat. Hasilnya cuma "usulan":
+// field Latitude/Longitude tetap bisa diedit/diisi manual sesudahnya
+// kalau memang meleset/kurang presisi (lihat helper text di form-nya).
+async function fetchCoordinatesFromAddress() {
+  const address = formData.value.address?.trim()
+  if (!address) {
+    showToast('error', 'Isi field Address dulu sebelum cari koordinat.')
+    return
+  }
+
+  const result = await store.geocodeAddress(address)
+
+  if (result) {
+    formData.value.latitude  = result.latitude
+    formData.value.longitude = result.longitude
+
+    // precisionLevel 0/1 = ketemu persis di alamat detailnya. 2+ berarti
+    // Nominatim cuma nemu sampai kelurahan/kecamatan/kota-nya aja -- kasih
+    // tau user biar ga salah kira itu titik pas di lokasi customer.
+    if (result.precisionLevel >= 2) {
+      showToast('info', 'Koordinat cuma perkiraan area (alamat detailnya belum ada di peta) — mohon cek & geser pin manual kalau perlu.')
+    } else {
+      showToast('success', 'Koordinat lokasi otomatis terisi dari alamat.')
+    }
+  } else {
+    showToast('error', store.geocodeError || 'Koordinat tidak ditemukan, silakan isi manual.')
+  }
+}
+
+// ── GEOCODE ADDRESS CABANG → LATITUDE/LONGITUDE ───────────
+// Sama persis konsepnya kayak fetchCoordinatesFromAddress() di atas, cuma
+// beroperasi di branchFormData (form Add/Edit Branch), bukan formData
+// (customer head company) -- disamain sejak cabang juga wajib punya titik
+// lokasi sendiri buat validasi radius Visit Check-In.
+async function fetchCoordinatesFromBranchAddress() {
+  const address = branchFormData.value.address?.trim()
+  if (!address) {
+    showToast('error', 'Isi field Branch Address dulu sebelum cari koordinat.')
+    return
+  }
+
+  const result = await store.geocodeAddress(address)
+
+  if (result) {
+    branchFormData.value.latitude  = result.latitude
+    branchFormData.value.longitude = result.longitude
+
+    if (result.precisionLevel >= 2) {
+      showToast('info', 'Koordinat cuma perkiraan area (alamat detailnya belum ada di peta) — mohon cek & geser pin manual kalau perlu.')
+    } else {
+      showToast('success', 'Koordinat lokasi cabang otomatis terisi dari alamat.')
+    }
+  } else {
+    showToast('error', store.geocodeError || 'Koordinat tidak ditemukan, silakan isi manual.')
+  }
 }
 </script>
 
@@ -1290,8 +1403,8 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
                 <button
                   v-if="canCreate"
                   class="act-btn act-visit"
-                  :disabled="loadingVisitNow || !!activeVisitCustomersId"
-                  :title="activeVisitCustomersId ? 'Selesaikan visit aktif dahulu' : 'Visit'"
+                  :disabled="loadingVisitNow || !!activeVisitCustomersId || !hasCoordinates(item)"
+                  :title="activeVisitCustomersId ? 'Selesaikan visit aktif dahulu' : (!hasCoordinates(item) ? 'Titik lokasi (Latitude/Longitude) belum diisi. Lengkapi dulu di Customer Master.' : 'Visit')"
                   @click="openVisitNow(item)"
                 >
                   <font-awesome-icon icon="location-dot" />
@@ -1416,8 +1529,8 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
                 <button
                   v-if="canCreate"
                   class="act-btn act-visit"
-                  :disabled="loadingVisitNow || !!activeVisitCustomersId"
-                  :title="activeVisitCustomersId ? 'Selesaikan visit aktif dahulu' : 'Visit'"
+                  :disabled="loadingVisitNow || !!activeVisitCustomersId || !hasCoordinates(item)"
+                  :title="activeVisitCustomersId ? 'Selesaikan visit aktif dahulu' : (!hasCoordinates(item) ? 'Titik lokasi (Latitude/Longitude) belum diisi. Lengkapi dulu di Customer Master.' : 'Visit')"
                   @click="openVisitNow(item)"
                 >
                   <font-awesome-icon icon="location-dot" />
@@ -1537,6 +1650,38 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
     <label>Branch Address</label>
     <textarea :value="branchFormData.address" class="form-input form-textarea" rows="2" placeholder="Alamat lengkap cabang..."
                @input="onCapitalizedInput($event, branchFormData, 'address', 'sentences')" />
+  </div>
+
+  <div class="form-group">
+    <button type="button" class="btn-geocode" :disabled="geocodingAddress"
+      @click="fetchCoordinatesFromBranchAddress">
+      <font-awesome-icon v-if="geocodingAddress" icon="spinner" spin />
+      <font-awesome-icon v-else icon="location-dot" />
+      {{ geocodingAddress ? 'Mencari koordinat...' : 'Cari Koordinat dari Address' }}
+    </button>
+  </div>
+
+  <div class="form-row-2">
+    <div class="form-group">
+      <label>Latitude</label>
+      <input v-model.number="branchFormData.latitude" type="number" step="0.0000001"
+        class="form-input" placeholder="Klik 'Cari Koordinat' atau isi manual" />
+    </div>
+    <div class="form-group">
+      <label>Longitude</label>
+      <input v-model.number="branchFormData.longitude" type="number" step="0.0000001"
+        class="form-input" placeholder="Klik 'Cari Koordinat' atau isi manual" />
+    </div>
+  </div>
+  <div class="form-hint">
+    <font-awesome-icon icon="circle-info" />
+    Latitude/Longitude bisa didapat otomatis dari tombol di atas, atau diisi/dikoreksi manual (misalnya salin langsung dari Google Maps) kalau hasilnya kurang tepat.
+  </div>
+
+  <div class="form-group">
+    <label>Radius Check-In (meter)</label>
+    <input v-model.number="branchFormData.radius_meter" type="number" min="10" max="5000" step="10"
+      class="form-input" placeholder="100" />
   </div>
 </template>
 
@@ -1741,8 +1886,40 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
         <div v-if="!store.matchedCompany" class="form-group">
           <label>Address</label>
           <textarea :value="formData.address" class="form-input form-textarea" rows="2"
-            placeholder="Alamat lengkap..."
+            placeholder="Alamat lengkap... (paste alamat dari Google Maps di sini)"
             @input="onCapitalizedInput($event, formData, 'address', 'sentences')" />
+        </div>
+
+        <div v-if="!store.matchedCompany" class="form-group">
+          <button type="button" class="btn-geocode" :disabled="geocodingAddress"
+            @click="fetchCoordinatesFromAddress">
+            <font-awesome-icon v-if="geocodingAddress" icon="spinner" spin />
+            <font-awesome-icon v-else icon="location-dot" />
+            {{ geocodingAddress ? 'Mencari koordinat...' : 'Cari Koordinat dari Address' }}
+          </button>
+        </div>
+
+        <div v-if="!store.matchedCompany" class="form-row-2">
+          <div class="form-group">
+            <label>Latitude</label>
+            <input v-model.number="formData.latitude" type="number" step="0.0000001"
+              class="form-input" placeholder="Klik 'Cari Koordinat' atau isi manual" />
+          </div>
+          <div class="form-group">
+            <label>Longitude</label>
+            <input v-model.number="formData.longitude" type="number" step="0.0000001"
+              class="form-input" placeholder="Klik 'Cari Koordinat' atau isi manual" />
+          </div>
+        </div>
+        <div v-if="!store.matchedCompany" class="form-hint">
+          <font-awesome-icon icon="circle-info" />
+          Latitude/Longitude bisa didapat otomatis dari tombol di atas, atau diisi/dikoreksi manual (misalnya salin langsung dari Google Maps) kalau hasilnya kurang tepat.
+        </div>
+
+        <div v-if="!store.matchedCompany" class="form-group">
+          <label>Radius Check-In (meter)</label>
+          <input v-model.number="formData.radius_meter" type="number" min="10" max="5000" step="10"
+            class="form-input" placeholder="100" />
         </div>
 
         <div v-if="!store.matchedCompany" class="form-group">
@@ -2556,13 +2733,30 @@ function onCapitalizedInput(e, target, field, mode = 'words', useAbbreviations =
 
 /* ── FORM ── */
 .form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.form-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; display: flex; align-items: center; gap: 8px; }
 .required { color: #ef4444; }
 .form-input { padding: 9px 12px; border: 1px solid var(--border-main); border-radius: 8px; font-size: 0.875rem; background: var(--bg-input); color: var(--text-primary); outline: none; transition: border 0.18s; width: 100%; box-sizing: border-box; }
 .form-input:focus { border-color: #6366f1; }
 .form-textarea { resize: none; min-height: 70px; line-height: 1.5; }
 .input-error { border-color: #ef4444 !important; background: #fef2f2 !important; }
 .form-error { font-size: 0.75rem; color: #ef4444; }
+
+/* ── GEOCODE BUTTON + HINT (Latitude/Longitude dari Address) ── */
+.btn-geocode {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 9px 14px; border: 1px dashed #6366f1; border-radius: 8px;
+  background: color-mix(in srgb, #6366f1 6%, transparent); color: #6366f1;
+  font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.18s ease;
+  width: fit-content;
+}
+.btn-geocode:hover:not(:disabled) { background: color-mix(in srgb, #6366f1 12%, transparent); }
+.btn-geocode:disabled { opacity: 0.6; cursor: not-allowed; }
+.form-hint {
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 0.76rem; color: var(--text-muted); line-height: 1.5;
+  margin-top: -6px;
+}
+.form-hint svg { margin-top: 2px; flex-shrink: 0; color: #6366f1; }
 
 /* ── MODAL BUTTONS ── */
 .btn-cancel { padding: 8px 18px; background: var(--bg-main, #f1f5f9); color: var(--text-muted); border: 1px solid var(--border-main); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }

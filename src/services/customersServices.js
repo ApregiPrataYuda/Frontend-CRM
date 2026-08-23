@@ -43,7 +43,7 @@ export const customersServices = {
   // Kita return response.data agar store tidak perlu .data lagi
   async getIndustry(params = {}) {
     const response = await api.get('/leads/select/industry', { params })
-    return response.data     // store: industrySelectData.value = response.data  
+    return response.data     // store: industrySelectData.value = response.data
   },
 
   // ── SELECT: SALES ──
@@ -55,7 +55,7 @@ export const customersServices = {
   // ── SELECT: CATEGORY ──
   async getCategory(params = {}) {
     const response = await api.get('/leads/select/category', { params })
-    return response.data     // store: categorySelectData.value = response.data  
+    return response.data     // store: categorySelectData.value = response.data
   },
 
   // ── SUBMISSION: PENDING + REJECTED (punya sales sendiri) ──
@@ -98,5 +98,16 @@ async deleteBranch(id) {
   return response
 },
 
-  
+  // ── GEOCODE ADDRESS (forward geocoding, Nominatim lewat Location::search()) ──
+  // Dipanggil pas user selesai isi/paste field Address (event @blur) di form
+  // Add/Edit Customer -- buat auto-fill Latitude/Longitude. SENGAJA endpoint
+  // baru & terpisah dari CRUD customer (bukan bagian dari /customers/store
+  // atau /customers/update) supaya bisa dipanggil kapan saja tanpa nyimpen
+  // dulu, dan hasilnya cuma "usulan" koordinat (masih bisa diedit manual
+  // sebelum submit).
+  async geocodeAddress(address) {
+    const response = await api.get('/geocode', { params: { address } })
+    return response          // store expects: response.data.lat / .lon / .display_name
+  },
+
 }

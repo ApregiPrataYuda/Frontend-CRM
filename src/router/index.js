@@ -395,6 +395,17 @@ const routes = [
       },
 
       {
+        path: 'sales-planning',
+        name: 'My Planning',
+
+        component: () =>
+        import('@/views/sales/plan/myVisitPlanView.vue'),
+        meta: {
+          role: [2], title: 'My Planning'
+        }
+      },
+
+      {
         path: 'sales-target',
         name: 'My Target Sales',
 

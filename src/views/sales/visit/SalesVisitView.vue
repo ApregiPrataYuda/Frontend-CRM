@@ -20,14 +20,14 @@ const customersVisitStore = useCustomersVisitStore()
 const permission  = usePermissionStore()
 
 
-// â”€â”€ PERMISSIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── PERMISSIONS ───────────────────────────────────────
 const currentUrl = computed(() => route.path.replace('/app', ''))
 const canCreate  = computed(() => permission.canCreate(currentUrl.value))
 const canUpdate  = computed(() => permission.canUpdate(currentUrl.value))
 const canDelete  = computed(() => permission.canDelete(currentUrl.value))
 const canView    = computed(() => permission.canView(currentUrl.value))
 
-// â”€â”€ Store refs â”€â”€
+// ── Store refs ──
 const {
   visitsData, loadingVisits, pagination, searchVisits, sort,
   visitsDetail, loadingDetail, loadingVisitNow,
@@ -47,12 +47,12 @@ const {
   searchCustomers, activeCustomerPhase,
 } = storeToRefs(customersVisitStore)
 
-// â”€â”€ Toolbar dropdowns â”€â”€
+// ── Toolbar dropdowns ──
 const showPerPageMenu = ref(false)
 const showSortByMenu  = ref(false)
 const showSortDirMenu = ref(false)
 
-// â”€â”€ View mode (card / table) â”€â”€
+// ── View mode (card / table) ──
 const viewMode = ref('card') // default tampilan: card
 
 const sortByOptions = [
@@ -66,9 +66,9 @@ const sortByLabel = computed(() =>
 
 const photoBase = `${import.meta.env.VITE_STORAGE_URL}/`
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // INIT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 onMounted(async () => {
   visitDataStore.fetchVisits(visitDataStore.buildUrl())
   updateCurrentDateTime()
@@ -83,9 +83,9 @@ onUnmounted(() => {
 
 watch(searchVisits, visitDataStore.searchWithDelay)
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // CLOCK
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const currentDateTime = ref('')
 let   clockInterval   = null
 
@@ -107,9 +107,9 @@ function getInitials(name = '') {
   return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('')
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // RESTORE ACTIVE STATE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 async function restoreActiveState() {
   await visitDataStore.fetchVisits(visitDataStore.buildUrl())
 
@@ -140,9 +140,9 @@ async function restoreActiveState() {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // CAMERA (shared)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const videoRef          = ref(null)
 const canvasRef         = ref(null)
 const cameraStream      = ref(null)
@@ -248,9 +248,9 @@ async function retakePhoto() {
   await startCamera()
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // DETAIL MODAL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const showDetailModal = ref(false)
 
 async function openDetail(id) {
@@ -262,9 +262,9 @@ function closeDetail() {
   visitDataStore.visitsDetail = null
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // FILE TYPE HELPER (untuk preview check_out_file)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 
 function getFileExtension(filename = '') {
@@ -291,9 +291,9 @@ function getFileNameOnly(path = '') {
   return path.split('/').pop() ?? path
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // IMAGE ZOOM / LIGHTBOX
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const showImageZoom = ref(false)
 const zoomImageSrc  = ref('')
 const zoomLevel     = ref(1)
@@ -344,9 +344,9 @@ function onDrag(e) {
 }
 function stopDrag() { isDragging.value = false }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // LEADS LIST MODAL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const showLeadForm = ref(false)
 
 function openLeadForm() {
@@ -355,9 +355,9 @@ function openLeadForm() {
 }
 function closeLeadModal() { showLeadForm.value = false }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// LEAD â€” VISIT NOW
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// LEAD — VISIT NOW
+// ════════════════════════════════════════════
 const showVisitNowModal = ref(false)
 const selectedLead      = ref(null)
 
@@ -378,9 +378,9 @@ async function confirmVisitNow() {
   } else { toast.error(message) }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// LEAD â€” CHECK IN
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// LEAD — CHECK IN
+// ════════════════════════════════════════════
 const showCheckInModal = ref(false)
 
 async function checkIn(item) {
@@ -414,9 +414,9 @@ async function submitCheckIn() {
   } finally { loadingCheckIn.value = false }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// LEAD â€” CHECK OUT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// LEAD — CHECK OUT
+// ════════════════════════════════════════════
 const showCheckOutModal    = ref(false)
 const selectedCheckOut     = ref(null)
 const checkOutNotes        = ref('')
@@ -461,9 +461,9 @@ async function submitCheckOut() {
   } else { toast.error(result.message) }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 // CUSTOMERS LIST MODAL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
 const showCustomerForm = ref(false)
 
 function openCustomerForm() {
@@ -472,13 +472,19 @@ function openCustomerForm() {
 }
 function closeCustomerModal() { showCustomerForm.value = false }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CUSTOMER â€” VISIT NOW
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// CUSTOMER — VISIT NOW
+// ════════════════════════════════════════════
 const showVisitCustNowModal = ref(false)
 const selectedCust          = ref(null)
 
-function visitNowCust(item) { selectedCust.value = item; showVisitCustNowModal.value = true }
+function visitNowCust(item) {
+  if (!hasCoordinates(item)) {
+    toast.error('Titik lokasi (Latitude/Longitude) belum diisi. Lengkapi dulu di Customer Master sebelum bisa divisit.')
+    return
+  }
+  selectedCust.value = item; showVisitCustNowModal.value = true
+}
 function closeVisitCustNowModal() {
   if (loadingVisitNow.value) return
   showVisitCustNowModal.value = false; selectedCust.value = null
@@ -501,7 +507,7 @@ async function confirmVisitCustNow() {
     toast.success(message)
     activeCustomerPhase.value = 'visiting'
     closeVisitCustNowModal()
-    // â”€â”€ refresh keduanya biar list "Ready to Visit" langsung sinkron â”€â”€
+    // ── refresh keduanya biar list "Ready to Visit" langsung sinkron ──
     await Promise.all([
       visitDataStore.fetchVisits(visitDataStore.buildUrl()),
       customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()),
@@ -512,11 +518,11 @@ async function confirmVisitCustNow() {
 }
 
 
-// â”€â”€ row dianggap aktif kalau backend sudah kasih active_visit_id untuk baris ini â”€â”€
+// ── row dianggap aktif kalau backend sudah kasih active_visit_id untuk baris ini ──
 const isRowActive = (item) => !!item.active_visit_id
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CUSTOMER â€” CHECK IN
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// CUSTOMER — CHECK IN
+// ════════════════════════════════════════════
 const showCheckInModalCustomers = ref(false)
 
 async function checkInCustomers(item) {
@@ -549,15 +555,27 @@ async function submitCheckInCustomers() {
       toast.success(result.message)
       closeCheckInModalCustomers()
       visitDataStore.fetchVisits(visitDataStore.buildUrl())
-      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // â† tambahkan ini
+      customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // ← tambahkan ini
+    } else if (result.outsideRadius) {
+      // PHASE 3: GPS di luar radius customer/cabang — backend nolak total
+      // (422, gak ada lagi jalur konfirmasi), langsung tutup modal +
+      // tampilin pesan jarak & radius-nya biar sales tau harus ke lokasi
+      // yang benar dulu.
+      toast.error(result.message)
+      closeCheckInModalCustomers()
+    } else if (result.missingCoordinates) {
+      // Customer/cabang belum punya Lat/Long sama sekali — gak ada yang
+      // bisa dikonfirmasi sales, harus dilengkapi dulu di Customer Master.
+      toast.error(result.message)
+      closeCheckInModalCustomers()
     } else { toast.error(result.message) }
       } catch (err) { console.error(err); toast.error('Failed check in customer')
       } finally { loadingCheckIn.value = false }
     }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CUSTOMER â€” CHECK OUT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════
+// CUSTOMER — CHECK OUT
+// ════════════════════════════════════════════
 const showCheckOutCustomerModal = ref(false)
 const selectedCustomerCheckOut  = ref(null)
 const loadingCustomerCheckOut   = ref(false)
@@ -741,8 +759,16 @@ function getResultIcon(result) {
   return map[result] ?? 'tag'
 }
 
-// â”€â”€ helpers â”€â”€
+// ── helpers ──
 const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
+
+// Dipakai buat nge-nonaktifin tombol "Visit Now" kalau target-nya (customer
+// head office ATAU branch) belum punya titik lokasi sendiri -- DETEKSI DARI
+// latitude/longitude, BUKAN dari teks field Address (field Address di list
+// ini kadang keisi placeholder text kayak "No address" yang tetap truthy,
+// jadi gak bisa dipakai buat nge-cek "kosong apa nggak"). Samain sama syarat
+// yang dicek backend pas Check-In (Visits::checkInVisitCustomer()).
+const hasCoordinates = (item) => item.latitude != null && item.longitude != null
 </script>
 
 <template>
@@ -762,7 +788,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       </div>
     </div>
 
-    <!-- TOOLBAR â€” 3 Action Buttons -->
+    <!-- TOOLBAR — 3 Action Buttons -->
     <div class="toolbar-top">
       <div class="toolbar-center">
 
@@ -883,9 +909,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       </div>
     </div>
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          TABLE VIEW
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <div v-if="viewMode === 'table'" class="table-card flex-grow-1 overflow-auto mb-3">
       <table class="data-table">
         <thead>
@@ -1010,9 +1036,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       </table>
     </div>
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          CARD VIEW
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <div v-else class="card-grid-wrap flex-grow-1 overflow-auto mb-3">
 
       <!-- LOADING -->
@@ -1128,9 +1154,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </div>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          DETAIL MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showDetailModal"
       title="Detail Visit"
@@ -1164,7 +1190,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <span class="detail-value">{{ visitsDetail.visit_type }}</span>
           </div>
 
-          <!-- â•â•â• TARGET: HEAD OFFICE / BRANCH â•â•â• -->
+          <!-- ═══ TARGET: HEAD OFFICE / BRANCH ═══ -->
           <div v-if="visitsDetail.target_type" class="detail-row">
             <span class="detail-label">Target</span>
             <span class="target-type-badge" :class="visitsDetail.target_type === 'BRANCH' ? 'target-branch' : 'target-hq'">
@@ -1210,7 +1236,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             <div style="font-size:0.85rem; color:var(--text-primary); margin:0" v-html="visitsDetail.notes || '-'"></div>
           </div>
 
-          <!-- â•â•â• CHECK OUT FILE: image â†’ zoomable, non-image â†’ file preview card â•â•â• -->
+          <!-- ═══ CHECK OUT FILE: image → zoomable, non-image → file preview card ═══ -->
           <div v-if="visitsDetail.check_out_file" style="margin-top:8px">
             <span class="detail-label" style="display:block; margin-bottom:8px">Photo / File Check Out</span>
 
@@ -1240,7 +1266,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             </a>
           </div>
 
-          <!-- â•â•â• CHECK IN PHOTO: always image, zoomable â•â•â• -->
+          <!-- ═══ CHECK IN PHOTO: always image, zoomable ═══ -->
           <div v-if="visitsDetail.photo" style="margin-top:8px">
             <span class="detail-label" style="display:block; margin-bottom:8px">Photo Check In</span>
             <img
@@ -1256,7 +1282,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               target="_blank"
               style="font-size:0.84rem; color:#6366f1; font-weight:600"
             >
-              <font-awesome-icon icon="map-location-dot" /> Open in Google Maps â†’
+              <font-awesome-icon icon="map-location-dot" /> Open in Google Maps →
             </a>
           </div>
         </div>
@@ -1267,9 +1293,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          LEADS LIST MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showLeadForm"
       title="Data Leads Ready To Visit"
@@ -1405,9 +1431,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         LEAD â€” VISIT NOW MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         LEAD — VISIT NOW MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showVisitNowModal && !!selectedLead"
       title="Visit Confirmation"
@@ -1451,9 +1477,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         LEAD â€” CHECK IN MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         LEAD — CHECK IN MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showCheckInModal"
       title="Check In Lead"
@@ -1538,9 +1564,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         LEAD â€” CHECK OUT MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         LEAD — CHECK OUT MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showCheckOutModal"
       title="Check Out Visit"
@@ -1597,9 +1623,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          CUSTOMERS LIST MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showCustomerForm"
       title="Data Customers Ready To Visit"
@@ -1650,7 +1676,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
               </td>
             </tr>
             <tr v-else-if="customersData.length === 0">
-              <td colspan="7" class="td-center">📭­ Tidak ada customers yang siap dikunjungi</td>
+              <td colspan="7" class="td-center">📭 Tidak ada customers yang siap dikunjungi</td>
             </tr>
             <tr
               v-else
@@ -1661,7 +1687,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
             >
               <td class="td-no">{{ index + 1 + customersPagination.per_page * (customersPagination.current_page - 1) }}.</td>
 
-              <!-- â•â•â• TARGET TYPE BADGE â•â•â• -->
+              <!-- ═══ TARGET TYPE BADGE ═══ -->
               <td>
                 <span
                   class="target-type-badge"
@@ -1672,7 +1698,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
                 </span>
               </td>
 
-              <!-- â•â•â• COMPANY (+ nama branch & kota kalau target branch) â•â•â• -->
+              <!-- ═══ COMPANY (+ nama branch & kota kalau target branch) ═══ -->
               <td>
                 <p class="td-name">{{ item.company_name ?? '-' }}</p>
                 <p class="td-muted" style="font-family:monospace">{{ item.customer_code ?? '-' }}</p>
@@ -1682,7 +1708,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
                 </p>
               </td>
 
-              <!-- â•â•â• KONTAK (bisa banyak) â•â•â• -->
+              <!-- ═══ KONTAK (bisa banyak) ═══ -->
               <td style="max-width:220px">
                 <div v-if="item.contacts?.length">
                   <div v-for="ct in item.contacts" :key="ct.id" class="contact-mini-row">
@@ -1695,7 +1721,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
                 <span v-else class="td-muted">{{ item.contact_name ?? '-' }}</span>
               </td>
 
-              <!-- â•â•â• ADDRESS â•â•â• -->
+              <!-- ═══ ADDRESS ═══ -->
               <td style="max-width:180px">
                 <p class="td-muted" style="overflow:hidden; white-space:nowrap; text-overflow:ellipsis" :title="item.address">
                   {{ item.address || '—' }}
@@ -1707,9 +1733,10 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
                 <button
                   v-if="canVisitNow(item)"
                   @click="visitNowCust(item)"
-                  :disabled="loadingVisitNow || activeVisitCustomersId !== null"
+                  :disabled="loadingVisitNow || activeVisitCustomersId !== null || !hasCoordinates(item)"
                   class="act-visit-btn"
-                  :class="activeVisitCustomersId !== null ? 'disabled' : 'slate'"
+                  :class="(activeVisitCustomersId !== null || !hasCoordinates(item)) ? 'disabled' : 'slate'"
+                  :title="!hasCoordinates(item) ? 'Titik lokasi (Latitude/Longitude) belum diisi. Lengkapi dulu di Customer Master sebelum bisa divisit.' : ''"
                 >
                   <font-awesome-icon icon="location-dot" /> Visit Now
                 </button>
@@ -1757,9 +1784,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         CUSTOMER â€” VISIT NOW MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         CUSTOMER — VISIT NOW MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showVisitCustNowModal && !!selectedCust"
       title="Visit Confirmation Customer"
@@ -1772,7 +1799,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
           <p class="detail-box-label">Customers to be visited</p>
           <p style="font-weight:700; font-size:0.95rem">{{ selectedCust.company_name }}</p>
 
-          <!-- â•â•â• TARGET: BRANCH atau HEAD OFFICE â•â•â• -->
+          <!-- ═══ TARGET: BRANCH atau HEAD OFFICE ═══ -->
           <p v-if="selectedCust.target_type === 'branch'" class="td-muted text-primary" style="font-weight:600">
             <font-awesome-icon icon="code-branch" />
             {{ selectedCust.branch_name }}<span v-if="selectedCust.city"> - {{ selectedCust.city }}</span>
@@ -1814,9 +1841,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         CUSTOMER â€” CHECK IN MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         CUSTOMER — CHECK IN MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showCheckInModalCustomers"
       title="Check In Customer"
@@ -1887,9 +1914,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
     </AppModal>
 
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-         CUSTOMER â€” CHECK OUT MODAL
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <!-- ══════════════════════════════════════════
+         CUSTOMER — CHECK OUT MODAL
+         ══════════════════════════════════════════ -->
     <AppModal
       :show="showCheckOutCustomerModal && !!selectedCustomerCheckOut"
       title="Check Out Customer"
@@ -2008,9 +2035,9 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
       </template>
     </AppModal>
 
-    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    <!-- ══════════════════════════════════════════
          IMAGE ZOOM LIGHTBOX
-         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+         ══════════════════════════════════════════ -->
     <Teleport to="body">
       <div v-if="showImageZoom" class="lightbox-overlay" @click.self="closeImageZoom">
         <div class="lightbox-toolbar">
@@ -2061,7 +2088,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 </template>
 
 <style scoped>
-/* â”€â”€ Inherit semua CSS dari kode lama â”€â”€ */
+/* ── Inherit semua CSS dari kode lama ── */
 .h-100 { --text-muted: #64748b; --primary-color: #6366f1; }
 .form-container-gap { display: flex; flex-direction: column; gap: 14px; }
 
@@ -2474,7 +2501,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   .visit-card-grid { grid-template-columns: 1fr; }
 }
 
-/* â”€â”€ SPINNER & EMPTY â”€â”€ */
+/* ── SPINNER & EMPTY ── */
 .spinner-custom { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 24px 0; gap: 8px; }
@@ -2550,7 +2577,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .segment-btn:hover:not(.active) { background: rgba(99, 102, 241, 0.08); color: #6366f1; }
 .segment-btn.active { background: #6366f1; color: #fff; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25); }
 
-/* â”€â”€ TARGET TYPE BADGE â”€â”€ */
+/* ── TARGET TYPE BADGE ── */
 .target-type-badge {
   display: inline-flex;
   align-items: center;
@@ -2564,7 +2591,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .target-hq     { background: #e0e7ff; color: #3730a3; }
 .target-branch { background: #fef3c7; color: #92400e; }
 
-/* â”€â”€ KONTAK MINI (list dalam tabel) â”€â”€ */
+/* ── KONTAK MINI (list dalam tabel) ── */
 .contact-mini-row {
   padding: 4px 0;
   border-bottom: 1px dashed var(--border-main);
@@ -2581,19 +2608,19 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   margin-left: 4px;
 }
 
-/* Tablet (â‰¤ 768px) */
+/* Tablet (≤ 768px) */
 @media (max-width: 768px) {
   .toolbar-center { gap: 8px; }
   .btn-toolbar { flex: 1 1 calc(33.33% - 8px); justify-content: center; padding: 10px 12px; font-size: 0.82rem; min-width: 100px; }
 }
 
-/* Mobile (â‰¤ 480px) */
+/* Mobile (≤ 480px) */
 @media (max-width: 480px) {
   .toolbar-center { flex-direction: column; gap: 8px; }
   .btn-toolbar { flex: 1 1 100%; width: 100%; padding: 11px 16px; font-size: 0.85rem; justify-content: center; }
 }
 
-/* Layar sangat kecil (â‰¤ 360px) */
+/* Layar sangat kecil (≤ 360px) */
 @media (max-width: 360px) {
   .btn-toolbar { flex: 1 1 100%; width: 100%; padding: 10px 14px; font-size: 0.8rem; gap: 6px; justify-content: center; }
 }
@@ -2606,7 +2633,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
 .result-orange  { background:#ffedd5; color:#9a3412; }
 .result-slate   { background:#f1f5f9; color:#475569; }
 
-/* â”€â”€ FILE PREVIEW CARD (non-image check_out_file) â”€â”€ */
+/* ── FILE PREVIEW CARD (non-image check_out_file) ── */
 .file-preview-card {
   display: flex;
   align-items: center;
@@ -2642,7 +2669,7 @@ const canVisitNow = (item) => !item.visit_started_at && !item.check_in_at
   font-size: 0.9rem;
 }
 
-/* â”€â”€ LIGHTBOX / IMAGE ZOOM â”€â”€ */
+/* ── LIGHTBOX / IMAGE ZOOM ── */
 .lightbox-overlay {
   position: fixed;
   inset: 0;

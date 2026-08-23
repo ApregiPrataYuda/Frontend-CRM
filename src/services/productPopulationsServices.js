@@ -8,7 +8,7 @@ export const productPopulationsServices = {
     return response          // store expects: response.data.data, response.data.pagination
   },
 
-  // ── GET ALL (dengan params: view, search, per_page, sort_by, sort_dir) ──
+  // ── GET ALL (dengan params: view, search, per_page, sort_by, sort_dir, customer_id) ──
   async getAll(params = {}) {
     const response = await api.get('/product-populations', { params })
     return response
@@ -69,6 +69,17 @@ export const productPopulationsServices = {
   async searchCustomer(search) {
     const response = await api.get('/customers/search-company', {
       params: { search }
+    })
+    return response
+  },
+
+  // ── SELECT: CUSTOMER PER-COMPANY (dropdown filter tabel BARU -- beda
+  // dari searchCustomer di atas yang cuma buat autocomplete form Add/Edit.
+  // Ini daftar SEMUA company yang punya data population di view yang lagi
+  // aktif, dipakai buat isi dropdown filter "per company" di toolbar.) ──
+  async getCustomerSelect(view = 'all') {
+    const response = await api.get('/product-populations/select/customers', {
+      params: { view }
     })
     return response
   },

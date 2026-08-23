@@ -204,7 +204,38 @@ export const useVisitDataStore = defineStore('visitData', () => {
       checkInSuccess.value = true
       return { success: true, message: 'Check in customer berhasil', data: res.data?.data }
     } catch (error) {
-      const message = error?.response?.data?.message ?? 'Gagal check in customer'
+      const responseData = error?.response?.data
+
+      // ── PHASE 3: LOKASI DI LUAR RADIUS ──
+      // Backend (Visits::checkInVisitCustomer()) balikin HTTP 422 khusus
+      // (outside_radius: true) kalau GPS sales di luar radius yang
+      // diizinkan -- ini HARD BLOCK, gak ada lagi opsi "confirm tetap
+      // checkin" kayak versi sebelumnya. Dibedain dari error generik biar
+      // komponen bisa nampilin pesan jarak yang informatif.
+      if (error?.response?.status === 422 && responseData?.outside_radius) {
+        return {
+          success       : false,
+          outsideRadius : true,
+          distanceMeter : responseData.distance_meter,
+          radiusMeter   : responseData.radius_meter,
+          message       : responseData.message,
+        }
+      }
+
+      // ── PHASE 2.1: CUSTOMER/CABANG BELUM PUNYA KOORDINAT ──
+      // Backend balikin HTTP 422 khusus (missing_coordinates: true) kalau
+      // customer/cabang tujuan belum punya latitude/longitude sama sekali
+      // -- checkin di-blok total, sales gak bisa "confirm" data yang emang
+      // belum ada.
+      if (error?.response?.status === 422 && responseData?.missing_coordinates) {
+        return {
+          success           : false,
+          missingCoordinates: true,
+          message           : responseData.message,
+        }
+      }
+
+      const message = responseData?.message ?? 'Gagal check in customer'
       checkInError.value = message
       return { success: false, message }
     } finally {

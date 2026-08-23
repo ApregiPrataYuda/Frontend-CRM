@@ -475,6 +475,45 @@ const deleteBranch = async (id) => {
 }
 
 
+  // ── GEOCODE ADDRESS (forward geocoding, Nominatim lewat backend Location::search()) ──
+  // Dipakai di CustomersManagement.vue: dipanggil pas user selesai isi/paste
+  // field Address (event @blur) di form Add/Edit Customer, buat auto-fill
+  // formData.latitude/longitude. Hasilnya cuma "usulan" -- field tetap bisa
+  // diedit manual sesudahnya (tidak dipaksa/di-lock).
+  const geocodingAddress = ref(false)
+  const geocodeError     = ref(null)
+
+  const geocodeAddress = async (address) => {
+    geocodeError.value = null
+
+    if (!address || address.trim().length < 3) {
+      geocodeError.value = 'Alamat terlalu pendek untuk dicari koordinatnya.'
+      return null
+    }
+
+    geocodingAddress.value = true
+    try {
+      const res  = await customersServices.geocodeAddress(address.trim())
+      const data = res.data
+      return {
+        latitude       : Number(data.lat),
+        longitude      : Number(data.lon),
+        display_name   : data.display_name ?? null,
+        // level 0/1 = alamat detailnya sendiri ketemu (presisi). Level 2+
+        // berarti Nominatim cuma nemu sampai kelurahan/kecamatan/kota-nya
+        // aja (bukan titik alamat persis) -- lihat Location::search().
+        precisionLevel : data.precision_level ?? 0,
+      }
+    } catch (err) {
+      geocodeError.value = err.response?.data?.message
+        || 'Koordinat tidak ditemukan untuk alamat ini. Silakan isi manual atau perbaiki alamatnya.'
+      return null
+    } finally {
+      geocodingAddress.value = false
+    }
+  }
+
+
   // ── RETURN ────────────────────────────────────────
   return {
     // state
@@ -516,5 +555,9 @@ const deleteBranch = async (id) => {
     companySuggestions, searchingCompany, matchedCompany,
     searchCompanyName, selectExistingCompany, clearMatchedCompany,
     saveBranch, updateBranch, deleteBranch,
+
+    // geocoding (latitude/longitude auto-fill dari Address)
+    geocodingAddress, geocodeError,
+    geocodeAddress,
   }
 })

@@ -55,6 +55,9 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
       params.append('sort_by',  sort.column)
       params.append('sort_dir', sort.direction)
     }
+    // dropdown filter "per company" (BEDA dari search) -- exact match ke
+    // 1 customer_id spesifik, lihat filterByCompany()/selectedCompanyId.
+    if (selectedCompanyId.value) params.append('customer_id', selectedCompanyId.value)
     return `/product-populations?${params.toString()}`
   }
 
@@ -132,7 +135,13 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
   const changeView = (newView) => {
     view.value               = newView
     pagination.current_page  = 1
+    // reset filter company tiap ganti tab -- soalnya dropdown company
+    // ini SCOPED per view (lihat fetchCompanySelect), jadi customer yang
+    // kepilih di tab lama belum tentu relevan/ada lagi di tab baru.
+    selectedCompanyId.value   = null
+    selectedCompanyName.value = ''
     fetchProductPopulations(buildUrl())
+    fetchCompanySelect()
   }
 
 
@@ -245,7 +254,10 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
     sort.column                    = 'pp.created_at'
     sort.direction                 = 'desc'
     view.value                     = 'all'
+    selectedCompanyId.value        = null
+    selectedCompanyName.value      = ''
     fetchProductPopulations(buildUrl())
+    fetchCompanySelect()
   }
 
 
@@ -324,6 +336,41 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
         searchingCustomer.value = false
       }
     }, 400)
+  }
+
+
+  // ── SELECT: CUSTOMER PER-COMPANY (dropdown filter tabel BARU) ─────
+  // BEDA dari customerSuggestions di atas (yang cuma buat autocomplete
+  // form Add/Edit, search-as-you-type ke endpoint /customers/search-company).
+  // Ini daftar SEMUA company yang punya data population di VIEW yang lagi
+  // aktif (all/mine/incomplete -- lihat customerSelect() di backend),
+  // dipakai buat isi dropdown filter "per company" supaya tabel cuma
+  // nampilin data punya 1 customer yang dipilih.
+  const companySelectData    = ref([])
+  const loadingCompanySelect = ref(false)
+  const selectedCompanyId    = ref(null)
+  const selectedCompanyName  = ref('')
+
+  const fetchCompanySelect = async () => {
+    loadingCompanySelect.value = true
+    try {
+      const res = await productPopulationsServices.getCustomerSelect(view.value)
+      companySelectData.value = res.data?.data ?? []
+    } catch (error) {
+      console.error('Gagal fetch company select:', error)
+      companySelectData.value = []
+    } finally {
+      loadingCompanySelect.value = false
+    }
+  }
+
+  // customer = { id, company_name } dari companySelectData, atau null
+  // buat "Semua Company" (reset filter).
+  const filterByCompany = (customer) => {
+    selectedCompanyId.value   = customer ? customer.id : null
+    selectedCompanyName.value = customer ? customer.company_name : ''
+    pagination.current_page   = 1
+    fetchProductPopulations(buildUrl())
   }
 
 
@@ -427,6 +474,11 @@ export const useProductPopulationsStore = defineStore('productPopulations', () =
     // search customer (autocomplete)
     customerSuggestions, searchingCustomer,
     searchCustomerName,
+
+    // select customer per-company (dropdown filter tabel)
+    companySelectData, loadingCompanySelect,
+    selectedCompanyId, selectedCompanyName,
+    fetchCompanySelect, filterByCompany,
 
     // unassigned + assign sales (khusus admin/manager)
     unassignedData, loadingUnassigned, searchUnassigned, errorUnassignedFetch,
