@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useSalesTargetStore } from '@/stores/salesTargetStore'
+import { useSalesTargetStore } from '@/stores/SalesTargetStore'
 import { useToast } from 'vue-toastification'
 
 const store = useSalesTargetStore()
