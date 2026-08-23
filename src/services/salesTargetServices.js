@@ -29,6 +29,18 @@ export const salesTargetServices = {
     return response
   },
 
+  // Dropdown-search buat field "Brand" (= Product Odoo) di form.
+  async getProductOptions(params = {}) {
+    const response = await api.get('/sales-targets/options/products', { params })
+    return response
+  },
+
+  // Dropdown-search buat field "Kategori" di form.
+  async getCategoryOptions(params = {}) {
+    const response = await api.get('/sales-targets/options/categories', { params })
+    return response
+  },
+
   async createSalesTarget(payload) {
     const response = await api.post('/sales-targets', payload)
     return response

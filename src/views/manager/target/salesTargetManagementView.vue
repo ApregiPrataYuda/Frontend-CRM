@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { useSalesTargetStore } from '@/stores/SalesTargetStore'
+import { useSalesTargetStore } from '@/stores/salesTargetStore'
 import { useToast } from 'vue-toastification'
 
 const store = useSalesTargetStore()
@@ -44,14 +44,18 @@ const emptyForm = () => ({
   id: null,
   sales_id: '',
   period_year: currentYear,
+  target_type: 'total', // 'total' | 'customer' | 'brand' | 'category'
   odoo_customer_id: '',
+  odoo_product_id: '',
+  categ_id: '',
+  categ_name: '',
   target_amount: '',
   notes: '',
 })
 const form = reactive(emptyForm())
 const formErrors = ref({})
 
-// ── SEARCHABLE DROPDOWN: Sales / Customer Odoo ──
+// ── SEARCHABLE DROPDOWN: Sales / Customer Odoo / Brand / Kategori ──
 // Pola SAMA PERSIS kayak yang dipakai di form Tambah/Edit Target Visit
 // (visitTargetView.vue) -- tombol "form-select-btn" yang nampilin label
 // terpilih, diklik buka panel "drop-menu-full" berisi <input> pencarian
@@ -70,12 +74,28 @@ const formErrors = ref({})
 //             (lewat CustomerSalesAssignmentOdoo), listnya dicari di
 //             backend tiap ngetik. Pola SAMA PERSIS kayak "Pilih Customer"
 //             di form Target Visit yang baru keisi setelah Sales dipilih.
+// - Brand (Product) & Kategori : TIDAK di-scope ke Sales (product/kategori
+//             ga "dimiliki" sales tertentu) -- listnya dicari di backend
+//             tiap ngetik, sama gayanya kayak panel Customer, cuma tanpa
+//             guard "harus pilih Sales dulu".
+//
+// Field mana yang dipakai ditentuin dari form.target_type ('total' |
+// 'customer' | 'brand' | 'category') -- cuma SALAH SATU dari
+// odoo_customer_id / odoo_product_id / categ_id yang boleh keisi pas
+// submit (dijaga di selectTargetType() & submitForm(), didobel lagi di
+// backend lewat SalesTargetValidationStore + CHECK constraint DB).
 const showSalesPicker    = ref(false)
 const showCustomerPicker = ref(false)
+const showBrandPicker    = ref(false)
+const showCategoryPicker = ref(false)
 
 const salesSearch    = ref('') // teks di kotak cari dalam panel Sales (filter lokal)
 const customerSearch = ref('') // teks di kotak cari dalam panel Customer (query ke server)
+const brandSearch    = ref('') // teks di kotak cari dalam panel Brand (query ke server)
+const categorySearch = ref('') // teks di kotak cari dalam panel Kategori (query ke server)
 let customerSearchTimeout = null
+let brandSearchTimeout    = null
+let categorySearchTimeout = null
 
 const filteredSalesOptions = computed(() => {
   const q = salesSearch.value.trim().toLowerCase()
@@ -88,10 +108,12 @@ const selectedSalesLabel = computed(() =>
   store.salesOptions.find(o => o.value === form.sales_id)?.label || 'Pilih Sales'
 )
 
-// label customer TERPILIH -- disimpen terpisah (bukan computed dari list),
-// soalnya list customer di store cuma nampung hasil pencarian TERAKHIR
-// (server search), bukan seluruh katalog customer.
-const selectedCustomerLabel = ref('Target Total (semua customer)')
+// label pilihan TERPILIH per dimensi -- disimpen terpisah (bukan computed
+// dari list), soalnya list di store cuma nampung hasil pencarian TERAKHIR
+// (server search), bukan seluruh katalog.
+const selectedCustomerLabel = ref('Pilih customer...')
+const selectedBrandLabel    = ref('Pilih brand (product)...')
+const selectedCategoryLabel = ref('Pilih kategori...')
 
 async function loadSalesOptions() {
   await store.fetchSalesOptions()
@@ -108,11 +130,11 @@ function selectSalesOption(opt) {
   salesSearch.value = ''
 
   // ganti sales -> customer yang kepilih sebelumnya (kalau ada) belum
-  // tentu jadi tanggung jawab sales yang baru, jadi direset. Sama kayak
-  // selectSalesOption() di form Target Visit yang reset customer_id.
-  if (changedSales) {
+  // tentu jadi tanggung jawab sales yang baru, jadi direset. Cuma relevan
+  // buat tipe 'customer' (Brand/Kategori ga di-scope ke sales).
+  if (changedSales && form.target_type === 'customer') {
     form.odoo_customer_id = ''
-    selectedCustomerLabel.value = 'Target Total (semua customer)'
+    selectedCustomerLabel.value = 'Pilih customer...'
     store.customerOptions.splice(0, store.customerOptions.length)
   }
 }
@@ -137,19 +159,80 @@ function selectCustomerOption(opt) {
   showCustomerPicker.value = false
   customerSearch.value = ''
 }
-function clearCustomerSelection() {
+
+// ── PICKER BRAND (Product Odoo) -- TIDAK di-scope ke Sales ──
+function toggleBrandPicker() {
+  showBrandPicker.value = !showBrandPicker.value
+  if (showBrandPicker.value) {
+    brandSearch.value = ''
+    store.fetchProductOptions('')
+  }
+}
+function onBrandSearchInput() {
+  clearTimeout(brandSearchTimeout)
+  brandSearchTimeout = setTimeout(() => {
+    store.fetchProductOptions(brandSearch.value)
+  }, 350)
+}
+function selectBrandOption(opt) {
+  form.odoo_product_id = opt.value
+  selectedBrandLabel.value = opt.label
+  showBrandPicker.value = false
+  brandSearch.value = ''
+}
+
+// ── PICKER KATEGORI -- TIDAK di-scope ke Sales ──
+function toggleCategoryPicker() {
+  showCategoryPicker.value = !showCategoryPicker.value
+  if (showCategoryPicker.value) {
+    categorySearch.value = ''
+    store.fetchCategoryOptions('')
+  }
+}
+function onCategorySearchInput() {
+  clearTimeout(categorySearchTimeout)
+  categorySearchTimeout = setTimeout(() => {
+    store.fetchCategoryOptions(categorySearch.value)
+  }, 350)
+}
+function selectCategoryOption(opt) {
+  form.categ_id = opt.value
+  form.categ_name = opt.label
+  selectedCategoryLabel.value = opt.label
+  showCategoryPicker.value = false
+  categorySearch.value = ''
+}
+
+// ── GANTI TIPE TARGET (Total / Customer / Brand / Kategori) ──
+// 1 baris target cuma boleh isi SALAH SATU dimensi -- makanya tiap ganti
+// tab, 3 field dimensi (odoo_customer_id/odoo_product_id/categ_id+name)
+// direset semua, biar ga ketinggalan nilai lama dari tab sebelumnya.
+function selectTargetType(type) {
+  form.target_type = type
   form.odoo_customer_id = ''
-  selectedCustomerLabel.value = 'Target Total (semua customer)'
+  form.odoo_product_id = ''
+  form.categ_id = ''
+  form.categ_name = ''
+  selectedCustomerLabel.value = 'Pilih customer...'
+  selectedBrandLabel.value = 'Pilih brand (product)...'
+  selectedCategoryLabel.value = 'Pilih kategori...'
   showCustomerPicker.value = false
-  customerSearch.value = ''
+  showBrandPicker.value = false
+  showCategoryPicker.value = false
 }
 
 function resetPickers() {
   showSalesPicker.value = false
   showCustomerPicker.value = false
+  showBrandPicker.value = false
+  showCategoryPicker.value = false
   salesSearch.value = ''
   customerSearch.value = ''
-  selectedCustomerLabel.value = 'Target Total (semua customer)'
+  brandSearch.value = ''
+  categorySearch.value = ''
+  selectedCustomerLabel.value = 'Pilih customer...'
+  selectedBrandLabel.value = 'Pilih brand (product)...'
+  selectedCategoryLabel.value = 'Pilih kategori...'
 }
 
 function openCreateModal() {
@@ -163,18 +246,27 @@ function openCreateModal() {
 
 function openEditModal(target) {
   formMode.value = 'edit'
+  const targetType = target.target_type || (target.is_total_target ? 'total' : 'customer')
   Object.assign(form, {
     id: target.id,
     sales_id: target.sales_id,
     period_year: target.period_year,
+    target_type: targetType,
     odoo_customer_id: target.odoo_customer_id ?? '',
+    odoo_product_id: target.odoo_product_id ?? '',
+    categ_id: target.categ_id ?? '',
+    categ_name: target.categ_name ?? '',
     target_amount: target.target_amount,
     notes: target.notes ?? '',
   })
   formErrors.value = {}
   resetPickers()
-  if (!target.is_total_target) {
+  if (targetType === 'customer') {
     selectedCustomerLabel.value = target.customer_name || ('#' + target.odoo_customer_id)
+  } else if (targetType === 'brand') {
+    selectedBrandLabel.value = target.product_name || ('#' + target.odoo_product_id)
+  } else if (targetType === 'category') {
+    selectedCategoryLabel.value = target.categ_name || ('#' + target.categ_id)
   }
   showFormModal.value = true
 }
@@ -196,12 +288,30 @@ async function submitForm() {
   if (form.target_amount === '' || form.target_amount === null || Number(form.target_amount) < 0) {
     formErrors.value.target_amount = 'Target harus diisi angka >= 0.'
   }
+  if (form.target_type === 'customer' && !form.odoo_customer_id) {
+    formErrors.value.odoo_customer_id = 'Pilih customer dulu.'
+  }
+  if (form.target_type === 'brand' && !form.odoo_product_id) {
+    formErrors.value.odoo_product_id = 'Pilih brand (product) dulu.'
+  }
+  if (form.target_type === 'category' && !form.categ_id) {
+    formErrors.value.categ_id = 'Pilih kategori dulu.'
+  }
   if (Object.keys(formErrors.value).length > 0) return
 
+  // Cuma kirim SALAH SATU dimensi sesuai form.target_type -- yang lain
+  // dipaksa null, biar konsisten sama aturan "1 baris cuma 1 dimensi" di
+  // backend (SalesTargetValidationStore + CHECK constraint DB).
   const payload = {
     sales_id: Number(form.sales_id),
     period_year: Number(form.period_year),
-    odoo_customer_id: form.odoo_customer_id === '' ? null : Number(form.odoo_customer_id),
+    odoo_customer_id: form.target_type === 'customer' && form.odoo_customer_id !== ''
+      ? Number(form.odoo_customer_id) : null,
+    odoo_product_id: form.target_type === 'brand' && form.odoo_product_id !== ''
+      ? Number(form.odoo_product_id) : null,
+    categ_id: form.target_type === 'category' && form.categ_id !== ''
+      ? Number(form.categ_id) : null,
+    categ_name: form.target_type === 'category' ? (form.categ_name || null) : null,
     target_amount: Number(form.target_amount),
     notes: form.notes || null,
   }
@@ -416,7 +526,7 @@ const summaryRows = computed(() => store.summaryData)
           <tr>
             <th style="width:56px">NO.</th>
             <th>SALES</th>
-            <th>CUSTOMER</th>
+            <th>TARGET UNTUK</th>
             <th style="width:150px">TARGET</th>
             <th style="width:150px">TERCAPAI</th>
             <th style="width:160px">PROGRESS</th>
@@ -428,8 +538,14 @@ const summaryRows = computed(() => store.summaryData)
             <td class="td-no">{{ (store.pagination.current_page - 1) * store.pagination.per_page + index + 1 }}.</td>
             <td class="font-semibold">{{ t.sales_name || ('#' + t.sales_id) }}</td>
             <td>
-              <span v-if="t.is_total_target" class="total-chip">TOTAL</span>
-              <span v-else class="td-muted">{{ t.customer_name || ('#' + t.odoo_customer_id) }}</span>
+              <span v-if="t.target_type === 'brand'" class="brand-chip">
+                <font-awesome-icon icon="tag" /> {{ t.product_name || ('#' + t.odoo_product_id) }}
+              </span>
+              <span v-else-if="t.target_type === 'category'" class="category-chip">
+                <font-awesome-icon icon="folder-tree" /> {{ t.categ_name || ('#' + t.categ_id) }}
+              </span>
+              <span v-else-if="t.target_type === 'customer'" class="td-muted">{{ t.customer_name || ('#' + t.odoo_customer_id) }}</span>
+              <span v-else class="total-chip">TOTAL</span>
             </td>
             <td>{{ store.formatCurrency(t.target_amount) }}</td>
             <td>{{ store.formatCurrency(t.achieved_amount) }}</td>
@@ -523,10 +639,29 @@ const summaryRows = computed(() => store.summaryData)
           </div>
 
           <div class="form-group">
-            <label>Customer Odoo (opsional)</label>
+            <label>Tipe Target <span class="req">*</span></label>
+            <div class="type-tabs">
+              <button type="button" class="type-tab" :class="{ active: form.target_type === 'total' }" @click="selectTargetType('total')">
+                <font-awesome-icon icon="layer-group" /> Total
+              </button>
+              <button type="button" class="type-tab" :class="{ active: form.target_type === 'customer' }" @click="selectTargetType('customer')">
+                <font-awesome-icon icon="building" /> Customer
+              </button>
+              <button type="button" class="type-tab" :class="{ active: form.target_type === 'brand' }" @click="selectTargetType('brand')">
+                <font-awesome-icon icon="tag" /> Brand
+              </button>
+              <button type="button" class="type-tab" :class="{ active: form.target_type === 'category' }" @click="selectTargetType('category')">
+                <font-awesome-icon icon="folder-tree" /> Kategori
+              </button>
+            </div>
+            <div class="form-hint">Total = target gabungan semua customer. Pilih Customer/Brand/Kategori kalau target ini khusus untuk 1 dimensi tertentu.</div>
+          </div>
+
+          <div v-if="form.target_type === 'customer'" class="form-group">
+            <label>Customer <span class="req">*</span></label>
             <div class="drop-wrap drop-wrap-full">
               <button
-                type="button" class="form-select-btn"
+                type="button" class="form-select-btn" :class="{ 'is-invalid': formErrors.odoo_customer_id }"
                 :disabled="!form.sales_id"
                 @click="toggleCustomerPicker"
               >
@@ -539,9 +674,6 @@ const summaryRows = computed(() => store.summaryData)
                   placeholder="Cari nama customer..." @input="onCustomerSearchInput"
                 />
                 <div class="drop-scroll-list">
-                  <button type="button" class="drop-item drop-item-clear" @click="clearCustomerSelection">
-                    <font-awesome-icon icon="xmark" /> Kosongkan (target TOTAL)
-                  </button>
                   <div v-if="store.loadingCustomerOptions" class="drop-empty">
                     <font-awesome-icon icon="spinner" spin /> Mencari...
                   </div>
@@ -558,8 +690,76 @@ const summaryRows = computed(() => store.summaryData)
                 </div>
               </div>
             </div>
-            <div class="form-hint">Diisi kalau target ini khusus 1 customer. Kosongkan kalau target total gabungan semua customer.</div>
+            <div class="form-hint">Cuma customer yang di-assign ke Sales ini yang muncul (realisasinya dihitung dari situ).</div>
             <div v-if="formErrors.odoo_customer_id" class="form-error">{{ formErrors.odoo_customer_id }}</div>
+          </div>
+
+          <div v-if="form.target_type === 'brand'" class="form-group">
+            <label>Brand (Product) <span class="req">*</span></label>
+            <div class="drop-wrap drop-wrap-full">
+              <button
+                type="button" class="form-select-btn" :class="{ 'is-invalid': formErrors.odoo_product_id }"
+                @click="toggleBrandPicker"
+              >
+                <span>{{ selectedBrandLabel }}</span>
+                <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+              </button>
+              <div class="drop-menu drop-menu-full" :class="{ show: showBrandPicker }">
+                <input
+                  v-model="brandSearch" type="text" class="drop-search-input"
+                  placeholder="Cari nama/kode product..." @input="onBrandSearchInput"
+                />
+                <div class="drop-scroll-list">
+                  <div v-if="store.loadingProductOptions" class="drop-empty">
+                    <font-awesome-icon icon="spinner" spin /> Mencari...
+                  </div>
+                  <template v-else>
+                    <button
+                      v-for="opt in store.productOptions" :key="opt.value"
+                      type="button" class="drop-item" :class="{ active: form.odoo_product_id === opt.value }"
+                      @click="selectBrandOption(opt)"
+                    >{{ opt.label }}</button>
+                    <div v-if="store.productOptions.length === 0" class="drop-empty">Tidak ditemukan</div>
+                  </template>
+                </div>
+              </div>
+            </div>
+            <div class="form-hint">Target khusus 1 product (Brand), dihitung dari transaksi customer-customer Sales ini untuk product tersebut.</div>
+            <div v-if="formErrors.odoo_product_id" class="form-error">{{ formErrors.odoo_product_id }}</div>
+          </div>
+
+          <div v-if="form.target_type === 'category'" class="form-group">
+            <label>Kategori <span class="req">*</span></label>
+            <div class="drop-wrap drop-wrap-full">
+              <button
+                type="button" class="form-select-btn" :class="{ 'is-invalid': formErrors.categ_id }"
+                @click="toggleCategoryPicker"
+              >
+                <span>{{ selectedCategoryLabel }}</span>
+                <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+              </button>
+              <div class="drop-menu drop-menu-full" :class="{ show: showCategoryPicker }">
+                <input
+                  v-model="categorySearch" type="text" class="drop-search-input"
+                  placeholder="Cari nama kategori..." @input="onCategorySearchInput"
+                />
+                <div class="drop-scroll-list">
+                  <div v-if="store.loadingCategoryOptions" class="drop-empty">
+                    <font-awesome-icon icon="spinner" spin /> Mencari...
+                  </div>
+                  <template v-else>
+                    <button
+                      v-for="opt in store.categoryOptions" :key="opt.value"
+                      type="button" class="drop-item" :class="{ active: form.categ_id === opt.value }"
+                      @click="selectCategoryOption(opt)"
+                    >{{ opt.label }}</button>
+                    <div v-if="store.categoryOptions.length === 0" class="drop-empty">Tidak ditemukan</div>
+                  </template>
+                </div>
+              </div>
+            </div>
+            <div class="form-hint">Target khusus 1 kategori product (gabungan semua brand di kategori itu).</div>
+            <div v-if="formErrors.categ_id" class="form-error">{{ formErrors.categ_id }}</div>
           </div>
 
           <div class="form-group">
@@ -623,7 +823,9 @@ const summaryRows = computed(() => store.summaryData)
                 <div class="detail-sub">
                   Tahun {{ store.targetDetail.target.period_year }} &middot;
                   <span v-if="store.targetDetail.type === 'total'">Target Total (semua customer)</span>
-                  <span v-else>{{ store.targetDetail.target.customer_name }}</span>
+                  <span v-else-if="store.targetDetail.type === 'customer'">{{ store.targetDetail.target.customer_name }}</span>
+                  <span v-else-if="store.targetDetail.type === 'brand'">Brand: {{ store.targetDetail.target.product_name }}</span>
+                  <span v-else>Kategori: {{ store.targetDetail.target.categ_name }}</span>
                 </div>
               </div>
               <span class="summary-percent" :class="progressColor(store.targetDetail.target.achievement_percent)">
@@ -639,8 +841,8 @@ const summaryRows = computed(() => store.summaryData)
               <span class="text-muted-color"> / {{ store.formatCurrency(store.targetDetail.target.target_amount) }}</span>
             </div>
 
-            <!-- TARGET PER-CUSTOMER: daftar transaksi -->
-            <template v-if="store.targetDetail.type === 'customer'">
+            <!-- TARGET PER-CUSTOMER / PER-BRAND: daftar transaksi -->
+            <template v-if="store.targetDetail.type === 'customer' || store.targetDetail.type === 'brand'">
               <div class="detail-section-title">Rincian Transaksi</div>
               <div v-if="store.targetDetail.transactions.length === 0" class="state-card">
                 Belum ada transaksi di tahun ini.
@@ -650,6 +852,9 @@ const summaryRows = computed(() => store.summaryData)
                   <div class="detail-tx-top">
                     <span class="detail-tx-code">{{ tx.order_name || '-' }}</span>
                     <span class="detail-tx-date">{{ store.formatDate(tx.order_date) }}</span>
+                  </div>
+                  <div v-if="store.targetDetail.type === 'brand'" class="detail-tx-customer">
+                    <font-awesome-icon icon="building" /> {{ tx.customer_name }}
                   </div>
                   <div class="detail-tx-product">
                     <span v-if="tx.product_code" class="mono">[{{ tx.product_code }}]</span>
@@ -661,6 +866,32 @@ const summaryRows = computed(() => store.summaryData)
                     <span class="font-semibold">{{ store.formatCurrency(tx.subtotal) }}</span>
                   </div>
                 </div>
+              </div>
+            </template>
+
+            <!-- TARGET PER-KATEGORI: breakdown per product -->
+            <template v-else-if="store.targetDetail.type === 'category'">
+              <div class="detail-section-title">Breakdown per Product</div>
+              <div v-if="store.targetDetail.products.length === 0" class="state-card">
+                Belum ada transaksi di kategori ini.
+              </div>
+              <div v-else class="table-card">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>PRODUCT</th>
+                      <th style="width:120px">TRANSAKSI</th>
+                      <th style="width:170px">TERCAPAI</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="p in store.targetDetail.products" :key="p.odoo_product_id" class="data-row">
+                      <td class="font-semibold">{{ p.product_name }}</td>
+                      <td class="td-muted">{{ p.transaction_count }}x</td>
+                      <td>{{ store.formatCurrency(p.achieved_amount) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </template>
 
@@ -811,6 +1042,9 @@ const summaryRows = computed(() => store.summaryData)
 .td-muted { color: var(--text-muted); font-size: 0.84rem; }
 .font-semibold { font-weight: 600; }
 .total-chip { font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 20px; background: rgba(99,102,241,0.1); color: #6366f1; }
+.brand-chip, .category-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 20px; white-space: nowrap; }
+.brand-chip { background: rgba(217,119,6,0.12); color: #b45309; }
+.category-chip { background: rgba(13,148,136,0.12); color: #0d9488; }
 .table-progress { width: 100px; display: inline-block; margin-right: 8px; vertical-align: middle; }
 .progress-label { font-size: 0.76rem; font-weight: 700; vertical-align: middle; }
 
@@ -849,6 +1083,7 @@ const summaryRows = computed(() => store.summaryData)
 .detail-tx-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .detail-tx-code { font-weight: 700; color: #6366f1; font-size: 0.82rem; }
 .detail-tx-date { font-size: 0.76rem; color: var(--text-muted); white-space: nowrap; }
+.detail-tx-customer { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin: 2px 0; display: flex; align-items: center; gap: 6px; }
 .detail-tx-product { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin: 4px 0; }
 .detail-tx-bottom { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-muted); }
 .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border-main); }
@@ -887,7 +1122,16 @@ const summaryRows = computed(() => store.summaryData)
 .drop-search-input:focus { border-color: #6366f1; }
 .drop-scroll-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
 .drop-empty { padding: 10px; text-align: center; font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
-.drop-item-clear { color: #ef4444; font-weight: 600; border-bottom: 1px solid var(--border-main); border-radius: 0; margin-bottom: 4px; padding-bottom: 10px; }
+
+/* ===== TIPE TARGET (Total / Customer / Brand / Kategori) ===== */
+.type-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.type-tab {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px;
+  border: 1px solid var(--border-main); background: var(--bg-input); color: var(--text-primary);
+  font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.type-tab:hover { border-color: #6366f1; color: #6366f1; }
+.type-tab.active { background: #6366f1; border-color: #6366f1; color: #fff; }
 
 /* ===== MOBILE ===== */
 @media (max-width: 900px) {

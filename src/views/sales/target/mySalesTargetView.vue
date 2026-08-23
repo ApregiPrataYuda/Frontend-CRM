@@ -28,7 +28,31 @@ function changeYear(year) {
 }
 
 function cardBadgeLabel(row) {
-  return row.is_total_target ? 'TOTAL' : row.customer_name || '-'
+  if (row.target_type === 'brand') return row.product_name || 'Brand'
+  if (row.target_type === 'category') return row.categ_name || 'Kategori'
+  if (row.target_type === 'customer') return row.customer_name || '-'
+  return 'TOTAL'
+}
+
+function cardBadgeIcon(row) {
+  if (row.target_type === 'brand') return 'tag'
+  if (row.target_type === 'category') return 'folder-tree'
+  if (row.target_type === 'customer') return 'building'
+  return 'layer-group'
+}
+
+function cardBadgeStyle(row) {
+  if (row.target_type === 'brand') return { background: 'rgba(217,119,6,0.12)', color: '#b45309' }
+  if (row.target_type === 'category') return { background: 'rgba(13,148,136,0.12)', color: '#0d9488' }
+  if (row.target_type === 'customer') return { background: 'rgba(13,148,136,0.12)', color: '#0d9488' }
+  return { background: 'rgba(99,102,241,0.12)', color: '#6366f1' }
+}
+
+function cardTitle(row) {
+  if (row.target_type === 'brand') return `Brand: ${row.product_name || '-'}`
+  if (row.target_type === 'category') return `Kategori: ${row.categ_name || '-'}`
+  if (row.target_type === 'customer') return row.customer_name || '-'
+  return 'Target Total Penjualan'
 }
 
 function isDone(row) {
@@ -128,10 +152,8 @@ function isDone(row) {
 
         <div v-else v-for="row in store.sortedTargets" :key="row.id" class="target-card" :class="{ done: isDone(row) }">
           <div class="target-card-top">
-            <span class="activity-badge" :title="cardBadgeLabel(row)" :style="row.is_total_target
-              ? { background: 'rgba(99,102,241,0.12)', color: '#6366f1' }
-              : { background: 'rgba(13,148,136,0.12)', color: '#0d9488' }">
-              <font-awesome-icon :icon="row.is_total_target ? 'layer-group' : 'building'" />
+            <span class="activity-badge" :title="cardBadgeLabel(row)" :style="cardBadgeStyle(row)">
+              <font-awesome-icon :icon="cardBadgeIcon(row)" />
               <span class="activity-badge-text">{{ cardBadgeLabel(row) }}</span>
             </span>
             <span class="result-chip" :class="isDone(row) ? 'status-done' : 'status-pending'">
@@ -141,7 +163,7 @@ function isDone(row) {
           </div>
 
           <div class="target-card-name">
-            {{ row.is_total_target ? 'Target Total Penjualan' : row.customer_name }}
+            {{ cardTitle(row) }}
           </div>
 
           <div class="target-progress-row">

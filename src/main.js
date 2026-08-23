@@ -206,7 +206,8 @@ import {
   faRuler,
   faCrosshairs,
   faBook,
-  faDiagramProject
+  faDiagramProject,
+  faFolderTree
 
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -401,7 +402,8 @@ library.add(
   faRuler,
   faCrosshairs,
   faBook,
-  faDiagramProject
+  faDiagramProject,
+  faFolderTree,
 )
 
 const app = createApp(App)

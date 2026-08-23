@@ -675,6 +675,16 @@ const routes = [
       },
 
       {
+        path: 'product-by-sales-report',
+        name: 'Product By Sales Report',
+        component: () =>
+          import('@/views/manager/reportProductBySales/reportProductBySalesView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
         path: 'approval-branch-customers',
         name: 'Approvals Branch Customer',
         component: () =>

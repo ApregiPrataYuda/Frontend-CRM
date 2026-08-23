@@ -38,6 +38,10 @@ export const useSalesTargetStore = defineStore('salesTarget', () => {
   const loadingSalesOptions   = ref(false)
   const customerOptions       = ref([])
   const loadingCustomerOptions = ref(false)
+  const productOptions        = ref([]) // "Brand" (= product Odoo)
+  const loadingProductOptions = ref(false)
+  const categoryOptions       = ref([])
+  const loadingCategoryOptions = ref(false)
 
   // ── DETAIL TARGET (breakdown di balik angka "Tercapai") ──
   const targetDetail    = ref(null) // { type: 'customer'|'total', target, transactions?, customers? }
@@ -201,6 +205,36 @@ export const useSalesTargetStore = defineStore('salesTarget', () => {
     }
   }
 
+  // ── FETCH PRODUCT OPTIONS (dropdown-search "Brand" di form) ──
+  // TIDAK di-scope ke sales_id -- product Odoo ga "dimiliki" sales
+  // tertentu (beda konsep sama assignment customer), jadi list-nya global.
+  const fetchProductOptions = async (search = '') => {
+    loadingProductOptions.value = true
+    try {
+      const response = await salesTargetServices.getProductOptions({ search })
+      productOptions.value = response.data.data ?? []
+    } catch (error) {
+      console.error('Gagal fetch product (brand) options:', error)
+      productOptions.value = []
+    } finally {
+      loadingProductOptions.value = false
+    }
+  }
+
+  // ── FETCH CATEGORY OPTIONS (dropdown-search "Kategori" di form) ──
+  const fetchCategoryOptions = async (search = '') => {
+    loadingCategoryOptions.value = true
+    try {
+      const response = await salesTargetServices.getCategoryOptions({ search })
+      categoryOptions.value = response.data.data ?? []
+    } catch (error) {
+      console.error('Gagal fetch category options:', error)
+      categoryOptions.value = []
+    } finally {
+      loadingCategoryOptions.value = false
+    }
+  }
+
   // ── FETCH DETAIL (buat modal "Detail Target") ──
   const fetchTargetDetail = async (id) => {
     loadingDetail.value = true
@@ -244,11 +278,12 @@ export const useSalesTargetStore = defineStore('salesTarget', () => {
     summaryData, summaryTotal, loadingSummary,
     saving, deleting,
     salesOptions, loadingSalesOptions, customerOptions, loadingCustomerOptions,
+    productOptions, loadingProductOptions, categoryOptions, loadingCategoryOptions,
     targetDetail, loadingDetail,
     // actions
     buildTargetsUrl, fetchTargets, changePeriodYear, changePageSize, searchWithDelay,
     fetchSummary, createTarget, updateTarget, deleteTarget,
-    fetchSalesOptions, fetchCustomerOptions, fetchTargetDetail,
+    fetchSalesOptions, fetchCustomerOptions, fetchProductOptions, fetchCategoryOptions, fetchTargetDetail,
     formatCurrency, formatDate,
   }
 })
