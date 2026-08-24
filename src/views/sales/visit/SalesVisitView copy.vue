@@ -552,29 +552,15 @@ async function submitCheckInCustomers() {
     const result = await visitDataStore.submitCheckInCustomer(activeVisitCustId.value, formData)
     if (result.success) {
       activeCustomerPhase.value = 'checked_in'
-
-      // ── PHASE 3 (UPDATE): ALERT BEDA TERGANTUNG SESUAI/TIDAK RADIUS ──
-      // Check-in TETAP TERSIMPAN walau di luar radius (tidak lagi
-      // ditolak) -- yang beda cuma alert-nya: kalau outsideRadius true,
-      // tampilkan warning "berhasil check-in TAPI lokasi tidak sesuai";
-      // kalau sesuai, tampilkan success biasa "berhasil check-in".
-      if (result.outsideRadius) {
-        toast.warning(
-          result.message
-            || 'Anda berhasil check-in, namun lokasi Anda tidak sesuai radius yang ditentukan.'
-        )
-      } else {
-        toast.success(result.message || 'Anda berhasil check-in.')
-      }
-
+      toast.success(result.message)
       closeCheckInModalCustomers()
       visitDataStore.fetchVisits(visitDataStore.buildUrl())
       customersVisitStore.fetchCustomersVisit(customersVisitStore.buildUrl()) // ← tambahkan ini
     } else if (result.outsideRadius) {
-      // ── PHASE 3 (LEGACY FALLBACK) ──
-      // Dulu backend nolak total (422) kalau di luar radius. Sekarang
-      // kasus itu sudah ditangani di jalur SUKSES di atas -- cabang ini
-      // dipertahankan hanya sebagai jaga-jaga.
+      // PHASE 3: GPS di luar radius customer/cabang — backend nolak total
+      // (422, gak ada lagi jalur konfirmasi), langsung tutup modal +
+      // tampilin pesan jarak & radius-nya biar sales tau harus ke lokasi
+      // yang benar dulu.
       toast.error(result.message)
       closeCheckInModalCustomers()
     } else if (result.missingCoordinates) {
@@ -973,7 +959,6 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
             v-for="(visit, index) in visitsData"
             :key="visit.id"
             class="data-row"
-            :class="{ 'row-outside-radius': visit.is_outside_radius }"
           >
             <td class="td-no">{{ index + 1 + pagination.per_page * (pagination.current_page - 1) }}.</td>
 
@@ -1024,15 +1009,6 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
                 {{ visitDataStore.formatDateTime(visit.check_in_at) }}
               </div>
               <span v-else class="badge-empty">Not Checked In Yet</span>
-
-              <!-- NOTE: lokasi check-in tidak sesuai radius customer/cabang -->
-              <div
-                v-if="visit.is_outside_radius"
-                class="radius-warning-badge"
-                :title="visit.distance_meter ? `Jarak ${visit.distance_meter} meter dari titik lokasi terdaftar` : ''"
-              >
-                <font-awesome-icon icon="triangle-exclamation" /> Lokasi Tidak Sesuai
-              </div>
             </td>
 
             <!-- CHECK OUT -->
@@ -1082,7 +1058,6 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
           v-for="(visit, index) in visitsData"
           :key="visit.id"
           class="visit-card"
-          :class="{ 'card-outside-radius': visit.is_outside_radius }"
         >
           <div class="visit-card-header">
             <span class="visit-type-badge" :class="visit.visit_type === 'LEAD' ? 'type-lead' : 'type-customer'">
@@ -1094,15 +1069,6 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
               {{ visit.visit_result?.replaceAll('_', ' ')?.replace(/\b\w/g, l => l.toUpperCase()) }}
             </span>
             <span v-else class="badge-empty">-</span>
-          </div>
-
-          <!-- NOTE: lokasi check-in tidak sesuai radius customer/cabang -->
-          <div
-            v-if="visit.is_outside_radius"
-            class="radius-warning-badge"
-            :title="visit.distance_meter ? `Jarak ${visit.distance_meter} meter dari titik lokasi terdaftar` : ''"
-          >
-            <font-awesome-icon icon="triangle-exclamation" /> Lokasi Check-In Tidak Sesuai
           </div>
 
           <p class="visit-card-company">{{ visit.company_name }}</p>
@@ -1253,27 +1219,6 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
             <span class="detail-label">Check In</span>
             <span class="detail-value">{{ visitDataStore.formatDateTime(visitsDetail.check_in_at) }}</span>
           </div>
-
-          <!-- ═══ RADIUS CHECK-IN: sesuai / tidak sesuai lokasi customer/cabang ═══ -->
-          <div v-if="visitsDetail.check_in_at" class="detail-row">
-            <span class="detail-label">Radius Check-In</span>
-            <span v-if="visitsDetail.is_outside_radius" class="radius-warning-badge">
-              <font-awesome-icon icon="triangle-exclamation" />
-              Tidak Sesuai<span v-if="visitsDetail.distance_meter"> ({{ visitsDetail.distance_meter }} m)</span>
-            </span>
-            <span v-else class="radius-ok-badge">
-              <font-awesome-icon icon="circle-check" /> Sesuai
-            </span>
-          </div>
-          <div
-            v-if="visitsDetail.is_outside_radius && visitsDetail.radius_confirm_reason"
-            class="detail-row"
-            style="flex-direction:column; align-items:flex-start; gap:8px"
-          >
-            <span class="detail-label">Alasan Check-In di Luar Radius</span>
-            <div style="font-size:0.85rem; color:var(--text-primary); margin:0">{{ visitsDetail.radius_confirm_reason }}</div>
-          </div>
-
           <div class="detail-row">
             <span class="detail-label">Check Out</span>
             <span class="detail-value">{{ visitDataStore.formatDateTime(visitsDetail.check_out_at) }}</span>
@@ -1332,7 +1277,7 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
           </div>
 
           <div v-if="visitsDetail.latitude" style="margin-top:8px">
-
+            
             <a :href="`https://www.google.com/maps?q=${visitsDetail.latitude},${visitsDetail.longitude}`"
               target="_blank"
               style="font-size:0.84rem; color:#6366f1; font-weight:600"
@@ -2163,24 +2108,6 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
 
 .checkin-badge  { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:8px; background:#d1fae5; color:#065f46; font-size:0.78rem; font-weight:600; }
 .checkout-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:8px; background:#fee2e2; color:#991b1b; font-size:0.78rem; font-weight:600; }
-
-/* ── NOTE: lokasi check-in di luar radius customer/cabang ── */
-.radius-warning-badge {
-  display:inline-flex; align-items:center; gap:5px;
-  margin-top:4px;
-  padding:4px 10px; border-radius:8px;
-  background:#fef3c7; color:#92400e; border:1px solid #fcd34d;
-  font-size:0.72rem; font-weight:700; white-space:nowrap;
-}
-.radius-ok-badge {
-  display:inline-flex; align-items:center; gap:5px;
-  padding:4px 10px; border-radius:8px;
-  background:#d1fae5; color:#065f46; border:1px solid #a7f3d0;
-  font-size:0.78rem; font-weight:700;
-}
-/* highlight baris tabel / card yang check-in-nya di luar radius */
-.row-outside-radius { background:#fffbeb !important; border-left:3px solid #f59e0b; }
-.visit-card.card-outside-radius { border-color:#fcd34d; box-shadow:0 0 0 1px #fcd34d inset; }
 
 /* Time cell */
 .time-cell { display:flex; align-items:center; gap:8px; }

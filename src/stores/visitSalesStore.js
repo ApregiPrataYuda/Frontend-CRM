@@ -200,18 +200,34 @@ export const useVisitDataStore = defineStore('visitData', () => {
     checkInError.value   = null
     checkInSuccess.value = false
     try {
-      const res = await visitsSalesServices.checkInCustomers(visitId, payload)
+      const res  = await visitsSalesServices.checkInCustomers(visitId, payload)
+      const body = res.data ?? {}
       checkInSuccess.value = true
-      return { success: true, message: 'Check in customer berhasil', data: res.data?.data }
+
+      // ── PHASE 3 (UPDATE): LOKASI DI LUAR RADIUS TIDAK LAGI DI-TOLAK ──
+      // Backend (Visits::checkInVisitCustomer()) SEKARANG tetap balikin
+      // sukses (200) walau GPS sales di luar radius yang diizinkan --
+      // bedanya cuma di flag `outside_radius` + pesan peringatannya. Jadi
+      // info ini diteruskan di jalur SUKSES ini (bukan lagi di catch di
+      // bawah), supaya komponen bisa nampilin alert "berhasil check-in,
+      // tapi lokasi tidak sesuai" ke sales.
+      return {
+        success       : true,
+        outsideRadius : !!body.outside_radius,
+        distanceMeter : body.distance_meter,
+        radiusMeter   : body.radius_meter,
+        message       : body.message ?? 'Check in customer berhasil',
+        data          : body.data,
+      }
     } catch (error) {
       const responseData = error?.response?.data
 
-      // ── PHASE 3: LOKASI DI LUAR RADIUS ──
-      // Backend (Visits::checkInVisitCustomer()) balikin HTTP 422 khusus
-      // (outside_radius: true) kalau GPS sales di luar radius yang
-      // diizinkan -- ini HARD BLOCK, gak ada lagi opsi "confirm tetap
-      // checkin" kayak versi sebelumnya. Dibedain dari error generik biar
-      // komponen bisa nampilin pesan jarak yang informatif.
+      // ── PHASE 3 (LEGACY FALLBACK) ──
+      // Dulu backend nolak total (422, outside_radius: true) kalau di luar
+      // radius. Sekarang kasus itu sudah tidak lagi terjadi (lihat jalur
+      // sukses di atas) -- cabang ini dipertahankan hanya sebagai jaga-jaga
+      // kalau suatu saat backend di-revert atau ada versi API lama yang
+      // masih dipanggil.
       if (error?.response?.status === 422 && responseData?.outside_radius) {
         return {
           success       : false,
