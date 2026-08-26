@@ -444,14 +444,21 @@ const routes = [
         }
       },
 
-       {
+      {
         path: 'sales-expenses',
-
         name: 'Expenses',
-
         component: () =>
           import('@/views/sales/expense/expensesView.vue'),
+        meta: {
+          role: [2]
+        }
+      },
 
+      {
+        path: 'sales-quotation',
+        name: 'Quotation',
+        component: () =>
+          import('@/views/sales/quotation/quotationView.vue'),
         meta: {
           role: [2]
         }
@@ -699,6 +706,16 @@ const routes = [
       },
 
       {
+        path: 'lists-qoutations',
+        name: 'Lists Quotation',
+        component: () =>
+          import('@/views/manager/quotation/quotationView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
         path: 'product-by-sales-report',
         name: 'Product By Sales Report',
         component: () =>
@@ -717,6 +734,7 @@ const routes = [
           role: [3]
         }
       },
+
       {
         path: 'reassignment-sales',
         name: 'Reassignment Sales Page',
