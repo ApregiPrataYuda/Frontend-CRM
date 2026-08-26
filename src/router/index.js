@@ -444,6 +444,19 @@ const routes = [
         }
       },
 
+       {
+        path: 'sales-expenses',
+
+        name: 'Expenses',
+
+        component: () =>
+          import('@/views/sales/expense/expensesView.vue'),
+
+        meta: {
+          role: [2]
+        }
+      },
+
       
 
       
@@ -669,6 +682,17 @@ const routes = [
         name: 'Approvals Customer',
         component: () =>
           import('@/views/manager/approvalCustomers/approvalCustomersView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
+
+      {
+        path: 'approval-expenses',
+        name: 'Approvals Expenses',
+        component: () =>
+          import('@/views/manager/expenses/expensesApproval.vue'),
         meta: {
           role: [3]
         }

@@ -207,7 +207,10 @@ import {
   faCrosshairs,
   faBook,
   faDiagramProject,
-  faFolderTree
+  faFolderTree,
+  faFileInvoice,
+  faMoneyBillWave,
+  faMoneyCheckDollar,
 
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -404,6 +407,9 @@ library.add(
   faBook,
   faDiagramProject,
   faFolderTree,
+  faFileInvoice,
+  faMoneyBillWave,
+  faMoneyCheckDollar
 )
 
 const app = createApp(App)
