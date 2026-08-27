@@ -119,19 +119,7 @@ export const useCustomersStore = defineStore('customers', () => {
   loadingCustomers.value = true
 
   try {
-    let finalUrl = url || buildUrl()
-    // Laravel paginate() generate prev_page_url/next_page_url pakai APP_URL /
-    // skema request di server -- kalau di server APP_URL-nya masih http://
-    // (atau request masuk sebagai http:// di belakang proxy/load balancer),
-    // link Prev/Next yang dikirim ke frontend bisa jadi http:// padahal
-    // halamannya sendiri dibuka lewat https://. Browser modern langsung
-    // blokir request http:// dari halaman https:// (mixed content), jadi
-    // klik Next/Prev di server diam saja / gagal walau fetch awal (pakai
-    // buildUrl() yang relatif) normal. Fix sama persis kayak di
-    // myExpenseStore.js / myQuotationStore.js / quotationManagerStore.js.
-    if (typeof finalUrl === 'string' && finalUrl.startsWith('http://')) {
-      finalUrl = finalUrl.replace('http://', 'https://')
-    }
+    const finalUrl = url || buildUrl()
     const response = await customersServices.getByUrl(finalUrl)
     const result = response.data
 
