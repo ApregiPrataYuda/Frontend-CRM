@@ -170,6 +170,19 @@ export const useProductStore = defineStore('product', () => {
     })
   }
 
+  // qty_available sudah dari dulu ke-sync dari Odoo (lihat SyncOdooProducts
+  // -- field qty_available sudah ada di domain fetch & sudah disimpan ke
+  // kolom odoo_products.qty_available), cuma belum ditampilkan di UI.
+  // Helper format angka stok biar konsisten (ribuan pakai titik, ga perlu
+  // desimal kalau bulat).
+  const formatStock = (val) => {
+    const num = Number(val ?? 0)
+    return new Intl.NumberFormat('id-ID', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(num)
+  }
+
   return {
     // state
     productsData, loadingProducts, errorProduct,
@@ -178,6 +191,6 @@ export const useProductStore = defineStore('product', () => {
     // actions
     buildProductsUrl, fetchProducts,
     searchWithDelay, changePageSize, changeSorting, toggleSort,
-    syncProducts, formatCurrency, formatDate,
+    syncProducts, formatCurrency, formatDate, formatStock,
   }
 })

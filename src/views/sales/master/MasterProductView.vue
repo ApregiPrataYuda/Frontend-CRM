@@ -177,13 +177,15 @@ async function handleSync() {
           <span v-if="p.category"><font-awesome-icon icon="tags" /> {{ p.category }}</span>
           <span v-if="p.uom"><font-awesome-icon icon="ruler" /> {{ p.uom }}</span>
         </div>
-        <!-- BARCODE / HARGA JUAL / HARGA POKOK / STOK di-hidden dulu sesuai request,
-             belum dihapus total field-nya di store/API -- gampang dimunculin lagi
-             kalau nanti dibutuhin, tinggal un-comment blok ini. -->
+        <!-- BARCODE masih di-hidden sesuai request sebelumnya, belum dihapus
+             total field-nya di store/API -- gampang dimunculin lagi kalau
+             nanti dibutuhin, tinggal un-comment blok ini. HARGA JUAL / HARGA
+             POKOK & STOK sekarang ditampilkan. -->
         <!--
         <div v-if="p.barcode" class="product-barcode mono">
           <font-awesome-icon icon="barcode" /> {{ p.barcode }}
         </div>
+        -->
         <div class="product-price-row">
           <div class="price-block">
             <div class="price-label">Harga Jual</div>
@@ -194,7 +196,12 @@ async function handleSync() {
             <div class="price-value">{{ store.formatCurrency(p.standard_price) }}</div>
           </div>
         </div>
-        -->
+        <div class="product-stock-row">
+          <span class="stock-chip" :class="{ low: Number(p.qty_available) <= 0 }">
+            <font-awesome-icon icon="boxes-stacked" />
+            Stok: {{ store.formatStock(p.qty_available) }}<span v-if="p.uom"> {{ p.uom }}</span>
+          </span>
+        </div>
       </div>
     </div>
 
@@ -208,8 +215,11 @@ async function handleSync() {
             <th>NAMA PRODUK</th>
             <th style="width:160px">KATEGORI</th>
             <th style="width:90px">SATUAN</th>
-            <!-- BARCODE / HARGA JUAL / HARGA POKOK / STOK di-hidden dulu sesuai
-                 request -- lihat catatan yang sama di blok Card View di atas. -->
+            <th style="width:130px" class="text-end">HARGA JUAL</th>
+            <th style="width:130px" class="text-end">HARGA POKOK</th>
+            <th style="width:110px" class="text-end">STOK</th>
+            <!-- BARCODE masih di-hidden sesuai request -- lihat catatan yang
+                 sama di blok Card View di atas. -->
           </tr>
         </thead>
         <tbody>
@@ -219,6 +229,13 @@ async function handleSync() {
             <td class="font-semibold">{{ p.name }}</td>
             <td class="td-muted">{{ p.category || '-' }}</td>
             <td class="td-muted">{{ p.uom || '-' }}</td>
+            <td class="td-price text-end">{{ store.formatCurrency(p.list_price) }}</td>
+            <td class="td-price text-end td-muted">{{ store.formatCurrency(p.standard_price) }}</td>
+            <td class="td-stock text-end">
+              <span class="stock-chip" :class="{ low: Number(p.qty_available) <= 0 }">
+                {{ store.formatStock(p.qty_available) }}
+              </span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -375,6 +392,9 @@ async function handleSync() {
 .price-block.muted .price-value { color: var(--text-muted); }
 .price-label { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
 .price-value { font-size: 0.88rem; font-weight: 700; color: var(--text-primary); margin-top: 2px; }
+.product-stock-row { display: flex; padding-top: 6px; border-top: 1px solid var(--border-main); margin-top: 2px; }
+.stock-chip { display: inline-flex; align-items: center; gap: 6px; }
+.td-stock, .td-price { white-space: nowrap; }
 
 /* ===== PAGINATION ===== */
 .pagination-card { background: var(--bg-card); border-radius: 10px; padding: 14px 18px; box-shadow: 0 1px 3px var(--shadow-color); display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; gap: 12px; }
