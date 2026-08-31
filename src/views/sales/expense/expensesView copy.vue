@@ -1,19 +1,19 @@
 <script setup>
-import { ref, onMounted, computed, nextTick, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'vue-toastification'
 import AppModal from '@/components/AppModal.vue'
-import { useExpenseApprovalStore } from '@/stores/expenseApprovalStore'
+import { useMyExpenseStore } from '@/stores/myExpenseStore'
 
 const toast = useToast()
-const store = useExpenseApprovalStore()
+const store = useMyExpenseStore()
 
 const {
   filterStatus, filterCategory, searchQuery,
   expenseData, loadingExpense, pagination,
   summaryData, loadingSummary,
-  categoryOptions,
-  expenseDetail, loadingDetail, loadingAction,
+  categoryOptions, customerOptions, loadingCustomerOptions,
+  expenseDetail, loadingDetail, loadingCreate,
 } = storeToRefs(store)
 
 onMounted(() => {
@@ -23,12 +23,110 @@ onMounted(() => {
 })
 
 // ── DROPDOWN TOGGLES ──
-const showStatusMenu   = ref(false)
+const showPerPageMenu = ref(false)
+const showStatusMenu  = ref(false)
 const showCategoryMenu = ref(false)
 
 const statusLabelMap = { pending: 'Pending', approved: 'Approved', rejected: 'Ditolak' }
-const statusLabel   = computed(() => filterStatus.value ? (statusLabelMap[filterStatus.value] ?? filterStatus.value) : 'Semua Status')
+const statusLabel = computed(() => filterStatus.value ? (statusLabelMap[filterStatus.value] ?? filterStatus.value) : 'Semua Status')
 const categoryLabel = computed(() => filterCategory.value || 'Semua Kategori')
+
+// ════════════════════════════════════════════
+// FORM: AJUKAN EXPENSE
+// ════════════════════════════════════════════
+const showCreateModal = ref(false)
+
+function emptyForm() {
+  return {
+    expense_date: new Date().toISOString().slice(0, 10),
+    amount: '',
+    category: '',
+    description: '',
+    customer_id: null,
+    location_name: '',
+    attachment: null,
+  }
+}
+
+const form = ref(emptyForm())
+
+// ── KUNJUNGAN: combobox bebas -- boleh cari & pilih dari customer yang
+// dipegang sales ini, ATAU langsung ketik nama tempat/customer manual
+// kalau belum ada di sistem. Milih salah satu saran akan mengunci
+// customer_id (badge centang muncul); ngetik ulang sesudahnya otomatis
+// melepas kuncian itu balik jadi teks bebas. ──
+const locationInput = ref('')
+const showLocationSuggestions = ref(false)
+let locationSearchTimeout = null
+
+function openCreateModal() {
+  form.value = emptyForm()
+  locationInput.value = ''
+  showLocationSuggestions.value = false
+  showCreateModal.value = true
+}
+function closeCreateModal() {
+  if (loadingCreate.value) return
+  showCreateModal.value = false
+}
+
+function selectCategory(cat) {
+  form.value.category = cat
+}
+
+function onLocationInput() {
+  // Ngetik manual -> lepas link ke customer manapun yang tadinya
+  // kepilih, balik jadi free text sampai user pilih salah satu saran.
+  form.value.customer_id = null
+  form.value.location_name = locationInput.value
+  showLocationSuggestions.value = true
+
+  clearTimeout(locationSearchTimeout)
+  locationSearchTimeout = setTimeout(() => store.fetchCustomerOptions(locationInput.value), 400)
+}
+function focusLocationInput() {
+  showLocationSuggestions.value = true
+  if (customerOptions.value.length === 0) store.fetchCustomerOptions('')
+}
+function blurLocationInput() {
+  showLocationSuggestions.value = false
+}
+function selectCustomerOption(opt) {
+  form.value.customer_id = opt.id
+  form.value.location_name = opt.label
+  locationInput.value = opt.label
+  showLocationSuggestions.value = false
+}
+
+function onAttachmentChange(e) {
+  form.value.attachment = e.target.files?.[0] ?? null
+}
+
+const isFormValid = computed(() =>
+  form.value.expense_date && form.value.amount && Number(form.value.amount) > 0 && form.value.category
+)
+
+async function submitCreate() {
+  if (!isFormValid.value) return
+  const formData = new FormData()
+  formData.append('expense_date', form.value.expense_date)
+  formData.append('amount', form.value.amount)
+  formData.append('category', form.value.category)
+  if (form.value.description) formData.append('description', form.value.description)
+  if (form.value.customer_id) formData.append('customer_id', form.value.customer_id)
+  if (form.value.location_name) formData.append('location_name', form.value.location_name)
+  if (form.value.attachment) formData.append('attachment', form.value.attachment)
+
+  const result = await store.createExpense(formData)
+  if (result.success) {
+    toast.success(result.message)
+    closeCreateModal()
+    store.fetchExpenses(store.buildUrl())
+    store.fetchSummary()
+  } else {
+    toast.error(result.message)
+  }
+}
 
 // ════════════════════════════════════════════
 // DETAIL MODAL
@@ -44,156 +142,17 @@ function closeDetail() {
 }
 
 // ════════════════════════════════════════════
-// APPROVE
+// DELETE (hanya boleh kalau masih pending)
 // ════════════════════════════════════════════
-async function approveExpense(item) {
-  const result = await store.approveExpense(item.id)
+async function deleteExpense(item) {
+  const result = await store.deleteExpense(item.id)
   if (result.success) {
     toast.success(result.message)
     store.fetchExpenses(store.buildUrl())
     store.fetchSummary()
-    if (showDetailModal.value && expenseDetail.value?.id === item.id) {
-      await store.fetchDetail(item.id)
-    }
   } else {
     toast.error(result.message)
   }
-}
-
-// ════════════════════════════════════════════
-// REJECT (butuh alasan via modal)
-// ════════════════════════════════════════════
-const showRejectModal = ref(false)
-const rejectTarget = ref(null)
-const rejectReason = ref('')
-
-function openRejectModal(item) {
-  rejectTarget.value = item
-  rejectReason.value = ''
-  showRejectModal.value = true
-}
-function closeRejectModal() {
-  if (loadingAction.value) return
-  showRejectModal.value = false
-  rejectTarget.value = null
-  rejectReason.value = ''
-}
-const isRejectValid = computed(() => rejectReason.value.trim().length > 0)
-
-async function submitReject() {
-  if (!isRejectValid.value || !rejectTarget.value) return
-  const result = await store.rejectExpense(rejectTarget.value.id, rejectReason.value.trim())
-  if (result.success) {
-    toast.success(result.message)
-    closeRejectModal()
-    store.fetchExpenses(store.buildUrl())
-    store.fetchSummary()
-    if (showDetailModal.value) closeDetail()
-  } else {
-    toast.error(result.message)
-  }
-}
-
-// ════════════════════════════════════════════
-// RETRY PUSH KE ODOO (buat expense approved yang odoo_push_status='failed')
-// ════════════════════════════════════════════
-async function retryPush(item) {
-  const result = await store.retryPushExpense(item.id)
-  if (result.success) {
-    toast.success(result.message)
-  } else {
-    toast.error(result.message)
-  }
-  store.fetchExpenses(store.buildUrl())
-  store.fetchSummary()
-  if (showDetailModal.value && expenseDetail.value?.id === item.id) {
-    await store.fetchDetail(item.id)
-  }
-}
-
-// ════════════════════════════════════════════
-// ZOOM LAMPIRAN (biar Manager bisa cek detail struk/bill beneran jelas,
-// bukan cuma thumbnail kecil di modal Detail). Overlay full-screen sendiri
-// (bukan pakai AppModal) supaya bisa numpuk DI ATAS modal Detail yang lagi
-// terbuka, dan biar bebas atur interaksi zoom/pan-nya sendiri.
-// ════════════════════════════════════════════
-const showImageZoom  = ref(false)
-const zoomImageUrl   = ref('')
-const zoomScale      = ref(1)
-const zoomTranslate  = ref({ x: 0, y: 0 })
-const isDragging     = ref(false)
-const zoomOverlayRef = ref(null)
-let dragStart      = { x: 0, y: 0 }
-let translateStart = { x: 0, y: 0 }
-
-const ZOOM_STEP = 0.5
-const ZOOM_MIN  = 1
-const ZOOM_MAX  = 4
-
-function openImageZoom(url) {
-  zoomImageUrl.value  = url
-  zoomScale.value     = 1
-  zoomTranslate.value = { x: 0, y: 0 }
-  showImageZoom.value = true
-  // fokusin overlay-nya biar tombol Escape langsung kepencet tanpa perlu
-  // klik dulu ke area overlay-nya
-  nextTick(() => zoomOverlayRef.value?.focus())
-}
-function closeImageZoom() {
-  showImageZoom.value = false
-}
-
-// kunci scroll body selagi overlay zoom kebuka, biar scroll wheel yang
-// dipakai buat zoom gambar ga ikut nge-scroll halaman di belakangnya
-watch(showImageZoom, (val) => {
-  document.body.style.overflow = val ? 'hidden' : ''
-})
-
-function zoomIn() {
-  zoomScale.value = Math.min(ZOOM_MAX, +(zoomScale.value + ZOOM_STEP).toFixed(2))
-}
-function zoomOut() {
-  zoomScale.value = Math.max(ZOOM_MIN, +(zoomScale.value - ZOOM_STEP).toFixed(2))
-  if (zoomScale.value === ZOOM_MIN) zoomTranslate.value = { x: 0, y: 0 }
-}
-function resetZoom() {
-  zoomScale.value     = ZOOM_MIN
-  zoomTranslate.value = { x: 0, y: 0 }
-}
-function toggleZoomOnDblclick() {
-  if (zoomScale.value > 1) {
-    resetZoom()
-  } else {
-    zoomScale.value = 2.5
-  }
-}
-function onZoomWheel(e) {
-  const delta = e.deltaY < 0 ? 0.3 : -0.3
-  const next  = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +(zoomScale.value + delta).toFixed(2)))
-  zoomScale.value = next
-  if (next === ZOOM_MIN) zoomTranslate.value = { x: 0, y: 0 }
-}
-function onZoomMouseDown(e) {
-  if (zoomScale.value <= 1) return
-  isDragging.value  = true
-  dragStart         = { x: e.clientX, y: e.clientY }
-  translateStart    = { ...zoomTranslate.value }
-}
-function onZoomMouseMove(e) {
-  if (!isDragging.value) return
-  zoomTranslate.value = {
-    x: translateStart.x + (e.clientX - dragStart.x),
-    y: translateStart.y + (e.clientY - dragStart.y),
-  }
-}
-function onZoomMouseUp() {
-  isDragging.value = false
-}
-// klik area kosong (bukan gambarnya) buat nutup -- cuma aktif kalau lagi
-// ga di-zoom, biar ga ke-close ga sengaja pas lagi geser (pan) gambar yang
-// sudah diperbesar
-function onViewportClick() {
-  if (zoomScale.value <= 1) closeImageZoom()
 }
 
 function statusBadgeClass(status) {
@@ -213,13 +172,16 @@ function odooBadge(item) {
     <!-- BREADCRUMB -->
     <div class="breadcrumb-card mb-2">
       <div class="breadcrumb-left">
-        <h4 class="breadcrumb-title"><font-awesome-icon icon="money-check-dollar" /> Approval Expenses</h4>
+        <h4 class="breadcrumb-title"><font-awesome-icon icon="money-bill-wave" /> Expenses Saya</h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item"><font-awesome-icon icon="house" /> Dashboard</span>
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
-          <span class="breadcrumb-item active">Approval Expenses</span>
+          <span class="breadcrumb-item active">Expenses</span>
         </div>
       </div>
+      <button class="btn-toolbar btn-purple" @click="openCreateModal">
+        <font-awesome-icon icon="plus" /> Ajukan Expense
+      </button>
     </div>
 
     <!-- SUMMARY -->
@@ -235,10 +197,6 @@ function odooBadge(item) {
       <div class="summary-card">
         <p class="summary-label">Ditolak</p>
         <p class="summary-value red">{{ summaryData.total_rejected }}</p>
-      </div>
-      <div class="summary-card" :class="{ danger: summaryData.total_failed_push > 0 }">
-        <p class="summary-label">Push ke Odoo Gagal</p>
-        <p class="summary-value" :class="summaryData.total_failed_push > 0 ? 'red' : ''">{{ summaryData.total_failed_push }}</p>
       </div>
       <div class="summary-card">
         <p class="summary-label">Total Nominal Disetujui</p>
@@ -274,7 +232,7 @@ function odooBadge(item) {
         </div>
         <div class="controls-right">
           <div class="search-wrap">
-            <input v-model="searchQuery" @input="store.searchWithDelay(searchQuery)" type="text" placeholder="Cari nama sales / keterangan..." class="search-input" />
+            <input v-model="searchQuery" @input="store.searchWithDelay(searchQuery)" type="text" placeholder="Cari keterangan / kategori..." class="search-input" />
             <button class="search-btn"><font-awesome-icon icon="magnifying-glass" /></button>
           </div>
         </div>
@@ -287,21 +245,19 @@ function odooBadge(item) {
         <thead>
           <tr>
             <th style="width:50px">NO.</th>
-            <th>Sales</th><th>Tanggal</th><th>Kategori</th><th>Nominal</th>
-            <th>Keterangan</th><th>Kunjungan</th><th>Status</th><th>Odoo</th>
-            <th style="width:150px; text-align:center">Aksi</th>
+            <th>Tanggal</th><th>Kategori</th><th>Nominal</th><th>Keterangan</th>
+            <th>Kunjungan</th><th>Status</th><th>Odoo</th><th style="width:120px; text-align:center">Aksi</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="loadingExpense"><td colspan="10" class="td-center"><div class="spinner-custom" style="margin:0 auto"></div></td></tr>
-          <tr v-else-if="expenseData.length === 0"><td colspan="10" class="td-center">Tidak ada data expense</td></tr>
+          <tr v-if="loadingExpense"><td colspan="9" class="td-center"><div class="spinner-custom" style="margin:0 auto"></div></td></tr>
+          <tr v-else-if="expenseData.length === 0"><td colspan="9" class="td-center">Belum ada data expense</td></tr>
           <tr v-else v-for="(item, index) in expenseData" :key="item.id" class="data-row">
             <td class="td-no">{{ index + 1 + pagination.per_page * (pagination.current_page - 1) }}.</td>
-            <td class="td-name">{{ item.sales_name ?? '-' }}</td>
-            <td class="td-muted">{{ store.formatDate(item.expense_date) }}</td>
+            <td class="td-name">{{ store.formatDate(item.expense_date) }}</td>
             <td><span class="cat-chip">{{ item.category }}</span></td>
             <td class="amount">{{ store.formatCurrency(item.amount) }}</td>
-            <td class="td-muted" style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" :title="item.description">{{ item.description || '-' }}</td>
+            <td class="td-muted" style="max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" :title="item.description">{{ item.description || '-' }}</td>
             <td class="td-muted">{{ item.location_name ?? '-' }}</td>
             <td><span class="status-badge" :class="statusBadgeClass(item.status)">{{ statusLabelMap[item.status] ?? item.status }}</span></td>
             <td>
@@ -311,13 +267,7 @@ function odooBadge(item) {
             </td>
             <td class="td-actions">
               <button class="act-btn act-info" title="Detail" @click="openDetail(item.id)"><font-awesome-icon icon="eye" /></button>
-              <template v-if="item.status === 'pending'">
-                <button class="act-btn act-approve" title="Approve" :disabled="loadingAction" @click="approveExpense(item)"><font-awesome-icon icon="check" /></button>
-                <button class="act-btn act-delete" title="Reject" :disabled="loadingAction" @click="openRejectModal(item)"><font-awesome-icon icon="xmark" /></button>
-              </template>
-              <button v-if="item.status === 'approved' && item.odoo_push_status === 'failed'" class="act-btn act-retry" title="Kirim Ulang ke Odoo" :disabled="loadingAction" @click="retryPush(item)">
-                <font-awesome-icon icon="rotate-right" />
-              </button>
+              <button v-if="item.status === 'pending'" class="act-btn act-delete" title="Hapus" @click="deleteExpense(item)"><font-awesome-icon icon="trash" /></button>
             </td>
           </tr>
         </tbody>
@@ -336,11 +286,76 @@ function odooBadge(item) {
       </div>
     </div>
 
+    <!-- ══════════════ MODAL: AJUKAN EXPENSE ══════════════ -->
+    <AppModal :show="showCreateModal" title="Ajukan Expense" icon="money-bill-wave" size="md" @close="closeCreateModal">
+      <div class="form-container-gap">
+        <div class="form-group">
+          <label>Tanggal <span style="color:#ef4444">*</span></label>
+          <input v-model="form.expense_date" type="date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label>Nominal (Rp) <span style="color:#ef4444">*</span></label>
+          <input v-model="form.amount" type="number" min="0" placeholder="Contoh: 350000" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label>Kategori <span style="color:#ef4444">*</span></label>
+          <div class="cat-grid">
+            <button v-for="opt in categoryOptions" :key="opt.value" type="button"
+              class="cat-btn" :class="{ active: form.category === opt.value }"
+              @click="selectCategory(opt.value)">{{ opt.label }}</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Keterangan</label>
+          <textarea v-model="form.description" rows="3" class="form-input form-textarea" placeholder="Contoh: Lunch meeting dengan team Mechanical (Bpk. Ardi, Bpk. Agus)"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Kunjungan (opsional)</label>
+          <div class="drop-wrap" style="width:100%">
+            <div class="kunjungan-input-wrap">
+              <font-awesome-icon icon="magnifying-glass" class="kunjungan-input-icon" />
+              <input
+                v-model="locationInput"
+                @input="onLocationInput"
+                @focus="focusLocationInput"
+                @blur="blurLocationInput"
+                type="text"
+                placeholder="Cari nama customer, atau ketik nama tempat manual..."
+                class="form-input kunjungan-input"
+              />
+              <font-awesome-icon v-if="form.customer_id" icon="circle-check" class="kunjungan-linked-icon" title="Terhubung ke data customer" />
+            </div>
+            <div class="drop-menu" :class="{ show: showLocationSuggestions }" style="width:100%; max-height:220px; overflow:auto">
+              <div v-if="loadingCustomerOptions" class="td-muted" style="padding:8px">Mencari...</div>
+              <div v-else-if="customerOptions.length === 0" class="td-muted" style="padding:8px">
+                Customer tidak ditemukan — boleh lanjut isi manual di kolom di atas.
+              </div>
+              <button v-else v-for="opt in customerOptions" :key="opt.id" type="button" class="drop-item" @mousedown.prevent="selectCustomerOption(opt)">{{ opt.label }}</button>
+            </div>
+          </div>
+          <p v-if="form.location_name && !form.customer_id" class="kunjungan-hint">
+            <font-awesome-icon icon="circle-info" /> Nama ini diisi manual, tidak terhubung ke data customer manapun.
+          </p>
+        </div>
+        <div class="form-group">
+          <label>Lampiran (Foto Struk/Bill)</label>
+          <input type="file" accept=".jpg,.jpeg,.png,.pdf" class="form-input" @change="onAttachmentChange" />
+        </div>
+      </div>
+      <template #footer>
+        <button class="btn-cancel" @click="closeCreateModal" :disabled="loadingCreate">Batal</button>
+        <button class="btn-save" @click="submitCreate" :disabled="!isFormValid || loadingCreate">
+          <font-awesome-icon v-if="loadingCreate" icon="spinner" spin />
+          <font-awesome-icon v-else icon="paper-plane" />
+          {{ loadingCreate ? 'Mengirim...' : 'Ajukan Expense' }}
+        </button>
+      </template>
+    </AppModal>
+
     <!-- ══════════════ MODAL: DETAIL ══════════════ -->
     <AppModal :show="showDetailModal" title="Detail Expense" icon="circle-info" size="md" @close="closeDetail">
       <div v-if="loadingDetail" class="td-center"><div class="spinner-wrap"><div class="spinner"></div><span>Loading...</span></div></div>
       <div v-else-if="expenseDetail" class="detail-list">
-        <div class="detail-row"><span class="detail-label">Sales</span><span class="detail-value">{{ expenseDetail.sales_name ?? '-' }}</span></div>
         <div class="detail-row"><span class="detail-label">Tanggal</span><span class="detail-value">{{ store.formatDate(expenseDetail.expense_date) }}</span></div>
         <div class="detail-row"><span class="detail-label">Kategori</span><span class="cat-chip">{{ expenseDetail.category }}</span></div>
         <div class="detail-row"><span class="detail-label">Nominal</span><span class="detail-value">{{ store.formatCurrency(expenseDetail.amount) }}</span></div>
@@ -366,102 +381,13 @@ function odooBadge(item) {
         </div>
         <div v-if="expenseDetail.attachment_url" style="margin-top:8px">
           <span class="detail-label" style="display:block; margin-bottom:8px">Lampiran</span>
-          <img
-            :src="expenseDetail.attachment_url"
-            class="attachment-thumb"
-            style="width:100%; border-radius:10px; object-fit:contain; max-height:280px;"
-            @click="openImageZoom(expenseDetail.attachment_url)"
-          />
-          <p class="attachment-hint">
-            <font-awesome-icon icon="magnifying-glass" /> Klik gambar untuk perbesar &amp; cek detail struk
-          </p>
+          <img :src="expenseDetail.attachment_url" style="width:100%; border-radius:10px; object-fit:contain; max-height:280px;" />
         </div>
       </div>
       <template #footer>
-        <template v-if="expenseDetail && expenseDetail.status === 'pending'">
-          <button class="btn-cancel" :disabled="loadingAction" @click="openRejectModal(expenseDetail)">
-            <font-awesome-icon icon="xmark" /> Reject
-          </button>
-          <button class="btn-save btn-approve" :disabled="loadingAction" @click="approveExpense(expenseDetail)">
-            <font-awesome-icon v-if="loadingAction" icon="spinner" spin />
-            <font-awesome-icon v-else icon="check" />
-            Approve
-          </button>
-        </template>
-        <template v-else-if="expenseDetail && expenseDetail.status === 'approved' && expenseDetail.odoo_push_status === 'failed'">
-          <button class="btn-cancel" @click="closeDetail">Close</button>
-          <button class="btn-save btn-retry" :disabled="loadingAction" @click="retryPush(expenseDetail)">
-            <font-awesome-icon v-if="loadingAction" icon="spinner" spin />
-            <font-awesome-icon v-else icon="rotate-right" />
-            Kirim Ulang ke Odoo
-          </button>
-        </template>
-        <button v-else class="btn-cancel" @click="closeDetail">Close</button>
+        <button class="btn-cancel" @click="closeDetail">Close</button>
       </template>
     </AppModal>
-
-    <!-- ══════════════ MODAL: REJECT (butuh alasan) ══════════════ -->
-    <AppModal :show="showRejectModal" title="Tolak Expense" icon="xmark" size="sm" @close="closeRejectModal">
-      <div class="form-container-gap">
-        <p style="font-size:0.85rem; color:var(--text-muted); margin:0">
-          Anda akan menolak expense
-          <strong>{{ rejectTarget?.sales_name ?? '' }}</strong> sebesar
-          <strong>{{ store.formatCurrency(rejectTarget?.amount) }}</strong>.
-          Alasan penolakan wajib diisi agar sales tahu apa yang perlu diperbaiki.
-        </p>
-        <div class="form-group">
-          <label>Alasan Ditolak <span style="color:#ef4444">*</span></label>
-          <textarea v-model="rejectReason" rows="4" class="form-input form-textarea" placeholder="Contoh: Nominal tidak sesuai dengan struk yang dilampirkan"></textarea>
-        </div>
-      </div>
-      <template #footer>
-        <button class="btn-cancel" @click="closeRejectModal" :disabled="loadingAction">Batal</button>
-        <button class="btn-save btn-reject" @click="submitReject" :disabled="!isRejectValid || loadingAction">
-          <font-awesome-icon v-if="loadingAction" icon="spinner" spin />
-          <font-awesome-icon v-else icon="xmark" />
-          {{ loadingAction ? 'Memproses...' : 'Tolak Expense' }}
-        </button>
-      </template>
-    </AppModal>
-
-    <!-- ══════════════ OVERLAY: ZOOM LAMPIRAN ══════════════ -->
-    <Teleport to="body">
-      <div
-        v-if="showImageZoom"
-        ref="zoomOverlayRef"
-        class="zoom-overlay"
-        tabindex="0"
-        @keydown.esc="closeImageZoom"
-      >
-        <div class="zoom-toolbar">
-          <span class="zoom-level">{{ Math.round(zoomScale * 100) }}%</span>
-          <button class="zoom-btn" title="Perkecil" @click="zoomOut"><font-awesome-icon icon="minus" /></button>
-          <button class="zoom-btn" title="Perbesar" @click="zoomIn"><font-awesome-icon icon="plus" /></button>
-          <button class="zoom-btn" title="Reset zoom" @click="resetZoom"><font-awesome-icon icon="rotate-right" /></button>
-          <button class="zoom-btn zoom-close" title="Tutup" @click="closeImageZoom"><font-awesome-icon icon="xmark" /></button>
-        </div>
-        <div
-          class="zoom-viewport"
-          @wheel.prevent="onZoomWheel"
-          @mousedown="onZoomMouseDown"
-          @mousemove="onZoomMouseMove"
-          @mouseup="onZoomMouseUp"
-          @mouseleave="onZoomMouseUp"
-          @click.self="onViewportClick"
-        >
-          <img
-            :src="zoomImageUrl"
-            class="zoom-image"
-            :class="{ dragging: isDragging, zoomed: zoomScale > 1 }"
-            :style="{ transform: `translate(${zoomTranslate.x}px, ${zoomTranslate.y}px) scale(${zoomScale})` }"
-            draggable="false"
-            @click.stop
-            @dblclick="toggleZoomOnDblclick"
-          />
-        </div>
-        <p class="zoom-hint">Scroll mouse / tombol +/− untuk zoom, geser gambar untuk lihat bagian lain, dobel-klik untuk reset cepat</p>
-      </div>
-    </Teleport>
 
   </div>
 </template>
@@ -479,10 +405,13 @@ function odooBadge(item) {
 .breadcrumb-item.active { color: #6366f1; font-weight: 700; }
 .breadcrumb-separator { font-size: 0.7rem; color: var(--text-muted); opacity: 0.6; }
 
+.btn-toolbar { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+.btn-purple { background: #6366f1; color: #fff; }
+.btn-purple:hover { background: #4f46e5; }
+
 .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
 .summary-card { background: var(--bg-card); border: 1px solid var(--border-main); border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 3px var(--shadow-color); }
 .summary-card.warn { border-color: #fcd34d; background: #fffbeb; }
-.summary-card.danger { border-color: #fca5a5; background: #fef2f2; }
 .summary-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 6px; }
 .summary-value { font-size: 1.3rem; font-weight: 800; margin: 0; }
 .summary-value.amber { color: #b45309; }
@@ -493,7 +422,7 @@ function odooBadge(item) {
 .controls-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .controls-left, .controls-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .search-wrap { display: flex; border: 1px solid var(--border-main); border-radius: 8px; overflow: hidden; background: var(--bg-input); }
-.search-input { padding: 7px 12px; border: none; background: transparent; color: var(--text-primary); font-size: 0.84rem; outline: none; width: 220px; }
+.search-input { padding: 7px 12px; border: none; background: transparent; color: var(--text-primary); font-size: 0.84rem; outline: none; width: 200px; }
 .search-btn { padding: 7px 12px; background: #6366f1; color: #fff; border: none; cursor: pointer; }
 
 .drop-wrap { position: relative; }
@@ -513,22 +442,17 @@ function odooBadge(item) {
 .data-table td { padding: 13px 18px; vertical-align: middle; color: var(--text-primary); }
 .data-row:hover { background: var(--bg-nav-hover); }
 .td-no { color: var(--text-muted); font-weight: 600; }
-.td-name { font-weight: 700; }
+.td-name { font-weight: 500; }
 .td-muted { color: var(--text-muted); font-size: 0.84rem; }
 .td-center { text-align: center; padding: 40px; color: var(--text-muted); }
 .td-actions { text-align: center; white-space: nowrap; }
 .amount { font-weight: 700; }
 
 .act-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; border: 1.5px solid; cursor: pointer; font-size: 0.8rem; margin: 0 2px; background: transparent; }
-.act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .act-info { color: #6366f1; border-color: #6366f1; }
 .act-info:hover { background: #6366f1; color: #fff; }
-.act-approve { color: #16a34a; border-color: #16a34a; }
-.act-approve:hover:not(:disabled) { background: #16a34a; color: #fff; }
 .act-delete { color: #ef4444; border-color: #ef4444; }
-.act-delete:hover:not(:disabled) { background: #ef4444; color: #fff; }
-.act-retry { color: #b45309; border-color: #b45309; }
-.act-retry:hover:not(:disabled) { background: #b45309; color: #fff; }
+.act-delete:hover { background: #ef4444; color: #fff; }
 
 .cat-chip { display: inline-flex; padding: 3px 10px; border-radius: 6px; background: #eef2ff; color: #3730a3; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
 .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 99px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
@@ -555,7 +479,15 @@ function odooBadge(item) {
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .form-input { padding: 9px 12px; border: 1px solid var(--border-main); border-radius: 8px; font-size: 0.875rem; background: var(--bg-input); color: var(--text-primary); outline: none; width: 100%; }
-.form-textarea { resize: none; min-height: 90px; }
+.form-textarea { resize: none; min-height: 80px; }
+.cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.cat-btn { padding: 9px 10px; border: 1.5px solid var(--border-main); border-radius: 8px; background: var(--bg-input); font-size: 0.8rem; font-weight: 600; cursor: pointer; text-align: left; color: var(--text-primary); }
+.cat-btn.active { border-color: #6366f1; background: #eef2ff; color: #4338ca; font-weight: 800; }
+.kunjungan-input-wrap { position: relative; display: flex; align-items: center; width: 100%; }
+.kunjungan-input-icon { position: absolute; left: 12px; font-size: 0.8rem; color: var(--text-muted); pointer-events: none; }
+.kunjungan-input { padding-left: 32px; padding-right: 32px; }
+.kunjungan-linked-icon { position: absolute; right: 12px; font-size: 0.9rem; color: #16a34a; }
+.kunjungan-hint { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 0.74rem; color: #b45309; }
 
 .detail-list { display: flex; flex-direction: column; }
 .detail-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border-main); gap: 12px; }
@@ -563,58 +495,9 @@ function odooBadge(item) {
 .detail-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
 .detail-value { font-size: 0.85rem; font-weight: 500; color: var(--text-primary); }
 
-.btn-cancel { display: inline-flex; align-items: center; gap: 7px; padding: 8px 18px; background: #ef4444; color: #fff; border: 1px solid #dc2626; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
-.btn-cancel:hover:not(:disabled) { background: #dc2626; }
-.btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-cancel { padding: 8px 18px; background: #ef4444; color: #fff; border: 1px solid #dc2626; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+.btn-cancel:hover { background: #dc2626; }
 .btn-save { display: inline-flex; align-items: center; gap: 7px; padding: 8px 18px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
 .btn-save:hover:not(:disabled) { background: #4f46e5; }
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-approve { background: #16a34a; }
-.btn-approve:hover:not(:disabled) { background: #15803d; }
-.btn-reject { background: #ef4444; }
-.btn-reject:hover:not(:disabled) { background: #dc2626; }
-.btn-retry { background: #b45309; }
-.btn-retry:hover:not(:disabled) { background: #92400e; }
-
-/* ===== LAMPIRAN THUMBNAIL (di modal Detail) ===== */
-.attachment-thumb { cursor: zoom-in; transition: opacity 0.15s ease; }
-.attachment-thumb:hover { opacity: 0.85; }
-.attachment-hint { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 0.74rem; color: var(--text-muted); }
-
-/* ===== OVERLAY ZOOM LAMPIRAN ===== */
-.zoom-overlay {
-  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.94);
-  z-index: 9999; display: flex; align-items: center; justify-content: center;
-  outline: none;
-}
-.zoom-toolbar {
-  position: absolute; top: 16px; right: 16px; display: flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.1); backdrop-filter: blur(6px); padding: 6px 10px; border-radius: 10px; z-index: 2;
-}
-.zoom-level { color: #fff; font-size: 0.78rem; font-weight: 700; min-width: 42px; text-align: center; }
-.zoom-btn {
-  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 7px; border: none; background: rgba(255,255,255,0.12); color: #fff; cursor: pointer; font-size: 0.85rem;
-  transition: background 0.15s ease;
-}
-.zoom-btn:hover { background: rgba(255,255,255,0.25); }
-.zoom-close { background: rgba(239,68,68,0.85); }
-.zoom-close:hover { background: #ef4444; }
-
-.zoom-viewport {
-  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  overflow: hidden; cursor: default;
-}
-.zoom-image {
-  max-width: 92vw; max-height: 82vh; object-fit: contain; user-select: none;
-  transition: transform 0.08s ease-out;
-  cursor: zoom-in;
-}
-.zoom-image.zoomed { cursor: grab; }
-.zoom-image.dragging { transition: none; cursor: grabbing; }
-
-.zoom-hint {
-  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
-  color: rgba(255,255,255,0.65); font-size: 0.74rem; margin: 0; text-align: center; padding: 0 16px;
-}
 </style>

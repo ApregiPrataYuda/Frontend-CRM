@@ -91,7 +91,7 @@ function odooBadge(item) {
         <div class="controls-left"></div>
         <div class="controls-right">
           <div class="search-wrap">
-            <input v-model="searchQuery" @input="store.searchWithDelay(searchQuery)" type="text" placeholder="Cari no. quotation / customer / nama sales..." class="search-input" />
+            <input v-model="searchQuery" @input="store.searchWithDelay(searchQuery)" type="text" placeholder="Cari no. Ref / customer / nama sales..." class="search-input" />
             <button class="search-btn"><font-awesome-icon icon="magnifying-glass" /></button>
           </div>
         </div>
@@ -104,7 +104,7 @@ function odooBadge(item) {
         <thead>
           <tr>
             <th style="width:50px">NO.</th>
-            <th>No. Quotation</th><th>Sales</th><th>Customer</th><th>Tanggal</th>
+            <th>No. Ref</th><th>Sales</th><th>Customer</th><th>Tanggal</th>
             <th>Net Amount</th><th>Status Odoo</th><th style="width:100px; text-align:center">Aksi</th>
           </tr>
         </thead>
@@ -113,7 +113,7 @@ function odooBadge(item) {
           <tr v-else-if="quotationData.length === 0"><td colspan="8" class="td-center">Tidak ada data quotation</td></tr>
           <tr v-else v-for="(item, index) in quotationData" :key="item.id" class="data-row">
             <td class="td-no">{{ index + 1 + pagination.per_page * (pagination.current_page - 1) }}.</td>
-            <td class="td-name">{{ item.quotation_no }}</td>
+            <td class="td-name">{{ item.customer_ref || '-' }}</td>
             <td class="td-muted">{{ item.sales_name ?? '-' }}</td>
             <td class="td-muted">{{ item.customer_company_name }}</td>
             <td class="td-muted">{{ store.formatDate(item.quotation_date) }}</td>
@@ -148,7 +148,7 @@ function odooBadge(item) {
     <AppModal :show="showDetailModal" title="Detail Quotation" icon="circle-info" size="lg" @close="closeDetail">
       <div v-if="loadingDetail" class="td-center"><div class="spinner-wrap"><div class="spinner"></div><span>Loading...</span></div></div>
       <div v-else-if="quotationDetail" class="detail-list">
-        <div class="detail-row"><span class="detail-label">No. Quotation</span><span class="detail-value">{{ quotationDetail.quotation_no }}</span></div>
+        <div class="detail-row"><span class="detail-label">No. Quotation</span><span class="detail-value">{{ quotationDetail.quotation_no || '-' }}</span></div>
         <div class="detail-row"><span class="detail-label">Sales</span><span class="detail-value">{{ quotationDetail.sales_name ?? '-' }}</span></div>
         <div class="detail-row"><span class="detail-label">Customer</span><span class="detail-value">{{ quotationDetail.customer_company_name }}</span></div>
         <div class="detail-row"><span class="detail-label">Alamat</span><span class="detail-value">{{ quotationDetail.customer_address || '-' }}</span></div>

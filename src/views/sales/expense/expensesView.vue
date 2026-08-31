@@ -50,6 +50,24 @@ function emptyForm() {
 
 const form = ref(emptyForm())
 
+// ── NOMINAL: tampilan di-format pakai titik ribuan (gaya Rupiah) selagi
+// diketik, biar sales ga bingung baca angka nol-nya (mis. 10000 -> 10.000).
+// form.amount TETAP disimpan sebagai angka murni (tanpa titik) -- itu yang
+// dikirim ke backend, amountDisplay cuma buat tampilan di <input>. Sengaja
+// dibuat 2 variabel terpisah karena kalau v-model langsung ke form.amount
+// dengan value yang sudah ada titiknya, browser bakal reject (field-nya
+// type text tapi backend expect numeric string tanpa titik).
+const amountDisplay = ref('')
+
+function onAmountInput(e) {
+  const digitsOnly = e.target.value.replace(/\D/g, '') // buang semua selain angka
+  form.value.amount = digitsOnly ? Number(digitsOnly) : ''
+  amountDisplay.value = digitsOnly ? new Intl.NumberFormat('id-ID').format(Number(digitsOnly)) : ''
+  // paksa balik tampilan input ke versi yang sudah diformat (nge-override
+  // apapun yang sempat keketik user, termasuk kalau dia coba ketik titik/koma manual)
+  e.target.value = amountDisplay.value
+}
+
 // ── KUNJUNGAN: combobox bebas -- boleh cari & pilih dari customer yang
 // dipegang sales ini, ATAU langsung ketik nama tempat/customer manual
 // kalau belum ada di sistem. Milih salah satu saran akan mengunci
@@ -61,6 +79,7 @@ let locationSearchTimeout = null
 
 function openCreateModal() {
   form.value = emptyForm()
+  amountDisplay.value = ''
   locationInput.value = ''
   showLocationSuggestions.value = false
   showCreateModal.value = true
@@ -102,8 +121,13 @@ function onAttachmentChange(e) {
   form.value.attachment = e.target.files?.[0] ?? null
 }
 
+// Lampiran (foto struk/bill) sekarang WAJIB -- antisipasi sales yang
+// ajukan expense tanpa bukti fisik. Backend (ExpenseValidationStore) sudah
+// diubah jadi 'required' juga, ini cuma lapisan validasi di frontend biar
+// tombol submit ke-disable duluan sebelum sempat kena error dari API.
 const isFormValid = computed(() =>
-  form.value.expense_date && form.value.amount && Number(form.value.amount) > 0 && form.value.category
+  form.value.expense_date && form.value.amount && Number(form.value.amount) > 0
+  && form.value.category && form.value.attachment
 )
 
 async function submitCreate() {
@@ -115,7 +139,7 @@ async function submitCreate() {
   if (form.value.description) formData.append('description', form.value.description)
   if (form.value.customer_id) formData.append('customer_id', form.value.customer_id)
   if (form.value.location_name) formData.append('location_name', form.value.location_name)
-  if (form.value.attachment) formData.append('attachment', form.value.attachment)
+  formData.append('attachment', form.value.attachment)
 
   const result = await store.createExpense(formData)
   if (result.success) {
@@ -295,7 +319,14 @@ function odooBadge(item) {
         </div>
         <div class="form-group">
           <label>Nominal (Rp) <span style="color:#ef4444">*</span></label>
-          <input v-model="form.amount" type="number" min="0" placeholder="Contoh: 350000" class="form-input" />
+          <input
+            :value="amountDisplay"
+            @input="onAmountInput"
+            type="text"
+            inputmode="numeric"
+            placeholder="Contoh: 350.000"
+            class="form-input"
+          />
         </div>
         <div class="form-group">
           <label>Kategori <span style="color:#ef4444">*</span></label>
@@ -306,11 +337,11 @@ function odooBadge(item) {
           </div>
         </div>
         <div class="form-group">
-          <label>Keterangan</label>
+          <label>Keterangan <span style="color:#ef4444">*</span></label>
           <textarea v-model="form.description" rows="3" class="form-input form-textarea" placeholder="Contoh: Lunch meeting dengan team Mechanical (Bpk. Ardi, Bpk. Agus)"></textarea>
         </div>
         <div class="form-group">
-          <label>Kunjungan (opsional)</label>
+          <label>Kunjungan <span style="color:#ef4444">*</span></label>
           <div class="drop-wrap" style="width:100%">
             <div class="kunjungan-input-wrap">
               <font-awesome-icon icon="magnifying-glass" class="kunjungan-input-icon" />
@@ -338,8 +369,14 @@ function odooBadge(item) {
           </p>
         </div>
         <div class="form-group">
-          <label>Lampiran (Foto Struk/Bill)</label>
+          <label>Lampiran (Foto Struk/Bill) <span style="color:#ef4444">*</span></label>
           <input type="file" accept=".jpg,.jpeg,.png,.pdf" class="form-input" @change="onAttachmentChange" />
+          <p v-if="form.attachment" class="kunjungan-hint" style="color:#16a34a">
+            <font-awesome-icon icon="circle-check" /> {{ form.attachment.name }}
+          </p>
+          <p v-else class="kunjungan-hint">
+            <font-awesome-icon icon="circle-info" /> Wajib upload foto struk/bill sebagai bukti pengeluaran (JPG/PNG/PDF, maks 4 MB).
+          </p>
         </div>
       </div>
       <template #footer>

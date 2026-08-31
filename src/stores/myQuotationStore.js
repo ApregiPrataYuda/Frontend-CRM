@@ -213,10 +213,12 @@ export const useMyQuotationStore = defineStore('myQuotation', () => {
       const url  = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      // quotation_no biasanya mengandung "/" (contoh: "22005/UN/CAP") --
-      // diganti ke "-" dulu, karena "/" di nama file bisa bikin browser
-      // salah artikan sebagai pemisah folder.
-      link.download = `Quotation-${(item.quotation_no || '').replace(/[/\\]/g, '-')}.pdf`
+      // Nama file pakai customer_ref (BUKAN quotation_no lagi -- quotation_no
+      // sekarang opsional/sering masih kosong, sudah disamakan dengan
+      // penamaan file di backend QuotationController::buildPdfFilename()).
+      // Diganti ke "-" dulu kalau ada "/" atau "\", karena karakter itu di
+      // nama file bisa bikin browser salah artikan sebagai pemisah folder.
+      link.download = `Quotation-${(item.customer_ref || '').replace(/[/\\]/g, '-')}.pdf`
       document.body.appendChild(link)
       link.click()
       link.remove()

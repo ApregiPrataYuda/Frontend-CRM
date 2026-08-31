@@ -5,9 +5,11 @@ import { useToast } from 'vue-toastification'
 import AppModal from '@/components/AppModal.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import { useMyQuotationStore } from '@/stores/myQuotationStore'
+import { useAuthStore } from '@/stores/authStore'
 
 const toast = useToast()
 const store = useMyQuotationStore()
+const authStore = useAuthStore()
 
 const {
   searchQuery,
@@ -143,6 +145,13 @@ const netAmount = computed(() => subTotal.value + (Number(form.value.ppn) || 0))
 
 function openCreateModal() {
   form.value = emptyForm()
+  // Signature auto-diisi nama sales yang login (authStore.user.fullname --
+  // pola sama kayak yang dipakai AppHeader.vue buat nampilin nama user di
+  // pojok atas), tetap boleh diedit manual sesudahnya kalau perlu beda
+  // (misal quotation ini ditandatangani sales lain). Cuma di-set pas BUAT
+  // baru -- pas EDIT, signature tetap ambil dari data quotation yang sudah
+  // tersimpan (lihat openEditModal), bukan ditimpa otomatis.
+  form.value.signature = authStore.user?.fullname || ''
   items.value = [newItemRow()]
   customerSearchInput.value = ''
   isEditing.value = false
@@ -197,9 +206,12 @@ function closeFormModal() {
   store.quotationDetail = null
 }
 
+// No. Quotation SEKARANG OPSIONAL -- nomornya biasanya baru terbit
+// belakangan, jadi ga ikut disyaratkan di sini lagi (dulu ini yang bikin
+// form quotation baru ga bisa disubmit sama sekali, karena field-nya
+// sempat di-hidden dari tampilan tapi validasinya masih wajib).
 const isFormValid = computed(() =>
   form.value.customer_id
-  && form.value.quotation_no.trim()
   && form.value.customer_ref.trim()
   && form.value.payment_terms.trim()
   && form.value.quotation_date
@@ -254,7 +266,8 @@ async function submitForm() {
 // DELETE
 // ════════════════════════════════════════════
 async function deleteQuotation(item) {
-  if (!window.confirm(`Hapus quotation ${item.quotation_no}? Tindakan ini tidak bisa dibatalkan.`)) return
+  const label = item.quotation_no || item.customer_ref || `#${item.id}`
+  if (!window.confirm(`Hapus quotation ${label}? Tindakan ini tidak bisa dibatalkan.`)) return
   const result = await store.deleteQuotation(item.id)
   if (result.success) {
     toast.success(result.message)
@@ -338,7 +351,7 @@ function odooBadge(item) {
         <div class="controls-left"></div>
         <div class="controls-right">
           <div class="search-wrap">
-            <input v-model="searchQuery" @input="store.searchWithDelay(searchQuery)" type="text" placeholder="Cari no. quotation / customer ref / customer..." class="search-input" />
+            <input v-model="searchQuery" @input="store.searchWithDelay(searchQuery)" type="text" placeholder="Cari no. customer ref / customer..." class="search-input" />
             <button class="search-btn"><font-awesome-icon icon="magnifying-glass" /></button>
           </div>
         </div>
@@ -351,7 +364,7 @@ function odooBadge(item) {
         <thead>
           <tr>
             <th style="width:50px">NO.</th>
-            <th>No. Quotation</th><th>Customer</th><th>Tanggal</th><th>Net Amount</th>
+            <th>No. Ref</th><th>Customer</th><th>Tanggal</th><th>Net Amount</th>
             <th>Status Odoo</th><th style="width:160px; text-align:center">Aksi</th>
           </tr>
         </thead>
@@ -360,7 +373,7 @@ function odooBadge(item) {
           <tr v-else-if="quotationData.length === 0"><td colspan="7" class="td-center">Belum ada data quotation</td></tr>
           <tr v-else v-for="(item, index) in quotationData" :key="item.id" class="data-row">
             <td class="td-no">{{ index + 1 + pagination.per_page * (pagination.current_page - 1) }}.</td>
-            <td class="td-name">{{ item.quotation_no }}</td>
+            <td class="td-name">{{ item.customer_ref }}</td>
             <td class="td-muted">{{ item.customer_company_name }}</td>
             <td class="td-muted">{{ store.formatDate(item.quotation_date) }}</td>
             <td class="amount">{{ store.formatCurrency(item.net_amount) }}</td>
@@ -370,10 +383,10 @@ function odooBadge(item) {
               </span>
             </td>
             <td class="td-actions">
-              <button class="act-btn act-edit" title="Edit" @click="openEditModal(item)"><font-awesome-icon icon="pen" /></button>
+              <button v-if="item.odoo_push_status !== 'pushed'" class="act-btn act-edit" title="Edit" @click="openEditModal(item)"><font-awesome-icon icon="pen" /></button>
               <button class="act-btn act-pdf" title="Download PDF" @click="downloadPdf(item)"><font-awesome-icon icon="file-pdf" /></button>
-              <button class="act-btn act-push" title="Push ke Odoo" :disabled="loadingAction" @click="pushToOdoo(item)"><font-awesome-icon icon="rotate-right" /></button>
-              <button class="act-btn act-delete" title="Hapus" :disabled="loadingAction" @click="deleteQuotation(item)"><font-awesome-icon icon="trash" /></button>
+              <button v-if="item.odoo_push_status !== 'pushed'" class="act-btn act-push" title="Push ke Odoo" :disabled="loadingAction" @click="pushToOdoo(item)"><font-awesome-icon icon="rotate-right" /></button>
+              <button v-if="item.odoo_push_status !== 'pushed'" class="act-btn act-delete" title="Hapus" :disabled="loadingAction" @click="deleteQuotation(item)"><font-awesome-icon icon="trash" /></button>
             </td>
           </tr>
         </tbody>
@@ -440,10 +453,10 @@ function odooBadge(item) {
         </div>
 
         <div class="form-grid">
-          <div class="form-group">
-            <label>No. Quotation <span style="color:#ef4444">*</span></label>
-            <input v-model="form.quotation_no" type="text" placeholder="Contoh: 22005/UN/CAP" class="form-input" />
-          </div>
+          <!-- <div class="form-group">
+            <label>No. Quotation <span class="label-optional">(opsional)</span></label>
+            <input v-model="form.quotation_no" type="text" placeholder="Boleh dikosongkan dulu, isi kalau sudah terbit" class="form-input" />
+          </div> -->
           <div class="form-group">
             <label>Customer Ref <span style="color:#ef4444">*</span></label>
             <input v-model="form.customer_ref" type="text" class="form-input" />
@@ -477,7 +490,7 @@ function odooBadge(item) {
         <!-- ═══ TERM: sekarang pakai RichTextEditor, sama kayak di form checkout ═══ -->
         <div class="form-group">
           <label>Term</label>
-          <RichTextEditor v-model="form.term" placeholder="Contoh : 
+          <RichTextEditor v-model="form.term" placeholder="Contoh :
 Innomag Model TBMAG
 PUMP TYPE/SIZE: C3-267-11100-CU0
 SN. : 40602
@@ -675,6 +688,7 @@ TAG#: PX300B
 
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.label-optional { color: var(--text-muted); font-weight: 500; text-transform: none; letter-spacing: normal; }
 .form-input { padding: 9px 12px; border: 1px solid var(--border-main); border-radius: 8px; font-size: 0.875rem; background: var(--bg-input); color: var(--text-primary); outline: none; width: 100%; }
 .form-textarea { resize: none; }
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 14px; }
