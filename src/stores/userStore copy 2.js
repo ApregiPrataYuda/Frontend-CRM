@@ -40,9 +40,6 @@ export const useUserStore = defineStore('userStore', () => {
   const rolesOptions     = ref([])
   const divisionsOptions = ref([])
   const groupsOptions    = ref([])
-  // ── Atasan (Master User hierarchy) & Cabang ──
-  const managersOptions  = ref([])
-  const cabangsOptions   = ref([])
   const loadingOptions   = ref(false)
 
   // Status statis untuk dropdown is_active
@@ -194,25 +191,19 @@ export const useUserStore = defineStore('userStore', () => {
   }
 
   // ─────────────────────────────────────────────
-  // FETCH OPTIONS FORM (role, division, group, manager, cabang)
-  // excludeManagerId (opsional) -- dipakai pas Edit User supaya user yang
-  // sedang di-edit tidak muncul jadi pilihan atasannya sendiri.
+  // FETCH OPTIONS FORM (role, division, group)
   // ─────────────────────────────────────────────
-  const fetchFormOptions = async (excludeManagerId = null) => {
+  const fetchFormOptions = async () => {
     loadingOptions.value = true
     try {
-      const [rolesRes, divisionsRes, groupsRes, managersRes, cabangsRes] = await Promise.all([
+      const [rolesRes, divisionsRes, groupsRes] = await Promise.all([
         usersManagementServices.getRolesForSelectForm(),
         usersManagementServices.getDivisionsForSelectForm(),
         usersManagementServices.getGroupsForSelectForm(),
-        usersManagementServices.getManagersForSelectForm(excludeManagerId),
-        usersManagementServices.getCabangsForSelectForm(),
       ])
       rolesOptions.value     = rolesRes.data?.data     ?? rolesRes.data     ?? []
       divisionsOptions.value = divisionsRes.data?.data ?? divisionsRes.data ?? []
       groupsOptions.value    = groupsRes.data?.data    ?? groupsRes.data    ?? []
-      managersOptions.value  = managersRes.data?.data  ?? managersRes.data  ?? []
-      cabangsOptions.value   = cabangsRes.data?.data   ?? cabangsRes.data   ?? []
     } catch (error) {
       console.error('Gagal fetch form options:', error)
       toast.error('Gagal memuat opsi form')
@@ -390,8 +381,6 @@ export const useUserStore = defineStore('userStore', () => {
     rolesOptions,
     divisionsOptions,
     groupsOptions,
-    managersOptions,
-    cabangsOptions,
     loadingOptions,
     statusStatis,
     fetchUsers,

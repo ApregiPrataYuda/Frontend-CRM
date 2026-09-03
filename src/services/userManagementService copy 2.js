@@ -67,20 +67,4 @@ export const usersManagementServices = {
     const response = await api.get('/group-select')
     return response
   },
-
-  // ── Atasan (Master User hierarchy) ──
-  // excludeId opsional -- dipakai pas Edit User, biar user yang lagi
-  // di-edit tidak muncul jadi pilihan atasannya sendiri.
-  async getManagersForSelectForm(excludeId = null) {
-    const response = await api.get('/manager-select', {
-      params: excludeId ? { exclude_id: excludeId } : {},
-    })
-    return response
-  },
-
-  // ── Cabang ──
-  async getCabangsForSelectForm() {
-    const response = await api.get('/cabang-select')
-    return response
-  },
 }

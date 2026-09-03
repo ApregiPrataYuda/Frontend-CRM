@@ -182,14 +182,17 @@ const isEdit             = ref(false)
 const selectedUser       = ref(null)
 
 const emptyForm = () => ({
-  fullname:  '',
-  username:  '',
-  email:     '',
-  password:  '',
-  role_id:   null,
-  divisi_id: null,
-  group_id:  null,
-  is_active: 1,
+  fullname:   '',
+  username:   '',
+  email:      '',
+  password:   '',
+  role_id:    null,
+  divisi_id:  null,
+  group_id:   null,
+  // ── Atasan (Master User hierarchy) & Cabang -- opsional ──
+  manager_id: null,
+  cabang_id:  null,
+  is_active:  1,
 })
 
 const form = ref(emptyForm())
@@ -213,17 +216,21 @@ async function openEditModal(user) {
   isUserModalVisible.value = true
 
   // FIX #7 — nextTick dihapus, tidak diperlukan di sini
-  await store.fetchFormOptions()
+  // exclude_id = id_user sendiri, supaya user ini tidak muncul jadi
+  // pilihan atasan buat dirinya sendiri di dropdown Atasan.
+  await store.fetchFormOptions(user.id_user)
 
   form.value = {
-    fullname:  user.fullname  ?? '',
-    username:  user.username  ?? '',
-    email:     user.email     ?? '',
-    password:  '',
-    role_id:   user.role_id         ? Number(user.role_id)           : null,
-    divisi_id: user.division?.id    ? Number(user.division.id)       : null,
-    group_id:  user.groups?.id_group ? Number(user.groups.id_group)  : null,
-    is_active: user.is_active ? 1 : 0,
+    fullname:   user.fullname  ?? '',
+    username:   user.username  ?? '',
+    email:      user.email     ?? '',
+    password:   '',
+    role_id:    user.role_id          ? Number(user.role_id)          : null,
+    divisi_id:  user.division?.id     ? Number(user.division.id)      : null,
+    group_id:   user.groups?.id_group ? Number(user.groups.id_group)  : null,
+    manager_id: user.manager_id       ? Number(user.manager_id)       : null,
+    cabang_id:  user.cabang_id        ? Number(user.cabang_id)        : null,
+    is_active:  user.is_active ? 1 : 0,
   }
 
   // Tampilkan preview foto existing (ini URL dari server, bukan blob — tidak perlu revoke)
@@ -264,6 +271,14 @@ async function submitUserForm() {
   const payload = { ...form.value }
   if (!payload.password) delete payload.password
   if (imageFile.value) payload.image = imageFile.value
+
+  // ── Atasan / Cabang opsional -- kalau user pilih "-- Tidak ada --"
+  // (null), kirim string kosong ('') supaya backend beneran meng-update
+  // jadi NULL. Kalau dibiarkan null, buildFormData() akan skip field ini
+  // sama sekali (FormData memang tidak bisa bawa value null/undefined),
+  // jadi field lama di database tidak akan pernah ke-clear. ──
+  payload.manager_id = (payload.manager_id === null || payload.manager_id === undefined) ? '' : payload.manager_id
+  payload.cabang_id  = (payload.cabang_id  === null || payload.cabang_id  === undefined) ? '' : payload.cabang_id
 
   if (isEdit.value && selectedUser.value) {
     const ok = await store.updateUser(selectedUser.value.id_user, payload)
@@ -490,6 +505,8 @@ async function handlePermissionChange(row) {
             <th>ROLE</th>
             <th>DIVISION</th>
             <th>GROUP</th>
+            <th>ATASAN</th>
+            <th>CABANG</th>
             <th style="width:70px; text-align:center">PHOTO</th>
             <th style="width:130px">CREATED</th>
             <th style="width:130px">UPDATED</th>
@@ -500,7 +517,7 @@ async function handlePermissionChange(row) {
 
           <!-- Loading -->
           <tr v-if="store.loadingUsers">
-            <td colspan="10" class="td-center">
+            <td colspan="12" class="td-center">
               <div class="d-flex justify-content-center">
                 <div class="spinner-custom"></div>
               </div>
@@ -509,7 +526,7 @@ async function handlePermissionChange(row) {
 
           <!-- Empty -->
           <tr v-else-if="!store.usersData.length">
-            <td colspan="10" class="td-center">
+            <td colspan="12" class="td-center">
               <div class="empty-state">
                 <font-awesome-icon icon="inbox" class="empty-icon" />
                 <div class="empty-text">No data found</div>
@@ -537,6 +554,12 @@ async function handlePermissionChange(row) {
             </td>
             <td>
               <span class="badge-group">{{ item.groups?.name_group ?? '-' }}</span>
+            </td>
+            <td>
+              <span class="badge-manager">{{ item.manager?.fullname ?? '-' }}</span>
+            </td>
+            <td>
+              <span class="badge-cabang">{{ item.cabang?.cabang ?? '-' }}</span>
             </td>
             <td style="text-align:center">
               <img
@@ -744,7 +767,46 @@ async function handlePermissionChange(row) {
           </div>
         </div>
 
-        <!-- Row 5: Photo -->
+        <!-- Row 5: Atasan (Manager) + Cabang -->
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Atasan (Manager) <span class="label-hint">(opsional)</span></label>
+            <select
+              v-model="form.manager_id"
+              class="form-input form-select"
+              :class="{ 'input-error': store.errorUser?.manager_id }"
+              @change="store.clearFieldError('manager_id')"
+            >
+              <option :value="null">-- Tidak ada --</option>
+              <option
+                v-for="m in store.managersOptions"
+                :key="m.id_user"
+                :value="m.id_user"
+              >{{ m.fullname }}</option>
+            </select>
+            <span v-if="store.errorUser?.manager_id" class="field-error">{{ store.errorUser.manager_id[0] }}</span>
+          </div>
+
+          <div class="form-group">
+            <label>Cabang <span class="label-hint">(opsional)</span></label>
+            <select
+              v-model="form.cabang_id"
+              class="form-input form-select"
+              :class="{ 'input-error': store.errorUser?.cabang_id }"
+              @change="store.clearFieldError('cabang_id')"
+            >
+              <option :value="null">-- Tidak ada --</option>
+              <option
+                v-for="c in store.cabangsOptions"
+                :key="c.id_cabang"
+                :value="c.id_cabang"
+              >{{ c.cabang }}</option>
+            </select>
+            <span v-if="store.errorUser?.cabang_id" class="field-error">{{ store.errorUser.cabang_id[0] }}</span>
+          </div>
+        </div>
+
+        <!-- Row 6: Photo -->
         <div class="form-group">
           <label>Foto Profil</label>
           <div class="photo-upload-wrap">
@@ -843,6 +905,14 @@ async function handlePermissionChange(row) {
           <div class="detail-row">
             <span class="detail-label">Group</span>
             <span class="badge-group">{{ detailUser.groups?.name_group ?? '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Atasan</span>
+            <span class="badge-manager">{{ detailUser.manager?.fullname ?? '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Cabang</span>
+            <span class="badge-cabang">{{ detailUser.cabang?.cabang ?? '-' }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Created At</span>
@@ -1137,6 +1207,9 @@ async function handlePermissionChange(row) {
 .badge-role     { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; background: rgba(59,130,246,0.1);  color: #2563eb; border: 1px solid rgba(59,130,246,0.2); }
 .badge-division { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; background: rgba(139,92,246,0.1); color: #7c3aed; border: 1px solid rgba(139,92,246,0.2); }
 .badge-group    { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; background: rgba(16,185,129,0.1); color: #059669; border: 1px solid rgba(16,185,129,0.2); }
+/* ── Atasan & Cabang (BARU) ── */
+.badge-manager  { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; background: rgba(13,148,136,0.1); color: #0d9488; border: 1px solid rgba(13,148,136,0.2); }
+.badge-cabang   { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; background: rgba(217,119,6,0.1);  color: #b45309; border: 1px solid rgba(217,119,6,0.2); }
 
 /* User avatar tabel */
 .user-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border-main); box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: block; margin: 0 auto; }
