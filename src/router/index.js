@@ -227,6 +227,18 @@ const routes = [
         }
       },
 
+      {
+        path: 'data-master-branch',
+        name: 'Master Branch',
+
+        component: () =>
+          import('@/views/administrator/cabang/cabangManagementView.vue'),
+
+        meta: {
+          role: [1],  title: 'Branch Management' 
+        }
+      },
+
       /* ========================================
          SALES
       ========================================= */
