@@ -232,7 +232,7 @@ const routes = [
         name: 'Master Branch',
 
         component: () =>
-          import('@/views/administrator/cabang/cabangManagementView.vue'),
+          import('@/views/administrator/cabang/CabangManagementView.vue'),
 
         meta: {
           role: [1],  title: 'Branch Management' 
