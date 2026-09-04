@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import AppModal from '@/components/AppModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
-import { useCabangStore } from '@/stores/cabangStore'
+import { useCabangStore } from '@/stores/CabangStore'
 import { usePermissionStore } from '@/stores/PermissionStore'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
