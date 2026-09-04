@@ -17,6 +17,10 @@ export const useCabangStore = defineStore('cabang', () => {
   const cabangDetail  = ref(null)
   const loadingDetail = ref(false)
 
+  // ── Dropdown pilih Company (1 Cabang = 1 Company) ──
+  const groupsOptions = ref([])
+  const loadingOptions = ref(false)
+
   const pagination = reactive({
     current_page: 1,
     per_page: 10,
@@ -188,6 +192,24 @@ export const useCabangStore = defineStore('cabang', () => {
     }
   }
 
+  // ───────────────── FORM OPTIONS (dropdown Company) ─────────────────
+  const fetchFormOptions = async () => {
+    loadingOptions.value = true
+
+    try {
+      const response = await cabangServices.getGroupsForSelectForm()
+
+      // /group-select mengembalikan array JSON langsung (response()->json($query->get())),
+      // bukan dibungkus ApiResponse -- pola sama seperti userStore.js.
+      groupsOptions.value = response.data?.data ?? response.data ?? []
+
+    } catch (error) {
+      console.error('Gagal fetch opsi company:', error)
+    } finally {
+      loadingOptions.value = false
+    }
+  }
+
   // ───────────────── STORE ─────────────────
   const saveCabang = async (payload) => {
     savingCabang.value = true
@@ -280,9 +302,14 @@ export const useCabangStore = defineStore('cabang', () => {
     cabangDetail,
     loadingDetail,
 
+    groupsOptions,
+    loadingOptions,
+
     // actions
     fetchCabang,
     buildUrl,
+
+    fetchFormOptions,
 
     searchWithDelay,
     changePageSize,

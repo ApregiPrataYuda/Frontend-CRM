@@ -83,4 +83,10 @@ export const usersManagementServices = {
     const response = await api.get('/cabang-select')
     return response
   },
+
+  // ── Modal Hirarki User (atasan + rekan setingkat + bawahan) ──
+  async getHierarchy(id) {
+    const response = await api.get(`/users-management/hierarchy/${id}`)
+    return response
+  },
 }

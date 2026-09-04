@@ -34,6 +34,10 @@ export const useUserStore = defineStore('userStore', () => {
   const userDetail    = ref(null)
   const loadingDetail = ref(false)
 
+  // ── Modal Hirarki User (atasan + rekan setingkat + bawahan) ──
+  const hierarchyData    = ref(null)
+  const loadingHierarchy = ref(false)
+
   // ─────────────────────────────────────────────
   // STATE — Select Options Form
   // ─────────────────────────────────────────────
@@ -240,6 +244,23 @@ export const useUserStore = defineStore('userStore', () => {
     }
   }
 
+  // ── Modal Hirarki User ──
+  const fetchUserHierarchy = async (id) => {
+    loadingHierarchy.value = true
+    hierarchyData.value    = null
+    try {
+      const response      = await usersManagementServices.getHierarchy(id)
+      hierarchyData.value = response.data?.data ?? response.data
+      return hierarchyData.value
+    } catch (error) {
+      console.error('Gagal fetch hirarki user:', error)
+      toast.error('Gagal memuat hirarki user')
+      return null
+    } finally {
+      loadingHierarchy.value = false
+    }
+  }
+
   // ─────────────────────────────────────────────
   // HELPER — Build FormData
   // ─────────────────────────────────────────────
@@ -404,6 +425,9 @@ export const useUserStore = defineStore('userStore', () => {
     resetFilters,
     fetchFormOptions,
     fetchUserDetail,
+    hierarchyData,
+    loadingHierarchy,
+    fetchUserHierarchy,
     clearFieldError,      // FIX #2 — expose per-field error clear
     saveUser,
     updateUser,

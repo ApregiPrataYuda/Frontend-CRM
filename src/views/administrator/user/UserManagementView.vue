@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
@@ -32,10 +32,15 @@ const canView    = computed(() => permission.canView(currentUrl.value))
 onMounted(async () => {
   await store.fetchUsers()
   window.addEventListener('click', closeAllMenus)
+  // Modal Hirarki: garis penghubung dihitung ulang kalau window di-resize
+  // selagi modal terbuka (posisi kartu bisa berubah).
+  window.addEventListener('resize', handleHierarchyResize)
 })
 
 onUnmounted(() => {
   window.removeEventListener('click', closeAllMenus)
+  window.removeEventListener('resize', handleHierarchyResize)
+  clearTimeout(hierarchyResizeTimeout)
   // FIX #1 — bersihkan timeout & abort request yang masih pending saat komponen di-unmount
   store.clearSearchTimeout()
 })
@@ -303,6 +308,148 @@ function openDetailModal(user) {
 function closeDetailModal() {
   isDetailModalVisible.value = false
   detailUser.value           = null
+}
+
+/* ─────────────────────────────────────────
+ * MODAL HIRARKI USER
+ * (atasan + rekan setingkat + bawahan langsung)
+ * ───────────────────────────────────────── */
+const isHierarchyModalVisible = ref(false)
+const hierarchyCaptureRef     = ref(null)
+const downloadingHierarchy    = ref(false)
+
+// Garis penghubung antar kartu -- dihitung dari posisi kartu asli
+// (bukan CSS statis) supaya tetap presisi walau baris rekan/bawahan
+// wrap ke baris baru karena datanya banyak.
+const hierarchyLines   = ref([])
+const hierarchySvgSize = ref({ width: 0, height: 0 })
+
+function computeHierarchyLines() {
+  const root = hierarchyCaptureRef.value
+  if (!root) {
+    hierarchyLines.value = []
+    return
+  }
+
+  const containerRect = root.getBoundingClientRect()
+  hierarchySvgSize.value = { width: containerRect.width, height: containerRect.height }
+
+  const topCenter = (el) => {
+    const r = el.getBoundingClientRect()
+    return { x: r.left + r.width / 2 - containerRect.left, y: r.top - containerRect.top }
+  }
+  const bottomCenter = (el) => {
+    const r = el.getBoundingClientRect()
+    return { x: r.left + r.width / 2 - containerRect.left, y: r.bottom - containerRect.top }
+  }
+
+  const managerEl = root.querySelector('[data-role="manager"]')
+  const selfEl    = root.querySelector('[data-role="self"]')
+  const peerEls   = Array.from(root.querySelectorAll('[data-role="peer"]'))
+  const subEls    = Array.from(root.querySelectorAll('[data-role="sub"]'))
+
+  // Garis siku (trunk turun → cabang mendatar → turun ke tiap kartu),
+  // bukan garis diagonal lurus -- supaya tidak numpuk/nabrak tulisan
+  // label tier ("Melapor Kepada", dst) yang duduk di antara dua tier.
+  const buildElbow = (parentPoint, childPoints) => {
+    if (!parentPoint || !childPoints.length) return []
+
+    const segments = []
+    const ys = childPoints.map((p) => p.y)
+    const xs = [...childPoints.map((p) => p.x), parentPoint.x]
+    const branchY = Math.min(...ys) - 16
+
+    // batang turun dari kartu induk ke garis cabang
+    segments.push({ x1: parentPoint.x, y1: parentPoint.y, x2: parentPoint.x, y2: branchY })
+
+    // garis cabang mendatar (cuma digambar kalau anaknya lebih dari 1 posisi X)
+    const minX = Math.min(...xs)
+    const maxX = Math.max(...xs)
+    if (maxX - minX > 1) {
+      segments.push({ x1: minX, y1: branchY, x2: maxX, y2: branchY })
+    }
+
+    // turun dari garis cabang ke tiap kartu anak
+    childPoints.forEach((p) => {
+      segments.push({ x1: p.x, y1: branchY, x2: p.x, y2: p.y })
+    })
+
+    return segments
+  }
+
+  const lines = []
+
+  // Atasan -> (dia + rekan setingkat) -- semua sama-sama anak dari atasan ini.
+  if (managerEl) {
+    const from = bottomCenter(managerEl)
+    const children = [selfEl, ...peerEls].filter(Boolean).map(topCenter)
+    lines.push(...buildElbow(from, children))
+  }
+
+  // Dia -> bawahan langsungnya (bukan bawahan rekan setingkat, karena
+  // data bawahan yang diambil backend memang cuma milik user yang diklik).
+  if (selfEl && subEls.length) {
+    const from = bottomCenter(selfEl)
+    const children = subEls.map(topCenter)
+    lines.push(...buildElbow(from, children))
+  }
+
+  hierarchyLines.value = lines
+}
+
+let hierarchyResizeTimeout = null
+function handleHierarchyResize() {
+  clearTimeout(hierarchyResizeTimeout)
+  hierarchyResizeTimeout = setTimeout(computeHierarchyLines, 150)
+}
+
+async function openHierarchyModal(user) {
+  isHierarchyModalVisible.value = true
+  hierarchyLines.value          = []
+  await store.fetchUserHierarchy(user.id_user)
+
+  // nextTick supaya kartu sudah ke-render dulu sebelum posisinya diukur.
+  // Diukur 2x (langsung + delay kecil) buat jaga-jaga kalau avatar/font
+  // masih menggeser layout sedikit pas baru tampil.
+  await nextTick()
+  computeHierarchyLines()
+  setTimeout(computeHierarchyLines, 120)
+}
+
+function closeHierarchyModal() {
+  isHierarchyModalVisible.value = false
+  store.hierarchyData           = null
+  hierarchyLines.value          = []
+}
+
+async function downloadHierarchyPNG() {
+  if (!hierarchyCaptureRef.value) return
+
+  downloadingHierarchy.value = true
+  try {
+    // html2canvas di-load dinamis supaya tidak wajib jadi dependency
+    // yang dibundle di awal -- cukup dipanggil saat tombol download diklik.
+    const { default: html2canvas } = await import('html2canvas')
+
+    const canvas = await html2canvas(hierarchyCaptureRef.value, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+    })
+
+    const link     = document.createElement('a')
+    const fileName = (store.hierarchyData?.user?.fullname || 'user')
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+    link.download = `hirarki-${fileName}.png`
+    link.href     = canvas.toDataURL('image/png')
+    link.click()
+  } catch (error) {
+    console.error('Gagal membuat gambar hirarki:', error)
+    toast.error('Gagal mengunduh gambar hirarki. Pastikan package "html2canvas" sudah ter-install (npm install html2canvas).')
+  } finally {
+    downloadingHierarchy.value = false
+  }
 }
 
 /* ─────────────────────────────────────────
@@ -585,6 +732,9 @@ async function handlePermissionChange(row) {
               <button v-if="canUpdate" class="act-btn act-access"  title="Access SubMenu" @click="openAccessModal(item)">
                 <font-awesome-icon icon="shield-halved" />
               </button>
+              <button v-if="canView"   class="act-btn act-hierarchy" title="Lihat Hirarki" @click="openHierarchyModal(item)">
+                <font-awesome-icon icon="sitemap" />
+              </button>
             </td>
           </tr>
 
@@ -800,7 +950,7 @@ async function handlePermissionChange(row) {
                 v-for="c in store.cabangsOptions"
                 :key="c.id_cabang"
                 :value="c.id_cabang"
-              >{{ c.cabang }}</option>
+              >{{ c.cabang }}{{ c.name_group ? ` (${c.name_group})` : '' }}</option>
             </select>
             <span v-if="store.errorUser?.cabang_id" class="field-error">{{ store.errorUser.cabang_id[0] }}</span>
           </div>
@@ -928,6 +1078,140 @@ async function handlePermissionChange(row) {
 
       <template #footer>
         <button class="btn-cancel" @click="closeDetailModal">Close</button>
+      </template>
+    </AppModal>
+
+    <!-- ════════════════════════════════════════
+         MODAL HIRARKI USER
+         (atasan + rekan setingkat + bawahan langsung)
+    ════════════════════════════════════════ -->
+    <AppModal
+      :show="isHierarchyModalVisible"
+      title="Hirarki User"
+      icon="sitemap"
+      size="lg"
+      @close="closeHierarchyModal"
+    >
+      <div v-if="store.loadingHierarchy" class="td-center">
+        <div class="spinner-custom" style="margin: 20px auto;"></div>
+      </div>
+
+      <div v-else-if="store.hierarchyData" ref="hierarchyCaptureRef" class="hierarchy-capture">
+
+        <!-- Garis penghubung antar kartu -- dihitung otomatis dari
+             posisi kartu asli (lihat computeHierarchyLines), supaya
+             tetap presisi walau baris rekan/bawahan wrap ke baris baru. -->
+        <svg
+          v-if="hierarchyLines.length"
+          class="hierarchy-lines-svg"
+          :viewBox="`0 0 ${hierarchySvgSize.width} ${hierarchySvgSize.height}`"
+          preserveAspectRatio="none"
+        >
+          <line
+            v-for="(l, i) in hierarchyLines"
+            :key="i"
+            :x1="l.x1" :y1="l.y1" :x2="l.x2" :y2="l.y2"
+          />
+        </svg>
+
+        <!-- Atasan -->
+        <div class="hierarchy-level">
+          <div class="hierarchy-level-label">Melapor Kepada</div>
+          <div class="hierarchy-row">
+            <div v-if="store.hierarchyData.manager" class="hierarchy-card card-manager" data-role="manager">
+              <img
+                :src="store.getImageUrl(store.hierarchyData.manager.image, store.hierarchyData.manager.fullname)"
+                :alt="store.hierarchyData.manager.fullname"
+                class="hc-avatar-img"
+              />
+              <div class="hc-name">{{ store.hierarchyData.manager.fullname }}</div>
+              <div class="hc-role-badge">{{ store.hierarchyData.manager.role?.role || '-' }}</div>
+              <div class="hc-meta">{{ store.hierarchyData.manager.groups?.name_group || '-' }}</div>
+              <div class="hc-meta hc-meta-cabang">{{ store.hierarchyData.manager.cabang?.cabang || '-' }}</div>
+              <div class="hc-meta">{{ store.hierarchyData.manager.division?.name_division || '-' }}</div>
+            </div>
+            <div v-else class="hierarchy-empty">Top Level (Tidak ada atasan)</div>
+          </div>
+        </div>
+
+        <!-- Dia + rekan setingkat -->
+        <div class="hierarchy-level">
+          <div class="hierarchy-level-label">User Ini &amp; Rekan Setingkat</div>
+          <div class="hierarchy-row hierarchy-row-wrap">
+            <div class="hierarchy-card card-self" data-role="self">
+              <img
+                :src="store.getImageUrl(store.hierarchyData.user.image, store.hierarchyData.user.fullname)"
+                :alt="store.hierarchyData.user.fullname"
+                class="hc-avatar-img"
+              />
+              <div class="hc-name">{{ store.hierarchyData.user.fullname }}</div>
+              <div class="hc-role-badge">{{ store.hierarchyData.user.role?.role || '-' }}</div>
+              <div class="hc-meta">{{ store.hierarchyData.user.groups?.name_group || '-' }}</div>
+              <div class="hc-meta hc-meta-cabang">{{ store.hierarchyData.user.cabang?.cabang || '-' }}</div>
+              <div class="hc-meta">{{ store.hierarchyData.user.division?.name_division || '-' }}</div>
+            </div>
+
+            <div
+              v-for="p in store.hierarchyData.peers"
+              :key="p.id_user"
+              class="hierarchy-card card-peer"
+              data-role="peer"
+            >
+              <img
+                :src="store.getImageUrl(p.image, p.fullname)"
+                :alt="p.fullname"
+                class="hc-avatar-img"
+              />
+              <div class="hc-name">{{ p.fullname }}</div>
+              <div class="hc-role-badge">{{ p.role?.role || '-' }}</div>
+              <div class="hc-meta">{{ p.groups?.name_group || '-' }}</div>
+              <div class="hc-meta hc-meta-cabang">{{ p.cabang?.cabang || '-' }}</div>
+              <div class="hc-meta">{{ p.division?.name_division || '-' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <template v-if="store.hierarchyData.subordinates?.length">
+          <!-- Bawahan langsung -->
+          <div class="hierarchy-level">
+            <div class="hierarchy-level-label">Bawahan Langsung</div>
+            <div class="hierarchy-row hierarchy-row-wrap">
+              <div
+                v-for="s in store.hierarchyData.subordinates"
+                :key="s.id_user"
+                class="hierarchy-card card-sub"
+                data-role="sub"
+              >
+                <img
+                  :src="store.getImageUrl(s.image, s.fullname)"
+                  :alt="s.fullname"
+                  class="hc-avatar-img"
+                />
+                <div class="hc-name">{{ s.fullname }}</div>
+                <div class="hc-role-badge">{{ s.role?.role || '-' }}</div>
+                <div class="hc-meta">{{ s.groups?.name_group || '-' }}</div>
+                <div class="hc-meta hc-meta-cabang">{{ s.cabang?.cabang || '-' }}</div>
+                <div class="hc-meta">{{ s.division?.name_division || '-' }}</div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+      </div>
+
+      <div v-else class="td-center">Data tidak tersedia</div>
+
+      <template #footer>
+        <button class="btn-cancel" @click="closeHierarchyModal">Close</button>
+        <button
+          class="btn-save"
+          :disabled="!store.hierarchyData || store.loadingHierarchy || downloadingHierarchy"
+          @click="downloadHierarchyPNG"
+        >
+          <font-awesome-icon v-if="downloadingHierarchy" icon="spinner" spin />
+          <font-awesome-icon v-else icon="download" />
+          {{ downloadingHierarchy ? 'Membuat gambar...' : 'Download PNG' }}
+        </button>
       </template>
     </AppModal>
 
@@ -1234,6 +1518,40 @@ async function handlePermissionChange(row) {
 .act-info:hover   { background: #6366f1; color: #fff; }
 .act-access       { color: #8b5cf6; border-color: #8b5cf6; }
 .act-access:hover { background: #8b5cf6; color: #fff; }
+.act-hierarchy       { color: #0ea5e9; border-color: #0ea5e9; }
+.act-hierarchy:hover { background: #0ea5e9; color: #fff; }
+
+/* ── MODAL HIRARKI USER ── */
+.hierarchy-capture { position: relative; display: flex; flex-direction: column; align-items: center; gap: 38px; padding: 8px 4px 12px; background: var(--bg-card); }
+.hierarchy-lines-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.hierarchy-lines-svg line { stroke: var(--border-main); stroke-width: 1.5; }
+.hierarchy-level { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 100%; }
+.hierarchy-level-label {
+  position: relative;
+  z-index: 2;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  padding: 0 12px;
+}
+.hierarchy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-items: flex-start; gap: 14px; flex-wrap: wrap; width: 100%; row-gap: 30px; }
+.hierarchy-row-wrap { flex-wrap: wrap; }
+.hierarchy-empty { font-size: 0.82rem; color: var(--text-muted); font-style: italic; padding: 10px 0; }
+
+.hierarchy-card { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 150px; padding: 12px 10px; border-radius: 10px; background: var(--bg-input); border: 1.5px solid var(--border-main); text-align: center; }
+.hc-avatar-img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; margin-bottom: 4px; }
+.hc-name { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
+.hc-role-badge { font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: rgba(99,102,241,0.1); color: #6366f1; }
+.hc-meta { font-size: 0.7rem; color: var(--text-muted); line-height: 1.2; }
+.hc-meta-cabang { font-style: italic; }
+
+.card-manager { border-color: #f59e0b; box-shadow: 0 0 0 1px rgba(245,158,11,0.15); }
+.card-self    { border-color: #0ea5e9; border-width: 2px; box-shadow: 0 0 0 2px rgba(14,165,233,0.15); }
+.card-peer    { border-color: var(--border-main); }
+.card-sub     { border-color: #22c55e; box-shadow: 0 0 0 1px rgba(34,197,94,0.15); }
 
 /* ── PAGINATION ── */
 .pagination-card { background: var(--bg-card); border-radius: 10px; padding: 14px 18px; box-shadow: 0 1px 3px var(--shadow-color); display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; gap: 12px; }

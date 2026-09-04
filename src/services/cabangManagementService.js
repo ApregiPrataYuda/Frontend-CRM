@@ -26,4 +26,11 @@ export const cabangServices = {
     const response = await api.delete(`/master-cabang-delete/${id}`)
     return response
   },
+
+  // ── Dropdown pilih Company (1 Cabang = 1 Company) --
+  // reuse endpoint yang sama dipakai modul User (/group-select). ──
+  async getGroupsForSelectForm() {
+    const response = await api.get('/group-select')
+    return response
+  },
 }

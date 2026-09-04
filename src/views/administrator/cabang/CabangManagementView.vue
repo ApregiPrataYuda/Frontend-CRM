@@ -51,9 +51,9 @@ function handleReset() {
 
 // ── EXPORT ─────────────────────────────────
 function exportCSV() {
-  const header = 'ID,Cabang,Alamat,No Telp,Created\n'
+  const header = 'ID,Cabang,Company,Alamat,No Telp,Created\n'
   const rows   = cabangStore.cabangData
-    .map(c => `${c.id_cabang},"${c.cabang}","${c.alamat || ''}","${c.no_telp || ''}","${cabangStore.formatDate(c.created_at)}"`)
+    .map(c => `${c.id_cabang},"${c.cabang}","${c.group?.name_group || ''}","${c.alamat || ''}","${c.no_telp || ''}","${cabangStore.formatDate(c.created_at)}"`)
     .join('\n')
   const blob = new Blob([header + rows], { type: 'text/csv' })
   const url  = URL.createObjectURL(blob)
@@ -72,6 +72,7 @@ const selectedEditCabang = ref(null)
 const newCabangName      = ref('')
 const newCabangAlamat    = ref('')
 const newCabangNoTelp    = ref('')
+const newCabangGroupId   = ref('')
 
 function openAddModal() {
   isEdit.value              = false
@@ -79,8 +80,10 @@ function openAddModal() {
   newCabangName.value       = ''
   newCabangAlamat.value     = ''
   newCabangNoTelp.value     = ''
+  newCabangGroupId.value    = ''
   cabangStore.errorCabang   = null
   isAddModalVisible.value   = true
+  cabangStore.fetchFormOptions()
 }
 
 function openEditModal(item) {
@@ -89,8 +92,10 @@ function openEditModal(item) {
   newCabangName.value      = item.cabang
   newCabangAlamat.value    = item.alamat || ''
   newCabangNoTelp.value    = item.no_telp || ''
+  newCabangGroupId.value   = item.group_id || ''
   cabangStore.errorCabang  = null
   isAddModalVisible.value  = true
+  cabangStore.fetchFormOptions()
 }
 
 function closeAddModal() {
@@ -111,11 +116,16 @@ async function submitAddData() {
     toast.error('No telp cabang wajib diisi!')
     return
   }
+  if (!newCabangGroupId.value) {
+    toast.error('Company wajib dipilih!')
+    return
+  }
 
   const payload = {
     cabang:   newCabangName.value.trim(),
     alamat:   newCabangAlamat.value.trim(),
     no_telp:  newCabangNoTelp.value.trim(),
+    group_id: newCabangGroupId.value,
   }
 
   if (isEdit.value && selectedEditCabang.value) {
@@ -306,6 +316,7 @@ async function openDeleteModal(item) {
           <tr>
             <th style="width:70px">NO.</th>
             <th>CABANG</th>
+            <th>COMPANY</th>
             <th>ALAMAT</th>
             <th style="width:160px">NO TELP</th>
             <th style="width:200px">CREATED</th>
@@ -317,7 +328,7 @@ async function openDeleteModal(item) {
 
           <!-- Loading -->
           <tr v-if="cabangStore.loadingCabang">
-            <td colspan="7" class="td-center">
+            <td colspan="8" class="td-center">
               <div style="display:flex; justify-content:center;">
                 <div class="spinner-custom"></div>
               </div>
@@ -326,7 +337,7 @@ async function openDeleteModal(item) {
 
           <!-- Empty -->
           <tr v-else-if="!cabangStore.cabangData.length">
-            <td colspan="7" class="td-center">
+            <td colspan="8" class="td-center">
               <div class="empty-state">
                 <img
                   src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
@@ -350,6 +361,10 @@ async function openDeleteModal(item) {
             </td>
             <td class="td-name">
               <span class="menu-badge">{{ item.cabang }}</span>
+            </td>
+            <td class="td-muted">
+              <span v-if="item.group?.name_group" class="detail-badge">{{ item.group.name_group }}</span>
+              <span v-else>-</span>
             </td>
             <td class="td-muted">{{ item.alamat || '-' }}</td>
             <td class="td-muted">{{ item.no_telp || '-' }}</td>
@@ -428,6 +443,27 @@ async function openDeleteModal(item) {
       @close="closeAddModal"
     >
       <div class="form-container-gap">
+        <div class="form-group">
+          <label>Company <span style="color:#ef4444">*</span></label>
+          <select
+            v-model="newCabangGroupId"
+            class="form-input"
+            :class="{ 'input-error': cabangStore.errorCabang?.group_id }"
+            :disabled="cabangStore.loadingOptions"
+            @change="cabangStore.errorCabang = null"
+          >
+            <option value="" disabled>-- Pilih Company --</option>
+            <option
+              v-for="opt in cabangStore.groupsOptions"
+              :key="opt.id_group"
+              :value="opt.id_group"
+            >{{ opt.name_group }}</option>
+          </select>
+          <span v-if="cabangStore.errorCabang?.group_id" class="field-error">
+            {{ cabangStore.errorCabang.group_id[0] }}
+          </span>
+        </div>
+
         <div class="form-group">
           <label>Cabang <span style="color:#ef4444">*</span></label>
           <input
@@ -509,6 +545,10 @@ async function openDeleteModal(item) {
         <div class="detail-row">
           <span class="detail-label">Cabang</span>
           <span class="detail-badge">{{ cabangStore.cabangDetail.cabang }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Company</span>
+          <span class="detail-badge">{{ cabangStore.cabangDetail.group?.name_group || '-' }}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Alamat</span>
