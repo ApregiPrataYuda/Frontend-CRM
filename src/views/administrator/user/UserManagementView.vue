@@ -333,6 +333,16 @@ const hierarchySelfRoleLabel = computed(() => {
   return role.charAt(0).toUpperCase() + role.slice(1)
 })
 
+// Sama seperti hierarchySelfRoleLabel, tapi buat label di atas kartu
+// atasan (manager) -- supaya section "atasan" juga jelas nunjukin role-nya
+// (mis. "MANAGER"), konsisten dengan tier-tier di bawahnya yang juga
+// dilabeli per role.
+const hierarchyManagerRoleLabel = computed(() => {
+  const role = store.hierarchyData?.manager?.role?.role
+  if (!role) return ''
+  return role.charAt(0).toUpperCase() + role.slice(1)
+})
+
 function computeHierarchyLines() {
   const root = hierarchyCaptureRef.value
   if (!root) {
@@ -1143,10 +1153,12 @@ async function handlePermissionChange(row) {
           />
         </svg>
 
-        <!-- Atasan -- label & placeholder "Top Level" sengaja tidak
-             ditampilkan lagi; section ini cuma dirender kalau memang
-             ada atasannya. -->
+        <!-- Atasan -- placeholder "Top Level" sengaja tidak ditampilkan;
+             section ini cuma dirender kalau memang ada atasannya. Label
+             tier-nya nunjukin role si atasan (mis. "MANAGER"), konsisten
+             dengan tier-tier lain yang juga dilabeli per role. -->
         <div v-if="store.hierarchyData.manager" class="hierarchy-level">
+          <div class="hierarchy-level-label">{{ hierarchyManagerRoleLabel }}</div>
           <div class="hierarchy-row">
             <div class="hierarchy-card card-manager" data-role="manager">
               <img
