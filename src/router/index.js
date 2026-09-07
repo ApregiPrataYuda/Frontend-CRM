@@ -757,6 +757,21 @@ const routes = [
         }
       },
 
+
+      // admin home page
+      {
+        path: 'admin-home',
+
+        name: 'AdminHome',
+
+        component: () =>
+          import('@/views/admin/home/homeAdminView.vue'),
+
+        meta: {
+          role: [4], title: 'Admin Home'
+        }
+      },
+
       /* ========================================
          SHARED
       ========================================= */

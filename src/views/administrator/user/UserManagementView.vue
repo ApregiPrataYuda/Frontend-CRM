@@ -343,10 +343,14 @@ function computeHierarchyLines() {
     return { x: r.left + r.width / 2 - containerRect.left, y: r.bottom - containerRect.top }
   }
 
-  const managerEl = root.querySelector('[data-role="manager"]')
-  const selfEl    = root.querySelector('[data-role="self"]')
-  const peerEls   = Array.from(root.querySelectorAll('[data-role="peer"]'))
-  const subEls    = Array.from(root.querySelectorAll('[data-role="sub"]'))
+  const managerEl       = root.querySelector('[data-role="manager"]')
+  const selfEl          = root.querySelector('[data-role="self"]')
+  const peerEls         = Array.from(root.querySelectorAll('[data-role="peer"]'))
+  // Bawahan sekarang bisa lebih dari 1 tier (Manager -> Admin -> Sales,
+  // hasil penelusuran rekursif dari backend). Tiap tier punya baris
+  // (.hierarchy-row) sendiri yang ditandai [data-subgroup-row], urut
+  // sesuai urutan tampil di DOM.
+  const subGroupRowEls  = Array.from(root.querySelectorAll('[data-subgroup-row]'))
 
   // Garis siku (trunk turun → cabang mendatar → turun ke tiap kartu),
   // bukan garis diagonal lurus -- supaya tidak numpuk/nabrak tulisan
@@ -386,13 +390,29 @@ function computeHierarchyLines() {
     lines.push(...buildElbow(from, children))
   }
 
-  // Dia -> bawahan langsungnya (bukan bawahan rekan setingkat, karena
-  // data bawahan yang diambil backend memang cuma milik user yang diklik).
-  if (selfEl && subEls.length) {
-    const from = bottomCenter(selfEl)
-    const children = subEls.map(topCenter)
-    lines.push(...buildElbow(from, children))
-  }
+  // Dia -> tier bawahan pertama -> tier bawahan berikutnya -> dst
+  // (BERANTAI per tier, bukan semua digantung langsung ke "Dia"),
+  // supaya garis tier bawah (misal Sales) tidak numpuk lewat tier
+  // di atasnya (misal Admin) waktu tier-nya lebih dari satu.
+  let chainAnchor = selfEl ? bottomCenter(selfEl) : null
+
+  subGroupRowEls.forEach((rowEl) => {
+    const cardEls = Array.from(rowEl.querySelectorAll('[data-role="sub"]'))
+    if (!cardEls.length) return
+
+    if (chainAnchor) {
+      const children = cardEls.map(topCenter)
+      lines.push(...buildElbow(chainAnchor, children))
+    }
+
+    // Anchor buat tier berikutnya = titik tengah-bawah baris tier ini
+    // (mencakup semua kartunya, termasuk kalau wrap ke beberapa baris).
+    const rowRect = rowEl.getBoundingClientRect()
+    chainAnchor = {
+      x: rowRect.left + rowRect.width / 2 - containerRect.left,
+      y: rowRect.bottom - containerRect.top,
+    }
+  })
 
   hierarchyLines.value = lines
 }
@@ -1116,7 +1136,7 @@ async function handlePermissionChange(row) {
 
         <!-- Atasan -->
         <div class="hierarchy-level">
-          <div class="hierarchy-level-label">Melapor Kepada</div>
+          <div class="hierarchy-level-label">Hirarki</div>
           <div class="hierarchy-row">
             <div v-if="store.hierarchyData.manager" class="hierarchy-card card-manager" data-role="manager">
               <img
@@ -1130,13 +1150,14 @@ async function handlePermissionChange(row) {
               <div class="hc-meta hc-meta-cabang">{{ store.hierarchyData.manager.cabang?.cabang || '-' }}</div>
               <div class="hc-meta">{{ store.hierarchyData.manager.division?.name_division || '-' }}</div>
             </div>
-            <div v-else class="hierarchy-empty">Top Level (Tidak ada atasan)</div>
+            <!-- <div v-else class="hierarchy-empty">Hirarki Top Level </div> -->
+            <!-- <div v-else class="hierarchy-empty">Top Level (Tidak ada atasan)</div> -->
           </div>
         </div>
 
         <!-- Dia + rekan setingkat -->
         <div class="hierarchy-level">
-          <div class="hierarchy-level-label">User Ini &amp; Rekan Setingkat</div>
+          <div class="hierarchy-level-label">Manager</div>
           <div class="hierarchy-row hierarchy-row-wrap">
             <div class="hierarchy-card card-self" data-role="self">
               <img
@@ -1171,13 +1192,18 @@ async function handlePermissionChange(row) {
           </div>
         </div>
 
-        <template v-if="store.hierarchyData.subordinates?.length">
-          <!-- Bawahan langsung -->
-          <div class="hierarchy-level">
-            <div class="hierarchy-level-label">Bawahan Langsung</div>
-            <div class="hierarchy-row hierarchy-row-wrap">
+        <!-- Bawahan -- bisa lebih dari 1 tier (Manager -> Admin -> Sales),
+             hasil penelusuran rekursif dari backend, tiap tier tampil
+             sebagai baris terpisah dengan label role-nya sendiri. -->
+        <template
+          v-for="group in store.hierarchyData.subordinates"
+          :key="group.role"
+        >
+          <div v-if="group.users?.length" class="hierarchy-level">
+            <div class="hierarchy-level-label">{{ group.label }}</div>
+            <div class="hierarchy-row hierarchy-row-wrap" data-subgroup-row>
               <div
-                v-for="s in store.hierarchyData.subordinates"
+                v-for="s in group.users"
                 :key="s.id_user"
                 class="hierarchy-card card-sub"
                 data-role="sub"

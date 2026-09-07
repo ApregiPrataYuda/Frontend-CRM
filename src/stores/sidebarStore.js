@@ -22,16 +22,36 @@ function cleanIcon(raw) {
 
 /* ──────────────────────────────────────────
    HELPER: map label section header
-   "administrator" → "Administrator"
+   "administrator" → "Administrator"  (role lama/superadmin)
+   "admin"         → "Admin"          (role admin biasa, id_menu baru)
    "sales"         → "Sales & Reports"
    "manager"       → "Manager & Reports"
+
+   PENTING: dicek EXACT MATCH dulu (bukan cuma `includes`), soalnya
+   "administrator" dan "admin" sama-sama mengandung kata "admin" --
+   kalau cuma pakai `includes('admin')` keduanya bakal ketuker jadi
+   satu label yang sama. Exact match dulu baru fallback `includes`
+   buat slug lain yang belum terdaftar eksplisit di sini.
 ────────────────────────────────────────── */
 function sectionLabel(menuName = '') {
-  const lower = menuName.toLowerCase()
-  if (lower.includes('admin'))   return 'Administrator'
+  const lower = menuName.toLowerCase().trim()
+
+  const exactLabelMap = {
+    administrator: 'Main Menu',
+    admin:         'Admin',
+    sales:         'Sales',
+    // sales:         '--',
+    manager:       'Reports',
+    // manager:       '---',
+  }
+
+  if (exactLabelMap[lower]) return exactLabelMap[lower]
+
+  // Fallback (slug belum terdaftar exact di atas)
   if (lower.includes('sales'))   return 'Sales & Reports'
   if (lower.includes('manager')) return 'Manager & Reports'
-  // Fallback: capitalize first letter
+
+  // Fallback terakhir: capitalize huruf pertama apa adanya
   return menuName.charAt(0).toUpperCase() + menuName.slice(1)
 }
 
