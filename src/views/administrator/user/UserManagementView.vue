@@ -324,6 +324,15 @@ const downloadingHierarchy    = ref(false)
 const hierarchyLines   = ref([])
 const hierarchySvgSize = ref({ width: 0, height: 0 })
 
+// Label tier "Dia & Rekan Setingkat" dibuat dinamis mengikuti role user
+// yang sedang dilihat -- misal "Manager & Rekan Setingkat" kalau yang
+// diklik akun manager, "Sales & Rekan Setingkat" kalau akun sales, dst.
+const hierarchySelfRoleLabel = computed(() => {
+  const role = store.hierarchyData?.user?.role?.role
+  if (!role) return 'User'
+  return role.charAt(0).toUpperCase() + role.slice(1)
+})
+
 function computeHierarchyLines() {
   const root = hierarchyCaptureRef.value
   if (!root) {
@@ -1134,11 +1143,12 @@ async function handlePermissionChange(row) {
           />
         </svg>
 
-        <!-- Atasan -->
-        <div class="hierarchy-level">
-          <div class="hierarchy-level-label">Hirarki</div>
+        <!-- Atasan -- label & placeholder "Top Level" sengaja tidak
+             ditampilkan lagi; section ini cuma dirender kalau memang
+             ada atasannya. -->
+        <div v-if="store.hierarchyData.manager" class="hierarchy-level">
           <div class="hierarchy-row">
-            <div v-if="store.hierarchyData.manager" class="hierarchy-card card-manager" data-role="manager">
+            <div class="hierarchy-card card-manager" data-role="manager">
               <img
                 :src="store.getImageUrl(store.hierarchyData.manager.image, store.hierarchyData.manager.fullname)"
                 :alt="store.hierarchyData.manager.fullname"
@@ -1150,14 +1160,13 @@ async function handlePermissionChange(row) {
               <div class="hc-meta hc-meta-cabang">{{ store.hierarchyData.manager.cabang?.cabang || '-' }}</div>
               <div class="hc-meta">{{ store.hierarchyData.manager.division?.name_division || '-' }}</div>
             </div>
-            <!-- <div v-else class="hierarchy-empty">Hirarki Top Level </div> -->
-            <!-- <div v-else class="hierarchy-empty">Top Level (Tidak ada atasan)</div> -->
           </div>
         </div>
 
-        <!-- Dia + rekan setingkat -->
+        <!-- Dia + rekan setingkat -- label tier-nya dinamis mengikuti
+             role user yang diklik (Manager / Admin / Sales / dst). -->
         <div class="hierarchy-level">
-          <div class="hierarchy-level-label">Manager</div>
+          <div class="hierarchy-level-label">{{ hierarchySelfRoleLabel }}</div>
           <div class="hierarchy-row hierarchy-row-wrap">
             <div class="hierarchy-card card-self" data-role="self">
               <img
