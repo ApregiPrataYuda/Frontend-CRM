@@ -1,7 +1,17 @@
 <script setup>
+import { computed } from 'vue'
 import { CFooter } from '@coreui/vue'
 import { useSettingAppStore } from '@/stores/settingAppStore'
+import { useAuthStore } from '@/stores/authStore'
+
 const settingStore = useSettingAppStore()
+const authStore    = useAuthStore()
+
+// Nama company user yang login dipakai buat teks copyright fallback
+// (kalau App Setting belum isi footer_text sendiri) -- pola sama kayak
+// brand-text di Sidebar.vue: prioritas company user, fallback ke nama
+// App Setting global.
+const companyName = computed(() => authStore.user?.groups?.name_group || settingStore.appName)
 </script>
 
 <template>
@@ -16,7 +26,7 @@ const settingStore = useSettingAppStore()
           </a>
         </span>
         <span class="footer-divider">·</span>
-        <span class="footer-copy">{{ settingStore.currentSetting?.footer_text ?? `© ${new Date().getFullYear()} ${settingStore.appName}` }}
+        <span class="footer-copy">{{ settingStore.currentSetting?.footer_text ?? `© ${new Date().getFullYear()} ${companyName}` }}
           </span>
       </div>
 

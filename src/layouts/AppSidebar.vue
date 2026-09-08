@@ -77,6 +77,18 @@ const brandLogoUrl = computed(() => {
   if (file.startsWith('http')) return file
   return `${storageUrl}/app-setting/${file}`
 })
+
+/* ── BRAND TEXT (nama Company) ──
+   Sebelumnya selalu nampilin nama App Setting global (settingStore.appName),
+   padahal sistemnya multi-company -- jadi semua user lihat nama yang sama
+   walau login dari PT berbeda. Sekarang diprioritaskan dari company milik
+   user yang login (authStore.user.groups.name_group, sama seperti field
+   yang dipakai modul lain / UsersResources), baru fallback ke appName
+   kalau data company belum ke-load atau memang tidak ada.
+*/
+const brandCompanyName = computed(() =>
+  authStore.user?.groups?.name_group || settingStore.appName
+)
 </script>
 
 <template>
@@ -94,7 +106,7 @@ const brandLogoUrl = computed(() => {
       <img
         v-if="brandLogoUrl"
         :src="brandLogoUrl"
-        :alt="settingStore.appName"
+        :alt="brandCompanyName"
         class="brand-logo"
         @error="$event.target.style.display = 'none'"
       />
@@ -105,8 +117,8 @@ const brandLogoUrl = computed(() => {
         class="brand-icon"
       />
 
-      <!-- Nama app dari DB, default 'My App' saat belum ter-fetch -->
-      <span class="brand-text">{{ settingStore.appName }}</span>
+      <!-- Nama company user yang login, fallback ke nama App Setting -->
+      <span class="brand-text">{{ brandCompanyName }}</span>
     </CSidebarBrand>
 
     <!-- ── NAVIGATION ── -->
