@@ -239,6 +239,21 @@ const routes = [
         }
       },
 
+
+      {
+        path: 'configuration-odoo',
+        name: 'Configuration Odoo',
+
+        component: () =>
+          import('@/views/administrator/configOdoo/odooConfigurationView.vue'),
+
+        meta: {
+          role: [1],  title: 'Odoo Configuration' 
+        }
+      },
+
+
+
       /* ========================================
          SALES
       ========================================= */

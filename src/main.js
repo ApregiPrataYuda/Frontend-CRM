@@ -212,6 +212,7 @@ import {
   faMoneyBillWave,
   faMoneyCheckDollar,
   faSitemap,
+  faPlug
 
 } from '@fortawesome/free-solid-svg-icons'
 
@@ -411,7 +412,8 @@ library.add(
   faFileInvoice,
   faMoneyBillWave,
   faMoneyCheckDollar,
-  faSitemap
+  faSitemap,
+  faPlug
 )
 
 const app = createApp(App)
