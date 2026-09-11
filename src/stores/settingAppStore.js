@@ -17,6 +17,16 @@ export const useSettingAppStore = defineStore('settingApp', () => {
   const settingAppDetail    = ref(null)
   const loadingDetail       = ref(false)
 
+  // ── Logo per Company (group_companies) ──
+  // State terpisah dari settingAppData di atas -- datanya multi-baris (1
+  // baris per company), bukan "1 record aktif" kayak App Setting global.
+  const companyLogos          = ref([])
+  const loadingCompanyLogos   = ref(false)
+  // id_group yang lagi di-upload logonya (dipakai buat nampilin spinner
+  // cuma di kartu company itu, bukan disable semua kartu sekaligus).
+  const updatingCompanyLogoId = ref(null)
+  const errorCompanyLogo      = ref(null)
+
   const pagination = reactive({
     current_page:  1,
     per_page:      10,
@@ -208,6 +218,42 @@ export const useSettingAppStore = defineStore('settingApp', () => {
   }
 
   // ─────────────────────────────────────────────
+  // LOGO PER COMPANY (group_companies)
+  // ─────────────────────────────────────────────
+  const fetchCompanyLogos = async () => {
+    loadingCompanyLogos.value = true
+    try {
+      const res = await settingAppService.getCompanyLogos()
+      const dataArray = res.data?.data ?? []
+      companyLogos.value.splice(0, companyLogos.value.length, ...dataArray)
+    } catch (error) {
+      console.error('Gagal fetch logo company:', error)
+    } finally {
+      loadingCompanyLogos.value = false
+    }
+  }
+
+  // file = objek File dari <input type="file"> (bukan FormData -- FormData
+  // dibentuk di sini biar pemanggil di komponen tinggal kirim file mentah).
+  const updateCompanyLogo = async (idGroup, file) => {
+    updatingCompanyLogoId.value = idGroup
+    errorCompanyLogo.value      = null
+    try {
+      const fd = new FormData()
+      fd.append('logo', file)
+      await settingAppService.updateCompanyLogo(idGroup, fd)
+      await fetchCompanyLogos()
+    } catch (err) {
+      if (err.response?.status === 422) {
+        errorCompanyLogo.value = err.response.data.errors
+      }
+      throw err
+    } finally {
+      updatingCompanyLogoId.value = null
+    }
+  }
+
+  // ─────────────────────────────────────────────
   // EXPORTS
   // ─────────────────────────────────────────────
   return {
@@ -216,6 +262,9 @@ export const useSettingAppStore = defineStore('settingApp', () => {
     pagination, sort,
     savingSettingApp, updatingSettingApp, deletingSettingApp, errorSettingApp,
     settingAppDetail, loadingDetail,
+
+    // state — logo per company
+    companyLogos, loadingCompanyLogos, updatingCompanyLogoId, errorCompanyLogo,
 
     // ★ computed getters — pakai di mana saja
     currentSetting,
@@ -229,5 +278,8 @@ export const useSettingAppStore = defineStore('settingApp', () => {
     searchWithDelay, changePageSize,
     changeSorting, toggleSort, resetFilters,
     formatDate, detailSettingApp, updateSettingApp,
+
+    // actions — logo per company
+    fetchCompanyLogos, updateCompanyLogo,
   }
 })

@@ -69,9 +69,28 @@ const isManagerRole = computed(() =>
 )
 
 /* ── BRAND LOGO ──
-   Prioritas: appLogoSmall → appLogo → null (tampilkan ikon)
+   Prioritas: logo company (group_companies) milik user yang login →
+   appLogoSmall (App Setting, global) → appLogo (App Setting, global) →
+   null (tampilkan ikon).
+
+   Sebelumnya logo SELALU dari App Setting global, sama buat semua
+   company -- padahal sistemnya multi-company (kejadian nyata: teks nama
+   company sudah beda per company, tapi logonya masih sama semua).
+   Sekarang tiap company boleh punya logo sendiri (kolom baru
+   group_companies.logo, di-upload Admin lewat halaman Setting
+   Management -- section "Logo Perusahaan"). Kalau company user yang
+   login belum di-upload-in logo sendiri, tetap fallback ke logo App
+   Setting global seperti biasa (folder 'company-logos' beda dari
+   'app-setting' -- lihat Administrator::updateCompanyLogo()).
 */
 const brandLogoUrl = computed(() => {
+  const companyLogo = authStore.user?.groups?.logo
+  if (companyLogo) {
+    return companyLogo.startsWith('http')
+      ? companyLogo
+      : `${storageUrl}/company-logos/${companyLogo}`
+  }
+
   const file = settingStore.appLogoSmall || settingStore.appLogo
   if (!file) return null
   if (file.startsWith('http')) return file

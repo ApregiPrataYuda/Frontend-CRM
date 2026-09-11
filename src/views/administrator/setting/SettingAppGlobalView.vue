@@ -33,6 +33,9 @@ const canView    = computed(() => permission.canView(currentUrl.value))
 // ─────────────────────────────────────────────
 onMounted(async () => {
   await store.fetchSettingApp()
+  // Logo per company -- section terpisah, gak perlu nunggu App Setting
+  // selesai fetch dulu, jadi gak di-await biar dua-duanya jalan paralel.
+  store.fetchCompanyLogos()
 })
 
 onBeforeUnmount(() => {
@@ -63,6 +66,14 @@ function imgUrl(filename) {
   return `${storageUrl}/app-setting/${filename}`
 }
 
+// Logo per company disimpan di folder storage YANG BEDA ('company-logos',
+// bukan 'app-setting') -- lihat Administrator::updateCompanyLogo().
+function companyLogoUrl(filename) {
+  if (!filename) return null
+  if (filename.startsWith('http')) return filename
+  return `${storageUrl}/company-logos/${filename}`
+}
+
 // ─────────────────────────────────────────────
 // IMAGE PREVIEW MODAL (klik untuk perbesar)
 // ─────────────────────────────────────────────
@@ -76,6 +87,31 @@ function openImagePreview(url) {
 function closeImagePreview() {
   showImagePreview.value = false
   previewImageUrl.value  = null
+}
+
+// ─────────────────────────────────────────────
+// LOGO PER COMPANY (group_companies) — upload langsung saat pilih file,
+// tanpa modal/tombol Save terpisah (beda dari App Setting yang lewat
+// modal Edit, soalnya di sini cuma 1 field per kartu company).
+// ─────────────────────────────────────────────
+async function handleCompanyLogoChange(e, item) {
+  const file = e.target.files[0]
+  if (!file) return
+
+  try {
+    await store.updateCompanyLogo(item.id_group, file)
+    toast.success(`Logo ${item.name_group} berhasil diperbarui!`)
+  } catch (err) {
+    if (store.errorCompanyLogo) {
+      const firstError = Object.values(store.errorCompanyLogo)[0]?.[0]
+      toast.error(firstError || 'Validasi gagal')
+    } else {
+      toast.error(err.response?.data?.message ?? 'Gagal memperbarui logo company')
+    }
+  } finally {
+    // reset value biar user bisa pilih file yang sama lagi kalau perlu
+    e.target.value = ''
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -279,7 +315,7 @@ async function submitEdit() {
     </div>
 
     <!-- ── TABLE ── -->
-    <div class="table-card flex-grow-1 overflow-auto mb-3">
+    <div class="table-card mb-3">
       <table class="data-table">
         <thead>
           <tr>
@@ -390,7 +426,7 @@ async function submitEdit() {
     </div>
 
     <!-- ── PAGINATION ── -->
-    <div class="pagination-card">
+    <div class="pagination-card mb-3">
       <div class="pagination-nav">
         <button
           class="btn-prev-next"
@@ -410,6 +446,80 @@ async function submitEdit() {
       <div class="page-badges">
         <span class="page-badge">PAGE {{ store.pagination.current_page }} OF {{ store.pagination.last_page }}</span>
         <span class="page-badge">TOTAL: {{ store.pagination.total }} DATA</span>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         LOGO PER COMPANY (group_companies)
+         Section terpisah dari App Setting di atas -- soalnya datanya
+         multi-baris (1 baris per company), bukan 1 record global. Logo
+         di sini dipakai di Sidebar.vue, prioritas di atas Logo/Logo
+         Small App Setting, KHUSUS buat user yang login dari company
+         tersebut.
+    ════════════════════════════════════════ -->
+    <div class="table-card company-logo-card mb-3">
+      <div class="company-logo-header">
+        <h5 class="company-logo-title">
+          <font-awesome-icon icon="building" /> Logo Perusahaan
+        </h5>
+        <p class="company-logo-subtitle">
+          Logo di sini dipakai khusus buat user yang login dari company
+          tersebut (tampil di sidebar, menggantikan Logo/Logo Small App
+          Setting di atas). Kalau belum di-upload, otomatis fallback ke
+          logo App Setting seperti biasa.
+        </p>
+      </div>
+
+      <div v-if="store.loadingCompanyLogos" class="td-center" style="padding:24px;">
+        <div class="spinner-custom"></div>
+      </div>
+
+      <div v-else class="company-logo-grid">
+        <div
+          v-for="item in store.companyLogos"
+          :key="item.id_group"
+          class="img-upload-card company-logo-item"
+        >
+          <span class="img-upload-caption">{{ item.name_group }}</span>
+
+          <div
+            class="img-upload-preview-wrap"
+            @click="companyLogoUrl(item.logo) && openImagePreview(companyLogoUrl(item.logo))"
+          >
+            <img
+              v-if="companyLogoUrl(item.logo)"
+              :src="companyLogoUrl(item.logo)"
+              :alt="item.name_group"
+              class="img-upload-preview"
+            />
+            <div v-else class="company-logo-empty">
+              <font-awesome-icon icon="building" />
+            </div>
+            <div v-if="companyLogoUrl(item.logo)" class="img-upload-zoom-hint">
+              <font-awesome-icon icon="magnifying-glass-plus" />
+            </div>
+          </div>
+
+          <label v-if="canUpdate" class="img-upload-btn">
+            <font-awesome-icon
+              v-if="store.updatingCompanyLogoId === item.id_group"
+              icon="spinner" spin
+            />
+            <font-awesome-icon v-else icon="upload" />
+            Ganti
+            <input
+              type="file"
+              accept="image/*"
+              class="hidden-input"
+              :disabled="store.updatingCompanyLogoId === item.id_group"
+              @change="handleCompanyLogoChange($event, item)"
+            />
+          </label>
+        </div>
+
+        <div v-if="!store.companyLogos.length" class="empty-state" style="padding:20px 0;">
+          <div class="empty-text">Belum ada data company</div>
+        </div>
       </div>
     </div>
 
@@ -895,6 +1005,21 @@ async function submitEdit() {
   .page-badges { width: 100%; justify-content: center; flex-wrap: wrap; }
 }
 
+/* ── LOGO PER COMPANY ── */
+.company-logo-card { padding: 18px 20px; }
+.company-logo-header { margin-bottom: 14px; }
+.company-logo-title { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); margin: 0 0 4px; }
+.company-logo-title svg { color: #6366f1; }
+.company-logo-subtitle { font-size: 0.78rem; color: var(--text-muted); margin: 0; }
+.company-logo-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+.company-logo-item { min-width: 120px; }
+.company-logo-empty {
+  width: 60px; height: 60px; border-radius: 8px;
+  border: 1px dashed var(--border-main);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted); font-size: 1.3rem; background: var(--bg-input);
+}
+
 /* ── FORM ── */
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
@@ -917,7 +1042,7 @@ async function submitEdit() {
   background-repeat: no-repeat; background-position: right 12px center; background-size: 1.25rem; padding-right: 36px;
 }
 
-/* ── LOGO UPLOAD CARDS (3-grid) ── */
+/* ── LOGO UPLOAD CARDS (3-grid, dipakai juga di Logo Perusahaan) ── */
 .img-upload-card {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
   border: 1px solid var(--border-main); border-radius: 10px; padding: 12px 10px;
