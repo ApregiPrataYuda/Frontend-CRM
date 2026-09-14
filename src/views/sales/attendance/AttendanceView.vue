@@ -78,7 +78,8 @@ const locationName  = ref('')
 const getAddressFromLatLng = async (lat, lng) => {
   try {
     address.value = 'Detecting address...'
-    const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lng}`)
+    // const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lng}`)
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/reverse-geocode?lat=${lat}&lon=${lng}`)
     // console.log(res);
     const data = await res.json()
     address.value = data.display_name || 'Address not found'
