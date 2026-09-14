@@ -5,46 +5,47 @@ import { accessSubMenuService } from '@/services/accessSubMenuServices'
 export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
 
   // ── STATE ──
-  const accessSubMenuData = ref([])
+  const accessSubMenuData    = ref([])
   const loadingAccessSubMenu = ref(false)
-  const searchAccessSubMenu = ref('')
-  let searchTimeout = null
-  let autoSaveTimeout = null
+  const searchAccessSubMenu  = ref('')
+
+  const searchTimeout   = ref(null)
+  const autoSaveTimeout = ref(null)
 
   const userId = ref(null)
 
   const pagination = reactive({
-    current_page: 1,
-    per_page: 10,
+    current_page:  1,
+    per_page:      10,
     prev_page_url: null,
     next_page_url: null,
-    last_page: 1,
-    total: 0,
+    last_page:     1,
+    total:         0,
   })
 
-//   const sort = reactive({
-//     column: 'title',
-//     direction: 'asc',
-//   })
+  // sort state dipertahankan untuk UI, tapi tidak dikirim ke backend
+  // sampai nama kolom yang valid dikonfirmasi dari controller Laravel
+  const sort = reactive({
+    column:    'title',
+    direction: 'asc',
+  })
 
-//   const allowedSortColumns = ['title']
+  const allowedSortColumns = ['title', 'created_at']
 
-const sort = reactive({
-  column: 'submenu.title',
-  direction: 'asc',
-})
-
-const allowedSortColumns = ['submenu.title', 'submenu.created_at']
   // ── BUILD URL ──
+  // CATATAN: sort_by & sort_dir sengaja tidak dikirim karena backend menolak 422.
+  // Cek controller Laravel — ada Rule::in([...]) pada validasi sort_by.
+  // Setelah tahu nama kolom yang diizinkan, uncomment blok sort di bawah.
   const buildUrl = () => {
     const params = new URLSearchParams()
-    if (searchAccessSubMenu.value) params.append('search', searchAccessSubMenu.value)
-    if (pagination.current_page) params.append('page', pagination.current_page)
-    if (pagination.per_page) params.append('per_page', pagination.per_page)
-    if (sort.column) {
-      params.append('sort_by', sort.column)
-      params.append('sort_dir', sort.direction)
-    }
+    if (searchAccessSubMenu.value) params.append('search',   searchAccessSubMenu.value)
+    if (pagination.current_page)   params.append('page',     pagination.current_page)
+    if (pagination.per_page)       params.append('per_page', pagination.per_page)
+    // Aktifkan setelah konfirmasi nama kolom dari backend:
+    // if (sort.column) {
+    //   params.append('sort_by',  sort.column)
+    //   params.append('sort_dir', sort.direction)
+    // }
     return `/users/${userId.value}/submenu-access?${params.toString()}`
   }
 
@@ -55,22 +56,22 @@ const allowedSortColumns = ['submenu.title', 'submenu.created_at']
     try {
       const finalUrl = url || buildUrl()
       const response = await accessSubMenuService.getByUrl(finalUrl)
-      const result = response.data
+      const result   = response.data
 
       const dataArray = Array.isArray(result.data)
         ? result.data
         : result.data?.data ?? []
 
-      accessSubMenuData.value.splice(0, accessSubMenuData.value.length, ...dataArray)
+      accessSubMenuData.value = dataArray
 
       const pag = result.pagination ?? result.data?.pagination
       if (pag) {
-        pagination.current_page = pag.current_page
-        pagination.per_page = pag.per_page
+        pagination.current_page  = pag.current_page
+        pagination.per_page      = pag.per_page
         pagination.prev_page_url = pag.prev_page_url
         pagination.next_page_url = pag.next_page_url
-        pagination.last_page = pag.last_page
-        pagination.total = pag.total
+        pagination.last_page     = pag.last_page
+        pagination.total         = pag.total
       }
     } catch (err) {
       console.error('Gagal fetch access submenu:', err)
@@ -81,19 +82,21 @@ const allowedSortColumns = ['submenu.title', 'submenu.created_at']
 
   // ── SET USER & FETCH ──
   const setUserId = async (id) => {
-    userId.value = id
+    userId.value              = id
     searchAccessSubMenu.value = ''
-    pagination.current_page = 1
-    pagination.per_page = 10
+    pagination.current_page   = 1
+    pagination.per_page       = 10
+    sort.column               = 'title'
+    sort.direction            = 'asc'
     await fetchAccessSubMenu()
   }
 
   // ── SEARCH WITH DELAY ──
   const searchWithDelay = (val) => {
-    clearTimeout(searchTimeout)
+    if (searchTimeout.value) clearTimeout(searchTimeout.value)
     searchAccessSubMenu.value = val
-    pagination.current_page = 1
-    searchTimeout = setTimeout(() => {
+    pagination.current_page   = 1
+    searchTimeout.value = setTimeout(() => {
       fetchAccessSubMenu(buildUrl())
     }, 500)
   }
@@ -115,36 +118,36 @@ const allowedSortColumns = ['submenu.title', 'submenu.created_at']
     if (sort.column === col) {
       sort.direction = sort.direction === 'asc' ? 'desc' : 'asc'
     } else {
-      sort.column = col
+      sort.column    = col
       sort.direction = 'asc'
     }
     changeSorting()
   }
 
-  // ── RESET ──
+  // ── RESET FILTERS ──
   const resetFilters = () => {
     searchAccessSubMenu.value = ''
-    pagination.per_page = 10
-    pagination.current_page = 1
-    sort.column = 'title'
-    sort.direction = 'asc'
+    pagination.per_page       = 10
+    pagination.current_page   = 1
+    sort.column               = 'title'
+    sort.direction            = 'asc'
     fetchAccessSubMenu(buildUrl())
   }
 
   // ── AUTO SAVE PERMISSION ──
   const autoSavePermission = (submenu) => {
     if (!userId.value) return Promise.resolve('no-user')
-    clearTimeout(autoSaveTimeout)
+    if (autoSaveTimeout.value) clearTimeout(autoSaveTimeout.value)
 
     const payload = {
-      can_view: submenu.can_view ? 1 : 0,
+      can_view:   submenu.can_view   ? 1 : 0,
       can_create: submenu.can_create ? 1 : 0,
       can_update: submenu.can_update ? 1 : 0,
       can_delete: submenu.can_delete ? 1 : 0,
     }
 
     return new Promise((resolve) => {
-      autoSaveTimeout = setTimeout(async () => {
+      autoSaveTimeout.value = setTimeout(async () => {
         try {
           await accessSubMenuService.savePermission(
             userId.value,
@@ -161,11 +164,20 @@ const allowedSortColumns = ['submenu.title', 'submenu.created_at']
   }
 
   return {
-    accessSubMenuData, loadingAccessSubMenu, searchAccessSubMenu,
-    pagination, sort, userId,
-    fetchAccessSubMenu, setUserId, buildUrl,
-    searchWithDelay, changePageSize,
-    changeSorting, toggleSort, resetFilters,
+    accessSubMenuData,
+    loadingAccessSubMenu,
+    searchAccessSubMenu,
+    pagination,
+    sort,
+    userId,
+    fetchAccessSubMenu,
+    setUserId,
+    buildUrl,
+    searchWithDelay,
+    changePageSize,
+    changeSorting,
+    toggleSort,
+    resetFilters,
     autoSavePermission,
   }
 })

@@ -281,9 +281,9 @@ function odooBadge(item) {
       </div>
     </div>
 
-    <!-- TABLE -->
+    <!-- TABLE (desktop/tablet) -->
     <div class="table-card flex-grow-1 overflow-auto mb-3">
-      <table class="data-table">
+      <table class="data-table table-view-desktop">
         <thead>
           <tr>
             <th style="width:50px">NO.</th>
@@ -322,6 +322,52 @@ function odooBadge(item) {
           </tr>
         </tbody>
       </table>
+
+      <!-- CARD LIST (mobile) -->
+      <div class="expense-card-list">
+        <div v-if="loadingExpense" class="td-center"><div class="spinner-custom" style="margin:0 auto"></div></div>
+        <div v-else-if="expenseData.length === 0" class="td-center">Tidak ada data expense</div>
+        <div v-else v-for="(item, index) in expenseData" :key="item.id" class="exp-card">
+          <div class="exp-card-top">
+            <span class="exp-card-sales">{{ item.sales_name ?? '-' }}</span>
+            <span class="status-badge" :class="statusBadgeClass(item.status)">{{ statusLabelMap[item.status] ?? item.status }}</span>
+          </div>
+          <div class="exp-card-meta">
+            <font-awesome-icon icon="calendar-day" class="exp-card-meta-icon" />
+            <span>{{ store.formatDate(item.expense_date) }}</span>
+          </div>
+          <div class="exp-card-amount">{{ store.formatCurrency(item.amount) }}</div>
+          <div class="exp-card-row">
+            <span class="cat-chip">{{ item.category }}</span>
+          </div>
+          <div v-if="item.description" class="exp-card-desc">{{ item.description }}</div>
+          <div class="exp-card-meta">
+            <font-awesome-icon icon="location-dot" class="exp-card-meta-icon" />
+            <span>{{ item.location_name ?? '-' }}</span>
+          </div>
+          <div class="exp-card-meta">
+            <span class="odoo-badge" :class="odooBadge(item).cls" :title="item.odoo_push_error || ''">
+              <font-awesome-icon :icon="odooBadge(item).icon" /> {{ odooBadge(item).text }}
+            </span>
+          </div>
+          <div class="exp-card-actions">
+            <button class="exp-action-btn exp-action-info" @click="openDetail(item.id)">
+              <font-awesome-icon icon="eye" /> Detail
+            </button>
+            <template v-if="item.status === 'pending'">
+              <button class="exp-action-btn exp-action-approve" :disabled="loadingAction" @click="approveExpense(item)">
+                <font-awesome-icon icon="check" /> Approve
+              </button>
+              <button class="exp-action-btn exp-action-delete" :disabled="loadingAction" @click="openRejectModal(item)">
+                <font-awesome-icon icon="xmark" /> Reject
+              </button>
+            </template>
+            <button v-if="item.status === 'approved' && item.odoo_push_status === 'failed'" class="exp-action-btn exp-action-retry" :disabled="loadingAction" @click="retryPush(item)">
+              <font-awesome-icon icon="rotate-right" /> Kirim Ulang ke Odoo
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- PAGINATION -->
@@ -616,5 +662,37 @@ function odooBadge(item) {
 .zoom-hint {
   position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
   color: rgba(255,255,255,0.65); font-size: 0.74rem; margin: 0; text-align: center; padding: 0 16px;
+}
+
+/* CARD LIST (mobile) -- disembunyikan di desktop, tabel yang tampil */
+.expense-card-list { display: none; }
+
+.exp-card { background: var(--bg-card); border: 1px solid var(--border-main); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.exp-card + .exp-card { margin-top: 12px; }
+.exp-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.exp-card-sales { font-size: 0.88rem; font-weight: 800; color: var(--text-primary); }
+.exp-card-amount { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); }
+.exp-card-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.exp-card-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.4; word-break: break-word; }
+.exp-card-meta { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; color: var(--text-muted); }
+.exp-card-meta-icon { font-size: 0.78rem; color: #6366f1; flex-shrink: 0; }
+
+.exp-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.exp-action-btn { flex: 1; min-width: 100px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; border-radius: 9px; border: 1.5px solid; font-size: 0.82rem; font-weight: 700; cursor: pointer; background: transparent; }
+.exp-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.exp-action-info { color: #6366f1; border-color: #6366f1; }
+.exp-action-info:hover:not(:disabled) { background: #6366f1; color: #fff; }
+.exp-action-approve { color: #16a34a; border-color: #16a34a; }
+.exp-action-approve:hover:not(:disabled) { background: #16a34a; color: #fff; }
+.exp-action-delete { color: #ef4444; border-color: #ef4444; }
+.exp-action-delete:hover:not(:disabled) { background: #ef4444; color: #fff; }
+.exp-action-retry { color: #b45309; border-color: #b45309; }
+.exp-action-retry:hover:not(:disabled) { background: #b45309; color: #fff; }
+
+/* RESPONSIVE -- di bawah 640px, tabel diganti tampilan card */
+@media (max-width: 640px) {
+  .table-card { overflow: visible; }
+  .table-view-desktop { display: none; }
+  .expense-card-list { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
 }
 </style>

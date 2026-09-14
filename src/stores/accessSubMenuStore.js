@@ -10,7 +10,23 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
   const searchAccessSubMenu  = ref('')
 
   const searchTimeout   = ref(null)
-  const autoSaveTimeout = ref(null)
+
+  // FIX (bug "kadang hapus akses ga kehapus"): SEBELUMNYA cuma ada 1
+  // `autoSaveTimeout` ref TUNGGAL buat SELURUH tabel -- jadi tiap kali
+  // checkbox di baris MANAPUN di-toggle, clearTimeout() di baris itu ikut
+  // MEMBATALKAN timer pending punya baris LAIN yang belum sempat kekirim
+  // (kalau di-toggle beruntun < 300ms, misal user klik checkbox row A lalu
+  // buru-buru klik checkbox row B), sehingga perubahan row A HILANG SAMA
+  // SEKALI, tidak pernah nyampe ke backend -- padahal checkbox-nya sendiri
+  // di UI sudah kelihatan ke-uncheck (v-model langsung ke object row-nya).
+  //
+  // SEKARANG pakai Map, di-key per id_submenu -- tiap baris py timer
+  // debounce sendiri-sendiri, jadi toggle di baris lain TIDAK LAGI
+  // membatalkan timer baris yang lain. Tiap entry-nya nyimpen bukan cuma
+  // timeoutId, tapi juga fungsi `run` buat NGIRIM SEKARANG JUGA (dipakai
+  // pas clearAllAutoSaveTimeouts() di-panggil sebelum 300ms-nya habis --
+  // lihat penjelasan di situ).
+  const autoSaveTimeouts = ref(new Map())
 
   const userId = ref(null)
 
@@ -82,12 +98,20 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
 
   // ── SET USER & FETCH ──
   const setUserId = async (id) => {
-    userId.value              = id
-    searchAccessSubMenu.value = ''
-    pagination.current_page   = 1
-    pagination.per_page       = 10
-    sort.column               = 'title'
-    sort.direction            = 'asc'
+    // Ganti user target -- bersihkan dulu SEMUA timer autosave yang masih
+    // pending dari user SEBELUMNYA (kalau modal ditutup lalu dibuka lagi
+    // buat user lain dalam waktu < 300ms). Tanpa ini, timer lama bisa
+    // nembak SETELAH userId.value sudah berubah ke user baru -- lihat
+    // penjelasan lengkap di autoSavePermission() soal kenapa userId juga
+    // di-capture di awal (bukan dibaca ulang pas timer baru nyala).
+    clearAllAutoSaveTimeouts()
+
+    userId.value               = id
+    searchAccessSubMenu.value  = ''
+    pagination.current_page    = 1
+    pagination.per_page        = 10
+    sort.column                = 'title'
+    sort.direction              = 'asc'
     await fetchAccessSubMenu()
   }
 
@@ -129,15 +153,34 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
     searchAccessSubMenu.value = ''
     pagination.per_page       = 10
     pagination.current_page   = 1
-    sort.column               = 'title'
-    sort.direction            = 'asc'
+    sort.column                = 'title'
+    sort.direction              = 'asc'
     fetchAccessSubMenu(buildUrl())
   }
 
   // ── AUTO SAVE PERMISSION ──
+  // FIX (bug "kadang hapus akses ga kehapus") -- 2 perubahan dari versi
+  // sebelumnya:
+  //   1. Timer debounce sekarang di-key per id_submenu (pakai Map), BUKAN
+  //      1 timer tunggal buat seluruh tabel -- supaya toggle di baris lain
+  //      tidak lagi membatalkan timer baris yang sedang berjalan.
+  //   2. userId di-CAPTURE ke variabel lokal (targetUserId) SAAT checkbox
+  //      di-klik, bukan dibaca ulang dari userId.value pas timer-nya baru
+  //      nyala 300ms kemudian -- soalnya kalau user sempat tutup modal &
+  //      buka lagi buat user LAIN dalam rentang < 300ms itu, userId.value
+  //      sudah keburu ganti, dan tanpa capture ini perubahan bisa nyasar
+  //      kesimpan ke user yang salah.
   const autoSavePermission = (submenu) => {
     if (!userId.value) return Promise.resolve('no-user')
-    if (autoSaveTimeout.value) clearTimeout(autoSaveTimeout.value)
+
+    const targetUserId = userId.value
+    const key           = submenu.id_submenu
+
+    // Kalau baris ini sudah py timer pending (user toggle beruntun di
+    // baris YANG SAMA), batalkan yang lama -- ini debounce normal, cuma
+    // kirim versi TERAKHIR-nya. Baris LAIN tidak tersentuh sama sekali.
+    const existing = autoSaveTimeouts.value.get(key)
+    if (existing) clearTimeout(existing.timeoutId)
 
     const payload = {
       can_view:   submenu.can_view   ? 1 : 0,
@@ -147,20 +190,36 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
     }
 
     return new Promise((resolve) => {
-      autoSaveTimeout.value = setTimeout(async () => {
+      const run = async () => {
+        autoSaveTimeouts.value.delete(key)
         try {
-          await accessSubMenuService.savePermission(
-            userId.value,
-            submenu.id_submenu,
-            payload
-          )
+          await accessSubMenuService.savePermission(targetUserId, key, payload)
           resolve('success')
         } catch (err) {
           console.error('Gagal save permission:', err)
           resolve('error')
         }
-      }, 300)
+      }
+
+      const timeoutId = setTimeout(run, 300)
+      autoSaveTimeouts.value.set(key, { timeoutId, run })
     })
+  }
+
+  // ── FLUSH + BERSIHKAN SEMUA TIMER AUTOSAVE YANG MASIH PENDING ──
+  // Dipanggil pas modal Access SubMenu ditutup, pas ganti ke user lain
+  // (setUserId()), dan pas komponen di-unmount. SENGAJA tidak cuma
+  // clearTimeout() (itu bakal DIAM-DIAM MEMBUANG perubahan checkbox
+  // terakhir yang belum sempat "settle" 300ms -- gejala yang sama persis
+  // yang lagi kita perbaiki), tapi jalankan run()-nya SEKARANG JUGA supaya
+  // perubahan terakhir tetap terkirim ke backend sebelum ditinggal/pindah
+  // user.
+  const clearAllAutoSaveTimeouts = () => {
+    autoSaveTimeouts.value.forEach((entry) => {
+      clearTimeout(entry.timeoutId)
+      entry.run()
+    })
+    autoSaveTimeouts.value.clear()
   }
 
   return {
@@ -179,5 +238,6 @@ export const useAccessSubMenuStore = defineStore('accessSubMenu', () => {
     toggleSort,
     resetFilters,
     autoSavePermission,
+    clearAllAutoSaveTimeouts,
   }
 })

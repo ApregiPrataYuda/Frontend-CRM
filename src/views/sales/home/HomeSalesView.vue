@@ -1,14 +1,16 @@
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { usePermissionStore } from '@/stores/PermissionStore'
 import { useDashboardSalesStore } from '@/stores/dashboardSalesStore'
+import { useSidebarStore } from '@/stores/sidebarStore'
 
 const route      = useRoute()
 const authStore  = useAuthStore()
 const permission = usePermissionStore()
 const dashboard  = useDashboardSalesStore()
+const sidebarStore = useSidebarStore()
 
 // ── PERMISSIONS ──
 const currentUrl = computed(() => route.path.replace('/app', ''))
@@ -20,9 +22,36 @@ const canView    = computed(() => permission.canView(currentUrl.value))
 // ── USER ──
 const fullNameUser = computed(() => authStore.user?.fullname || 'User')
 
+// ── QUICK MENU ──
+// Sengaja re-use data yang sama kayak Sidebar.vue (useSidebarStore), BUKAN
+// hardcode daftar menu sendiri di sini -- supaya Quick Menu otomatis ngikut
+// hak akses role/user yang login (submenu yang di-hide di sidebar buat role
+// tertentu otomatis ga muncul juga di sini), dan kalau menu di-update dari
+// Access SubMenu / master menu, Quick Menu ikut kebaruan tanpa perlu ubah
+// kode lagi.
+//
+// Item yang py `children` (group/dropdown di sidebar, misal "Reports")
+// di-flatten jadi child-nya langsung satu-satu -- soalnya Quick Menu cuma
+// nampilin tile yang BISA LANGSUNG DIKLIK (harus py `to`), bukan toggle
+// group kayak di sidebar.
+const quickMenuItems = computed(() => {
+  const flatten = (items = []) =>
+    items.flatMap((item) => (item.children?.length ? flatten(item.children) : [item]))
+
+  return sidebarStore.sections.flatMap((section) => flatten(section.items))
+})
+
 const currentMonth = new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })
 onMounted(async () => {
   if (!authStore.user) await authStore.fetchProfile()
+
+  // ── Fetch sidebar menu (buat Quick Menu) -- pola & param sama kayak
+  //    Sidebar.vue, cuma di sini ga usah nunggu (await) biar ga nge-block
+  //    render dashboard stats kalau kebetulan lambat ──
+  if (!sidebarStore.sections.length) {
+    sidebarStore.fetchMenus(authStore.user?.role_id, authStore.user?.id_user)
+  }
+
   await dashboard.fetchDashboard(authStore.user?.id_user)
 })
 </script>
@@ -39,6 +68,24 @@ onMounted(async () => {
         <p class="page-subtitle">
           Kelola pelanggan dan aktivitas follow up Anda.
         </p>
+      </div>
+    </div>
+
+    <!-- QUICK MENU -->
+    <div v-if="quickMenuItems.length" class="quick-menu-card">
+      <div class="quick-menu-title">Quick Menu</div>
+      <div class="quick-menu-grid">
+        <RouterLink
+          v-for="item in quickMenuItems"
+          :key="item.id_submenu"
+          :to="item.to"
+          class="quick-menu-item"
+        >
+          <span class="quick-menu-icon">
+            <font-awesome-icon :icon="['fas', item.icon]" />
+          </span>
+          <span class="quick-menu-label">{{ item.label }}</span>
+        </RouterLink>
       </div>
     </div>
 
@@ -388,6 +435,59 @@ onMounted(async () => {
   margin-top: 6px;
   color: var(--text-muted);
   font-size: 0.92rem;
+}
+
+/* QUICK MENU */
+.quick-menu-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: 16px;
+  padding: 18px 16px;
+}
+.quick-menu-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.quick-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 16px 8px;
+}
+.quick-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+.quick-menu-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eeedff;
+  color: #696cff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.quick-menu-item:hover .quick-menu-icon {
+  background: rgba(105,108,255,0.22);
+  transform: translateY(-2px);
+}
+.quick-menu-label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.25;
 }
 
 /* LOADING */
@@ -779,6 +879,36 @@ onMounted(async () => {
   .content-grid  { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
+  /* FIX: sebelumnya di sini stats-grid dipaksa jadi 1 kolom penuh --
+     hasilnya tiap stat-card jadi memanjang selebar layar (icon di kiri,
+     angka+label di kanan dalam 1 baris panjang), bukan kelihatan
+     seperti "card" beneran. Sekarang tetap 2 kolom (turun dari grid
+     desktop), dan .stat-card di bawah ini diganti jadi vertikal (icon
+     di atas, angka+label di bawahnya) supaya proporsinya jadi kotak
+     ringkas kayak card, bukan strip horizontal. */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .quick-menu-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px 4px;
+  }
+  .quick-menu-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 0.95rem;
+  }
+  .quick-menu-label {
+    font-size: 0.62rem;
+  }
 }
 </style>

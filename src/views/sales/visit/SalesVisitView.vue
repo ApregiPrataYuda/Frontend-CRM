@@ -1383,8 +1383,8 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
         </div>
       </div>
 
-      <!-- Table -->
-      <div style="overflow-x:auto; margin-top:12px">
+      <!-- Table (desktop/tablet) -->
+      <div class="modal-table-wrap" style="overflow-x:auto; margin-top:12px">
         <table class="data-table">
           <thead>
             <tr>
@@ -1459,6 +1459,74 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Card list (mobile) -- versi ringkas dari tabel di atas, 1 kolom
+           penuh, tombol aksi full-width & lebih besar biar gampang diklik
+           di layar HP. Data & method (visitNow/checkIn/checkOut) sama
+           persis kayak tabel-nya, cuma beda tampilan. -->
+      <div class="modal-card-list">
+        <div v-if="loadingLeads" class="td-center">
+          <div class="spinner-wrap"><div class="spinner"></div><span>Loading leads...</span></div>
+        </div>
+        <div v-else-if="leadsData.length === 0" class="td-center">ðŸ“­ No leads ready to visit</div>
+        <div
+          v-else
+          v-for="(item, index) in leadsData"
+          :key="item.id"
+          class="lmc-card"
+          :class="activeVisitLeadId === item.id ? 'lmc-card-active' : ''"
+        >
+          <div class="lmc-top">
+            <div>
+              <p class="lmc-company">{{ item.company_name ?? '-' }}</p>
+              <p class="lmc-code">{{ item.lead_code ?? '' }}</p>
+            </div>
+            <span class="badge-source">{{ item.status ?? 'New' }}</span>
+          </div>
+
+          <div class="lmc-row">
+            <font-awesome-icon icon="user" class="lmc-icon" /> {{ item.contact_name ?? '-' }}
+          </div>
+          <div v-if="item.phone" class="lmc-row">
+            <font-awesome-icon icon="phone" class="lmc-icon" /> {{ item.phone }}
+          </div>
+          <div v-if="item.address" class="lmc-row">
+            <font-awesome-icon icon="location-dot" class="lmc-icon" /> {{ item.address }}
+          </div>
+
+          <div class="lmc-action">
+            <template v-if="activeVisitLeadId !== item.id">
+              <button
+                @click="visitNow(item)"
+                :disabled="loadingVisitNow || activeVisitLeadId !== null"
+                class="act-visit-btn lmc-btn"
+                :class="activeVisitLeadId !== null ? 'disabled' : ''"
+              >
+                <font-awesome-icon icon="location-dot" /> Visit Now
+              </button>
+            </template>
+            <template v-else>
+              <span class="badge-active-ping">
+                <span class="ping-dot"></span> ACTIVE
+              </span>
+              <button
+                v-if="activeLeadPhase === 'visiting'"
+                @click="checkIn(item)"
+                class="act-visit-btn emerald lmc-btn"
+              >
+                <font-awesome-icon icon="right-to-bracket" /> Check In
+              </button>
+              <button
+                v-if="activeLeadPhase === 'checked_in'"
+                @click="checkOut(item)"
+                class="act-visit-btn rose lmc-btn"
+              >
+                <font-awesome-icon icon="right-from-bracket" /> Check Out
+              </button>
+            </template>
+          </div>
+        </div>
       </div>
 
       <!-- Pagination -->
@@ -1712,7 +1780,7 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
         </div>
       </div>
 
-      <div style="overflow-x:auto; margin-top:12px">
+      <div class="modal-table-wrap" style="overflow-x:auto; margin-top:12px">
         <table class="data-table">
           <thead>
             <tr>
@@ -1819,6 +1887,93 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Card list (mobile) -- versi ringkas, 1 kolom penuh, tombol aksi
+           full-width & lebih besar biar gampang diklik di layar HP. Data &
+           method (visitNowCust/checkInCustomers/openCustomerCheckOut) sama
+           persis kayak tabel-nya, cuma beda tampilan. -->
+      <div class="modal-card-list">
+        <div v-if="loadingCustomers" class="td-center">
+          <div class="spinner-wrap"><div class="spinner"></div><span>Loading customers...</span></div>
+        </div>
+        <div v-else-if="customersData.length === 0" class="td-center">📭 Tidak ada customers yang siap dikunjungi</div>
+
+        <div
+          v-else
+          v-for="(item, index) in customersData"
+          :key="item.target_type === 'branch' ? `mc-branch-${item.branch_id}` : `mc-${item.id}`"
+          class="lmc-card"
+          :class="isRowActive(item) ? 'lmc-card-active-emerald' : ''"
+        >
+          <div class="lmc-top">
+            <span
+              class="target-type-badge"
+              :class="item.target_type === 'branch' ? 'target-branch' : 'target-hq'"
+            >
+              <font-awesome-icon :icon="item.target_type === 'branch' ? 'code-branch' : 'building'" />
+              {{ item.target_type === 'branch' ? 'Branch' : 'Head Office' }}
+            </span>
+          </div>
+
+          <div>
+            <p class="lmc-company">{{ item.company_name ?? '-' }}</p>
+            <p class="lmc-code">{{ item.customer_code ?? '-' }}</p>
+            <p v-if="item.target_type === 'branch'" class="td-sub text-primary" style="margin:2px 0 0">
+              <font-awesome-icon icon="code-branch" />
+              {{ item.branch_name ?? '-' }}<span v-if="item.city"> - {{ item.city }}</span>
+            </p>
+          </div>
+
+          <div v-if="item.contacts?.length" class="lmc-contacts">
+            <div v-for="ct in item.contacts" :key="ct.id" class="contact-mini-row">
+              <span class="fw-semibold">{{ ct.name }}</span>
+              <span v-if="ct.is_primary" class="contact-primary-tag">Kontak Utama</span>
+              <span v-if="ct.position" class="td-muted"> · {{ ct.position }}</span>
+              <div v-if="ct.phone" class="td-muted" style="font-size:0.76rem">{{ ct.phone }}</div>
+            </div>
+          </div>
+          <div v-else-if="item.contact_name" class="lmc-row">
+            <font-awesome-icon icon="user" class="lmc-icon" /> {{ item.contact_name }}
+          </div>
+
+          <div v-if="item.address" class="lmc-row">
+            <font-awesome-icon icon="location-dot" class="lmc-icon" /> {{ item.address }}
+          </div>
+
+          <div class="lmc-action">
+            <template v-if="!isRowActive(item)">
+              <button
+                v-if="canVisitNow(item)"
+                @click="visitNowCust(item)"
+                :disabled="loadingVisitNow || activeVisitCustomersId !== null || !hasCoordinates(item)"
+                class="act-visit-btn lmc-btn"
+                :class="(activeVisitCustomersId !== null || !hasCoordinates(item)) ? 'disabled' : 'slate'"
+              >
+                <font-awesome-icon icon="location-dot" /> Visit Now
+              </button>
+            </template>
+            <template v-else>
+              <span class="badge-active-ping emerald">
+                <span class="ping-dot emerald-dot"></span> ACTIVE
+              </span>
+              <button
+                v-if="item.visit_status === 'ONGOING'"
+                @click="checkInCustomers(item)"
+                class="act-visit-btn emerald lmc-btn"
+              >
+                <font-awesome-icon icon="right-to-bracket" /> Check In
+              </button>
+              <button
+                v-if="item.visit_status === 'CHECKED_IN'"
+                @click="openCustomerCheckOut(item)"
+                class="act-visit-btn rose lmc-btn"
+              >
+                <font-awesome-icon icon="right-from-bracket" /> Check Out
+              </button>
+            </template>
+          </div>
+        </div>
       </div>
 
       <div class="modal-pagination">
@@ -2222,6 +2377,47 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
 .modal-toolbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
 .modal-pagination { display:flex; justify-content:space-between; align-items:center; margin-top:14px; flex-wrap:wrap; gap:8px; }
 
+/* ── MODAL LIST: tabel (desktop/tablet) vs card (mobile) ──
+   Defaultnya tabel yang tampil, card list disembunyikan -- breakpoint
+   di bawah (≤640px) yang membalik keduanya. Dipakai di modal "Data
+   Leads Ready To Visit" & "Data Customers Ready To Visit". */
+.modal-card-list { display: none; }
+
+.lmc-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 1px 3px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lmc-card + .lmc-card { margin-top: 10px; }
+.lmc-card-active         { background:#eff6ff; border-color:#93c5fd; }
+.lmc-card-active-emerald { background:#ecfdf5; border-color:#6ee7b7; }
+
+.lmc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.lmc-company { font-weight: 700; font-size: 0.92rem; color: var(--text-primary); margin: 0; text-transform: capitalize; }
+.lmc-code    { font-family: monospace; font-size: 0.76rem; color: var(--text-muted); margin: 2px 0 0; }
+
+.lmc-row  { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--text-primary); }
+.lmc-icon { color: var(--text-muted); width: 14px; flex-shrink: 0; }
+
+.lmc-contacts { display: flex; flex-direction: column; gap: 2px; }
+
+/* Tombol aksi full-width & tinggi minimal 44px -- gampang diketuk jari
+   di HP, ga kayak tombol kecil versi tabel. */
+.lmc-action { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.lmc-btn {
+  width: 100%;
+  justify-content: center;
+  padding: 12px;
+  font-size: 0.88rem;
+  min-height: 44px;
+}
+.lmc-action .badge-active-ping { align-self: flex-start; }
+
 /* Camera */
 .camera-section { display:flex; flex-direction:column; }
 .camera-wrap { position:relative; border-radius:16px; overflow:hidden; background:#000; aspect-ratio:16/9; }
@@ -2572,6 +2768,16 @@ const hasCoordinates = (item) => item.latitude != null && item.longitude != null
   .page-badges { width: 100%; justify-content: center; flex-wrap: wrap; }
   .page-badge { flex: 1; text-align: center; font-size: 0.7rem; }
   .visit-card-grid { grid-template-columns: 1fr; }
+}
+
+/* Modal "Data Leads/Customers Ready To Visit": di layar sempit tabelnya
+   susah dibaca & tombol Visit Now-nya kekecilan buat diketuk (lihat
+   screenshot laporan) -- jadi di bawah 640px, tabel disembunyikan dan
+   diganti card list (.lmc-card) yang 1 kolom, full-width, tombol
+   aksinya juga lebih besar. */
+@media (max-width: 640px) {
+  .modal-table-wrap { display: none; }
+  .modal-card-list  { display: block; }
 }
 
 /* ── SPINNER & EMPTY ── */

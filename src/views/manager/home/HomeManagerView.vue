@@ -1,14 +1,16 @@
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { usePermissionStore } from '@/stores/PermissionStore'
 import { useDashboardManagerStore } from '@/stores/dashboardManagerStore'
+import { useSidebarStore } from '@/stores/sidebarStore'
 
 const route      = useRoute()
 const authStore  = useAuthStore()
 const permission = usePermissionStore()
 const dashboard  = useDashboardManagerStore()
+const sidebarStore = useSidebarStore()
 
 // ── PERMISSIONS ──
 const currentUrl = computed(() => route.path.replace('/app', ''))
@@ -21,8 +23,31 @@ const canView    = computed(() => permission.canView(currentUrl.value))
 const fullNameUser = computed(() => authStore.user?.fullname || 'User')
 const currentMonth = new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })
 
+// ── QUICK MENU ──
+// Sama kayak yang dipasang di Sales Home -- re-use data dari
+// useSidebarStore (store yang sama dipakai Sidebar.vue), BUKAN hardcode
+// daftar menu sendiri di sini, supaya otomatis ngikut hak akses
+// role/user Manager yang login dan tetap satu sumber data sama sidebar.
+//
+// Item yang py `children` (group/dropdown di sidebar) di-flatten jadi
+// child-nya langsung satu-satu, soalnya Quick Menu cuma nampilin tile
+// yang BISA LANGSUNG DIKLIK (harus py `to`), bukan toggle group.
+const quickMenuItems = computed(() => {
+  const flatten = (items = []) =>
+    items.flatMap((item) => (item.children?.length ? flatten(item.children) : [item]))
+
+  return sidebarStore.sections.flatMap((section) => flatten(section.items))
+})
+
 onMounted(async () => {
   if (!authStore.user) await authStore.fetchProfile()
+
+  // ── Fetch sidebar menu (buat Quick Menu) -- ga usah nunggu (await)
+  //    biar ga nge-block render dashboard manager kalau kebetulan lambat ──
+  if (!sidebarStore.sections.length) {
+    sidebarStore.fetchMenus(authStore.user?.role_id, authStore.user?.id_user)
+  }
+
   await dashboard.fetchDashboard(authStore.user?.id_user)
 })
 
@@ -89,6 +114,46 @@ const fuIcon = (type) => {
 <template>
   <div class="dm-page">
 
+    <!-- ── HEADER (welcome) -- ditaruh paling atas, DI LUAR v-if loading /
+         v-else, jadi langsung kelihatan begitu halaman dibuka tanpa
+         nunggu data dashboard Manager selesai fetch (sama kayak pola di
+         Sales Home). inactiveSales & summary di sini computed dari
+         dashboard.stats yang defaultnya kosong ({}/[]) sebelum data
+         datang, jadi ga error -- badge-nya cuma bakal muncul begitu
+         datanya udah ke-load. ── -->
+    <div class="dm-header">
+      <div>
+        <h1 class="dm-title">Selamat Datang, {{ fullNameUser }} 👋</h1>
+        <p class="dm-subtitle">Pantau performa tim & aktivitas bisnis — {{ currentMonth }}</p>
+      </div>
+      <div class="dm-header-badges">
+        <span v-if="inactiveSales.length" class="badge-alert">
+          ⚠️ {{ inactiveSales.length }} Sales Tidak Aktif
+        </span>
+        <span v-if="summary.overdue_follow_ups" class="badge-overdue">
+          🔴 {{ summary.overdue_follow_ups }} Follow Up Terlambat
+        </span>
+      </div>
+    </div>
+
+    <!-- ── QUICK MENU ── -->
+    <div v-if="quickMenuItems.length" class="quick-menu-card">
+      <div class="quick-menu-title">Quick Menu</div>
+      <div class="quick-menu-grid">
+        <RouterLink
+          v-for="item in quickMenuItems"
+          :key="item.id_submenu"
+          :to="item.to"
+          class="quick-menu-item"
+        >
+          <span class="quick-menu-icon">
+            <font-awesome-icon :icon="['fas', item.icon]" />
+          </span>
+          <span class="quick-menu-label">{{ item.label }}</span>
+        </RouterLink>
+      </div>
+    </div>
+
     <!-- ── LOADING ── -->
     <div v-if="dashboard.loadingStats" class="dm-loading">
       <div class="spinner"></div>
@@ -96,22 +161,6 @@ const fuIcon = (type) => {
     </div>
 
     <template v-else>
-
-      <!-- ── HEADER ── -->
-      <div class="dm-header">
-        <div>
-          <h1 class="dm-title">Selamat Datang, {{ fullNameUser }} 👋</h1>
-          <p class="dm-subtitle">Pantau performa tim & aktivitas bisnis — {{ currentMonth }}</p>
-        </div>
-        <div class="dm-header-badges">
-          <span v-if="inactiveSales.length" class="badge-alert">
-            ⚠️ {{ inactiveSales.length }} Sales Tidak Aktif
-          </span>
-          <span v-if="summary.overdue_follow_ups" class="badge-overdue">
-            🔴 {{ summary.overdue_follow_ups }} Follow Up Terlambat
-          </span>
-        </div>
-      </div>
 
       <!-- ── SUMMARY CARDS ── -->
       <div class="summary-grid">
@@ -382,6 +431,59 @@ const fuIcon = (type) => {
   flex-direction: column;
   gap: 24px;
   padding-bottom: 40px;
+}
+
+/* ── QUICK MENU ── */
+.quick-menu-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-main);
+  border-radius: 16px;
+  padding: 18px 16px;
+}
+.quick-menu-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.quick-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 16px 8px;
+}
+.quick-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+.quick-menu-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(99,102,241,0.1);
+  color: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.quick-menu-item:hover .quick-menu-icon {
+  background: rgba(99,102,241,0.2);
+  transform: translateY(-2px);
+}
+.quick-menu-label {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.25;
 }
 
 /* ── LOADING ── */
@@ -1016,5 +1118,53 @@ const fuIcon = (type) => {
 @media (max-width: 480px) {
   .summary-grid { grid-template-columns: 1fr 1fr; }
   .dm-title     { font-size: 1.3rem; }
+
+  .quick-menu-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px 4px;
+  }
+  .quick-menu-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 0.95rem;
+  }
+  .quick-menu-label {
+    font-size: 0.62rem;
+  }
+
+  /* FIX: di layar sempit, "Performa Sales", "Kunjungan Hari Ini", dan
+     "Follow Up Terlambat" kepotong di sisi kanan -- soalnya sp-row /
+     visit-row / fu-row dipaksa 1 baris (nowrap) dengan rank/avatar di
+     kiri dan blok statistik/badge (sp-right, vr-right, fu-status) yang
+     flex-shrink:0 di kanan. Kalau nama + statistiknya kepanjangan buat
+     muat di 1 baris pada layar HP, blok kanan yang flex-shrink:0 itu
+     TETAP mempertahankan lebar aslinya dan malah keluar dari card,
+     bukan menyempit -- makanya kelihatan "kepotong" di tepi layar.
+     Sekarang baris-baris itu dibolehin wrap, jadi blok kanannya turun
+     ke baris baru (full width) kalau memang ga muat, bukan overflow. */
+  .sp-row,
+  .visit-row,
+  .fu-row {
+    flex-wrap: wrap;
+  }
+
+  .sp-right {
+    width: 100%;
+    text-align: left;
+    margin-top: 4px;
+  }
+
+  .vr-right {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .fu-status {
+    width: 100%;
+    margin-top: 6px;
+  }
 }
 </style>

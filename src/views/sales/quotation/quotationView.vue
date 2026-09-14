@@ -358,9 +358,9 @@ function odooBadge(item) {
       </div>
     </div>
 
-    <!-- TABLE -->
+    <!-- TABLE (desktop/tablet) -->
     <div class="table-card flex-grow-1 overflow-auto mb-3">
-      <table class="data-table">
+      <table class="data-table table-view-desktop">
         <thead>
           <tr>
             <th style="width:50px">NO.</th>
@@ -391,6 +391,40 @@ function odooBadge(item) {
           </tr>
         </tbody>
       </table>
+
+      <!-- CARD LIST (mobile) -->
+      <div class="quo-card-list">
+        <div v-if="loadingQuotation" class="td-center"><div class="spinner-custom" style="margin:0 auto"></div></div>
+        <div v-else-if="quotationData.length === 0" class="td-center">Belum ada data quotation</div>
+        <div v-else v-for="(item, index) in quotationData" :key="item.id" class="quo-card">
+          <div class="quo-card-top">
+            <span class="quo-card-ref">{{ item.customer_ref }}</span>
+            <span class="odoo-badge" :class="odooBadge(item).cls" :title="item.odoo_push_error || ''">
+              <font-awesome-icon :icon="odooBadge(item).icon" /> {{ odooBadge(item).text }}
+            </span>
+          </div>
+          <div class="quo-card-customer">{{ item.customer_company_name }}</div>
+          <div class="quo-card-meta">
+            <font-awesome-icon icon="calendar-day" class="quo-card-meta-icon" />
+            <span>{{ store.formatDate(item.quotation_date) }}</span>
+          </div>
+          <div class="quo-card-amount">{{ store.formatCurrency(item.net_amount) }}</div>
+          <div class="quo-card-actions">
+            <button v-if="item.odoo_push_status !== 'pushed'" class="quo-action-btn quo-action-edit" @click="openEditModal(item)">
+              <font-awesome-icon icon="pen" /> Edit
+            </button>
+            <button class="quo-action-btn quo-action-pdf" @click="downloadPdf(item)">
+              <font-awesome-icon icon="file-pdf" /> PDF
+            </button>
+            <button v-if="item.odoo_push_status !== 'pushed'" class="quo-action-btn quo-action-push" :disabled="loadingAction" @click="pushToOdoo(item)">
+              <font-awesome-icon icon="rotate-right" /> Push Odoo
+            </button>
+            <button v-if="item.odoo_push_status !== 'pushed'" class="quo-action-btn quo-action-delete" :disabled="loadingAction" @click="deleteQuotation(item)">
+              <font-awesome-icon icon="trash" /> Hapus
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- PAGINATION -->
@@ -769,4 +803,35 @@ textarea.kunjungan-input.cell-input { resize: none; min-height: 40px; padding-to
 .btn-save { display: inline-flex; align-items: center; gap: 7px; padding: 8px 18px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
 .btn-save:hover:not(:disabled) { background: #4f46e5; }
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* CARD LIST (mobile) -- disembunyikan di desktop, tabel yang tampil */
+.quo-card-list { display: none; }
+
+.quo-card { background: var(--bg-card); border: 1px solid var(--border-main); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.quo-card + .quo-card { margin-top: 12px; }
+.quo-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.quo-card-ref { font-size: 0.88rem; font-weight: 800; color: var(--text-primary); }
+.quo-card-customer { font-size: 0.84rem; color: var(--text-muted); }
+.quo-card-meta { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; color: var(--text-muted); }
+.quo-card-meta-icon { font-size: 0.78rem; color: #6366f1; flex-shrink: 0; }
+.quo-card-amount { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); }
+
+.quo-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.quo-action-btn { flex: 1; min-width: 100px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; border-radius: 9px; border: 1.5px solid; font-size: 0.82rem; font-weight: 700; cursor: pointer; background: transparent; }
+.quo-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.quo-action-edit { color: #6366f1; border-color: #6366f1; }
+.quo-action-edit:hover:not(:disabled) { background: #6366f1; color: #fff; }
+.quo-action-pdf { color: #0d9488; border-color: #0d9488; }
+.quo-action-pdf:hover:not(:disabled) { background: #0d9488; color: #fff; }
+.quo-action-push { color: #b45309; border-color: #b45309; }
+.quo-action-push:hover:not(:disabled) { background: #b45309; color: #fff; }
+.quo-action-delete { color: #ef4444; border-color: #ef4444; }
+.quo-action-delete:hover:not(:disabled) { background: #ef4444; color: #fff; }
+
+/* RESPONSIVE -- di bawah 640px, tabel diganti tampilan card */
+@media (max-width: 640px) {
+  .table-card { overflow: visible; }
+  .table-view-desktop { display: none; }
+  .quo-card-list { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+}
 </style>

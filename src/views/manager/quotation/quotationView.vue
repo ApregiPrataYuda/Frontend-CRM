@@ -98,9 +98,9 @@ function odooBadge(item) {
       </div>
     </div>
 
-    <!-- TABLE -->
+    <!-- TABLE (desktop/tablet) -->
     <div class="table-card flex-grow-1 overflow-auto mb-3">
-      <table class="data-table">
+      <table class="data-table table-view-desktop">
         <thead>
           <tr>
             <th style="width:50px">NO.</th>
@@ -130,6 +130,38 @@ function odooBadge(item) {
           </tr>
         </tbody>
       </table>
+
+      <!-- CARD LIST (mobile) -->
+      <div class="quo-card-list">
+        <div v-if="loadingQuotation" class="td-center"><div class="spinner-custom" style="margin:0 auto"></div></div>
+        <div v-else-if="quotationData.length === 0" class="td-center">Tidak ada data quotation</div>
+        <div v-else v-for="(item, index) in quotationData" :key="item.id" class="quo-card">
+          <div class="quo-card-top">
+            <span class="quo-card-ref">{{ item.customer_ref || '-' }}</span>
+            <span class="odoo-badge" :class="odooBadge(item).cls" :title="item.odoo_push_error || ''">
+              <font-awesome-icon :icon="odooBadge(item).icon" /> {{ odooBadge(item).text }}
+            </span>
+          </div>
+          <div class="quo-card-meta">
+            <font-awesome-icon icon="user" class="quo-card-meta-icon" />
+            <span>{{ item.sales_name ?? '-' }}</span>
+          </div>
+          <div class="quo-card-customer">{{ item.customer_company_name }}</div>
+          <div class="quo-card-meta">
+            <font-awesome-icon icon="calendar-day" class="quo-card-meta-icon" />
+            <span>{{ store.formatDate(item.quotation_date) }}</span>
+          </div>
+          <div class="quo-card-amount">{{ store.formatCurrency(item.net_amount) }}</div>
+          <div class="quo-card-actions">
+            <button class="quo-action-btn quo-action-info" @click="openDetail(item.id)">
+              <font-awesome-icon icon="eye" /> Detail
+            </button>
+            <button class="quo-action-btn quo-action-pdf" @click="downloadPdf(item)">
+              <font-awesome-icon icon="file-pdf" /> PDF
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- PAGINATION -->
@@ -148,13 +180,14 @@ function odooBadge(item) {
     <AppModal :show="showDetailModal" title="Detail Quotation" icon="circle-info" size="lg" @close="closeDetail">
       <div v-if="loadingDetail" class="td-center"><div class="spinner-wrap"><div class="spinner"></div><span>Loading...</span></div></div>
       <div v-else-if="quotationDetail" class="detail-list">
-        <div class="detail-row"><span class="detail-label">No. Quotation</span><span class="detail-value">{{ quotationDetail.quotation_no || '-' }}</span></div>
+        <!-- No. Quotation disembunyikan (pakai No. Ref sebagai identitas utama) -- v-if="false" biar gampang di-toggle balik kalau perlu -->
+        <div v-if="false" class="detail-row"><span class="detail-label">No. Quotation</span><span class="detail-value">{{ quotationDetail.quotation_no || '-' }}</span></div>
+        <div class="detail-row"><span class="detail-label">No. Ref</span><span class="detail-value">{{ quotationDetail.customer_ref }}</span></div>
         <div class="detail-row"><span class="detail-label">Sales</span><span class="detail-value">{{ quotationDetail.sales_name ?? '-' }}</span></div>
         <div class="detail-row"><span class="detail-label">Customer</span><span class="detail-value">{{ quotationDetail.customer_company_name }}</span></div>
         <div class="detail-row"><span class="detail-label">Alamat</span><span class="detail-value">{{ quotationDetail.customer_address || '-' }}</span></div>
         <div class="detail-row"><span class="detail-label">PIC</span><span class="detail-value">{{ quotationDetail.customer_pic_name || '-' }}</span></div>
         <div class="detail-row"><span class="detail-label">Tanggal</span><span class="detail-value">{{ store.formatDate(quotationDetail.quotation_date) }}</span></div>
-        <div class="detail-row"><span class="detail-label">Customer Ref</span><span class="detail-value">{{ quotationDetail.customer_ref }}</span></div>
         <div class="detail-row"><span class="detail-label">Payment Terms</span><span class="detail-value">{{ quotationDetail.payment_terms }}</span></div>
         <div class="detail-row"><span class="detail-label">Validity</span><span class="detail-value">{{ quotationDetail.validity }}</span></div>
         <div class="detail-row"><span class="detail-label">Delivery Time</span><span class="detail-value">{{ quotationDetail.delivery_time }}</span></div>
@@ -292,4 +325,30 @@ function odooBadge(item) {
 .btn-cancel:hover { background: #dc2626; }
 .btn-save { display: inline-flex; align-items: center; gap: 7px; padding: 8px 18px; background: #6366f1; color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
 .btn-save:hover { background: #4f46e5; }
+
+/* CARD LIST (mobile) -- disembunyikan di desktop, tabel yang tampil */
+.quo-card-list { display: none; }
+
+.quo-card { background: var(--bg-card); border: 1px solid var(--border-main); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.quo-card + .quo-card { margin-top: 12px; }
+.quo-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.quo-card-ref { font-size: 0.88rem; font-weight: 800; color: var(--text-primary); }
+.quo-card-customer { font-size: 0.84rem; color: var(--text-muted); }
+.quo-card-meta { display: flex; align-items: center; gap: 7px; font-size: 0.82rem; color: var(--text-muted); }
+.quo-card-meta-icon { font-size: 0.78rem; color: #6366f1; flex-shrink: 0; }
+.quo-card-amount { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); }
+
+.quo-card-actions { display: flex; gap: 8px; margin-top: 6px; }
+.quo-action-btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; border-radius: 9px; border: 1.5px solid; font-size: 0.84rem; font-weight: 700; cursor: pointer; background: transparent; }
+.quo-action-info { color: #6366f1; border-color: #6366f1; }
+.quo-action-info:hover { background: #6366f1; color: #fff; }
+.quo-action-pdf { color: #0d9488; border-color: #0d9488; }
+.quo-action-pdf:hover { background: #0d9488; color: #fff; }
+
+/* RESPONSIVE -- di bawah 640px, tabel diganti tampilan card */
+@media (max-width: 640px) {
+  .table-card { overflow: visible; }
+  .table-view-desktop { display: none; }
+  .quo-card-list { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+}
 </style>
