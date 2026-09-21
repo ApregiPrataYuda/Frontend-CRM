@@ -274,7 +274,7 @@ async function confirmDeletePlan(item) {
       <div class="breadcrumb-left">
         <h4 class="breadcrumb-title">
           <font-awesome-icon icon="calendar-days" />
-          Planning Kunjungan Sales
+          Planning Sales Visits
         </h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item">
@@ -282,7 +282,7 @@ async function confirmDeletePlan(item) {
             Dashboard
           </span>
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
-          <span class="breadcrumb-item active">Planning Kunjungan</span>
+          <span class="breadcrumb-item active">Visit Planning</span>
         </div>
       </div>
     </div>
@@ -304,11 +304,11 @@ async function confirmDeletePlan(item) {
         <button type="button" class="month-nav-btn" @click="nextMonth">
           <font-awesome-icon icon="chevron-right" />
         </button>
-        <button type="button" class="btn-today" @click="goToday">Hari Ini</button>
+        <button type="button" class="btn-today" @click="goToday">Today</button>
       </div>
       <div class="toolbar-hint">
         <font-awesome-icon icon="circle-info" />
-        Klik salah satu tanggal buat lihat atau tambah rencana kunjungan kamu di tanggal itu.
+       Click on a date to view or add your visit plans for that date.
       </div>
     </div>
 
@@ -335,12 +335,12 @@ async function confirmDeletePlan(item) {
       </div>
       <div class="stat-chip stat-total">
         <font-awesome-icon icon="layer-group" />
-        <span>{{ totalItemsThisMonth }} Total Item Bulan Ini</span>
+        <span>{{ totalItemsThisMonth }} Total Items This Month</span>
       </div>
     </div>
 
     <div v-if="loading" class="td-center-loading">
-      <font-awesome-icon icon="spinner" spin /> Memuat planning kunjungan...
+      <font-awesome-icon icon="spinner" spin /> Loading visit planning...
     </div>
 
     <div v-else class="calendar-card flex-grow-1 overflow-auto mb-3">
@@ -387,12 +387,12 @@ async function confirmDeletePlan(item) {
 
         <div class="plan-list-section">
           <div class="plan-list-title">
-            Item di tanggal ini <span class="count">{{ dayItems.length }}</span>
+           Items on this date <span class="count">{{ dayItems.length }}</span>
           </div>
 
           <div v-if="dayItems.length === 0" class="empty-state-sm">
             <font-awesome-icon icon="inbox" />
-            Belum ada rencana atau follow up di tanggal ini.
+           There are no plans or follow ups on this date..
           </div>
 
           <div v-for="item in dayItems" :key="item.type + '-' + item.id" class="plan-item-card">
@@ -426,10 +426,10 @@ async function confirmDeletePlan(item) {
         </div>
 
         <div class="plan-form-box">
-          <div class="plan-form-title">{{ editingPlanId ? 'Edit Rencana' : 'Tambah Rencana Baru' }}</div>
+          <div class="plan-form-title">{{ editingPlanId ? 'Update Planing' : 'Add New Planing' }}</div>
 
           <div class="form-group">
-            <label>Customer <span class="opt-label">(opsional -- cuma customer yang kamu pegang)</span></label>
+            <label>Customer <span class="opt-label">(optional -- only customers you hold)</span></label>
 
             <div v-if="!selectedCustomer" class="drop-wrap full-width">
               <button
@@ -437,17 +437,17 @@ async function confirmDeletePlan(item) {
                 class="btn-select full-width"
                 @click="showCustomerDropdown = !showCustomerDropdown"
               >
-                <span>Pilih customer saya...</span>
+                <span>Select my customers...</span>
                 <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu drop-company full-width" :class="{ show: showCustomerDropdown }">
-                <div class="drop-label">Customer Saya</div>
+                <div class="drop-label">My Customers</div>
                 <input
                   v-model="customerDropdownSearch"
                   type="text"
                   class="form-input"
                   style="margin-bottom:8px"
-                  placeholder="Cari customer..."
+                  placeholder="Search customer..."
                 />
                 <div class="cs-list">
                   <button
@@ -472,12 +472,12 @@ async function confirmDeletePlan(item) {
           </div>
 
           <div class="form-group" v-if="!selectedCustomer">
-            <label>Judul Rencana <span class="required">*</span></label>
+            <label>Plan Title <span class="required">*</span></label>
             <input
               v-model="formData.title"
               class="form-input"
               :class="{ 'input-error': getError('title') }"
-              placeholder="misal: Survey calon customer area Cilegon"
+              placeholder="Example: Survey calon customer area Cilegon"
             />
             <span v-if="getError('title')" class="form-error">{{ getError('title') }}</span>
           </div>
@@ -492,16 +492,16 @@ async function confirmDeletePlan(item) {
           </div>
 
           <div class="form-group">
-            <label>Catatan</label>
-            <textarea v-model="formData.notes" class="form-input" rows="2" placeholder="Catatan tambahan (opsional)"></textarea>
+            <label>Noted</label>
+            <textarea v-model="formData.notes" class="form-input" rows="2" placeholder="Additional notes (optional)"></textarea>
           </div>
 
           <div class="plan-form-actions">
-            <button v-if="editingPlanId" type="button" class="btn-cancel" @click="cancelEditPlan">Batal Edit</button>
+            <button v-if="editingPlanId" type="button" class="btn-cancel" @click="cancelEditPlan">Cancel Edits</button>
             <button type="button" class="btn-save" :disabled="savingPlan || updatingPlan" @click="submitPlanForm">
               <font-awesome-icon v-if="savingPlan || updatingPlan" icon="spinner" spin />
               <font-awesome-icon v-else :icon="editingPlanId ? 'floppy-disk' : 'plus'" />
-              {{ (savingPlan || updatingPlan) ? 'Menyimpan...' : (editingPlanId ? 'Update Rencana' : 'Tambah Rencana') }}
+              {{ (savingPlan || updatingPlan) ? 'Save...' : (editingPlanId ? 'Update Plan' : 'Add Plane') }}
             </button>
           </div>
         </div>

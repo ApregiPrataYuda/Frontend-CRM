@@ -101,8 +101,7 @@ function resendEmail() {
         <div class="hero-text">
           <h2>Secure Your Account</h2>
           <p>
-            Jangan khawatir jika Anda melupakan password Anda. Kami akan membantu 
-            mengirimkan langkah-langkah pemulihan akun dengan aman.
+            Don't worry if you forget your password. We'll help you securely and provide steps to recover your account.
           </p>
         </div>
       </div>
@@ -113,7 +112,7 @@ function resendEmail() {
 
         <div v-if="!isSuccess" class="login-header">
           <h2>Forgot Password? 🔒</h2>
-          <p>Masukkan email Anda untuk menerima link reset password</p>
+          <p>Enter your email to receive a password reset link</p>
         </div>
 
         <div class="login-card">
@@ -125,12 +124,12 @@ function resendEmail() {
             
             <h2>Check Your Email</h2>
             <p>
-              Kami telah mengirimkan instruksi beserta link reset password ke 
-              <strong>{{ email }}</strong>. Silakan periksa folder inbox atau spam Anda.
+             We have sent instructions along with a password reset link to 
+              <strong>{{ email }}</strong>. Please check your inbox or spam folder.
             </p>
 
             <button type="button" class="login-btn outline-btn" @click="isSuccess = false; email = ''">
-              Kirim Ulang Email
+              Resend Email
             </button>
           </div>
 
@@ -182,7 +181,7 @@ function resendEmail() {
 
         <div class="login-footer">
           <router-link to="/login" class="back-link">
-            <font-awesome-icon :icon="['fas', 'arrow-left']" /> Kembali ke Login
+            <font-awesome-icon :icon="['fas', 'arrow-left']" /> Back To Login
           </router-link>
         </div>
 

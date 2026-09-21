@@ -67,7 +67,7 @@ function isDone(row) {
       <div class="breadcrumb-left">
         <h4 class="breadcrumb-title">
           <font-awesome-icon icon="bullseye" />
-          Target Penjualan Saya
+          My Sales Target
         </h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item">
@@ -75,7 +75,7 @@ function isDone(row) {
             Dashboard
           </span>
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
-          <span class="breadcrumb-item active">Target Penjualan</span>
+          <span class="breadcrumb-item active">Sales Targets</span>
         </div>
       </div>
       <span class="sales-chip">
@@ -97,12 +97,12 @@ function isDone(row) {
         </div>
       </div>
       <div class="toolbar-hint">
-        <font-awesome-icon icon="circle-info" /> Target ini dikasih sama Manager kamu, angka "Tercapai" dihitung otomatis dari data penjualan Odoo.
+        <font-awesome-icon icon="circle-info" /> This target is given by your Manager, the "Achieved" figure is calculated automatically from Odoo sales data.
       </div>
     </div>
 
     <div v-if="store.loading" class="td-center-loading">
-      <font-awesome-icon icon="spinner" spin /> Memuat data target penjualan...
+      <font-awesome-icon icon="spinner" spin /> Loading sales target data...
     </div>
 
     <template v-else>
@@ -118,36 +118,36 @@ function isDone(row) {
           </svg>
           <div class="hero-ring-label">
             <div class="hero-ring-value">{{ store.avgPercentage }}%</div>
-            <div class="hero-ring-sub">Rata-rata</div>
+            <div class="hero-ring-sub">Average</div>
           </div>
         </div>
 
         <div class="hero-stats">
           <div class="hero-stat-item">
             <div class="hero-stat-value">{{ store.formatCurrency(store.totalAchievedAmount) }}</div>
-            <div class="hero-stat-label">Tercapai dari {{ store.formatCurrency(store.totalTargetAmount) }}</div>
+            <div class="hero-stat-label">Reached from {{ store.formatCurrency(store.totalTargetAmount) }}</div>
           </div>
           <div class="hero-stat-item">
             <div class="hero-stat-value">{{ store.achievedCount }} / {{ store.totalTargets }}</div>
-            <div class="hero-stat-label">Target Sudah Tercapai</div>
+            <div class="hero-stat-label">Target Has Been Achieved</div>
           </div>
           <div class="hero-stat-item">
             <div class="hero-stat-value">{{ store.totalTargets - store.achievedCount }}</div>
-            <div class="hero-stat-label">Masih Berjalan</div>
+            <div class="hero-stat-label">Still walking</div>
           </div>
         </div>
       </div>
 
       <div class="section-title">
         <font-awesome-icon icon="list-check" />
-        <span>Daftar Target Tahun {{ store.periodYear }}</span>
+        <span>List of Year's Targets {{ store.periodYear }}</span>
         <span class="count">{{ store.totalTargets }}</span>
       </div>
 
       <div class="target-grid flex-grow-1 overflow-auto mb-3">
         <div v-if="store.sortedTargets.length === 0" class="empty-state">
           <font-awesome-icon icon="inbox" class="empty-icon" />
-          <div>Belum ada target penjualan buat tahun {{ store.periodYear }}.</div>
+          <div>There is no sales target for this year yet{{ store.periodYear }}.</div>
         </div>
 
         <div v-else v-for="row in store.sortedTargets" :key="row.id" class="target-card" :class="{ done: isDone(row) }">
@@ -180,7 +180,7 @@ function isDone(row) {
           </div>
 
           <div class="target-card-foot">
-            Dibuat oleh {{ row.created_by_name || '-' }}
+            Created by {{ row.created_by_name || '-' }}
           </div>
         </div>
       </div>

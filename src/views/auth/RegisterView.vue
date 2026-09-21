@@ -79,8 +79,7 @@ async function handleRegister() {
         <div class="hero-text">
           <h2>Join Us and Grow Faster</h2>
           <p>
-            Mulai kelola leads, otomatisasi sales report, dan tingkatkan performa 
-            tim kamu dalam satu platform terintegrasi.
+            Start managing leads, automate sales reports, and improve your team's performance in one integrated platform.
           </p>
         </div>
       </div>
@@ -90,8 +89,8 @@ async function handleRegister() {
       <div class="right-wrapper">
 
         <div class="login-header">
-          <h2>Create Account ✨</h2>
-          <p>Daftar akun baru untuk memulai</p>
+          <h2>Create Account</h2>
+          <p>Register a new account to get started</p>
         </div>
 
         <div class="login-card">
@@ -166,8 +165,8 @@ async function handleRegister() {
         </div>
 
         <div class="login-footer">
-          Sudah punya akun? 
-          <router-link to="/login" class="auth-link">Login sekarang</router-link>
+         Already have an account? 
+          <router-link to="/login" class="auth-link">Login Now</router-link>
         </div>
 
         <div class="login-footer copyright">

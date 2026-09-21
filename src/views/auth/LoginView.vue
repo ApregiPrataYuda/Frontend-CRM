@@ -68,7 +68,7 @@ async function handleLogin() {
         <div class="hero-text">
           <h2>Manage Your Business Smarter</h2>
           <p>
-            Pantau leads, customer, sales report, dan performa tim dalam satu dashboard modern.
+            Monitor leads, customers, sales reports, and team performance in one modern dashboard.
           </p>
         </div>
 
@@ -79,8 +79,8 @@ async function handleLogin() {
       <div class="right-wrapper">
 
         <div class="login-header">
-          <h2>Selamat Datang👋</h2>
-          <p>Silakan login ke akun anda</p>
+          <h2>Wellcome</h2>
+          <p>Please login to your account</p>
         </div>
 
         <div class="login-card">

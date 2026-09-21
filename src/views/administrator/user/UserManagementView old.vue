@@ -35,29 +35,14 @@ onMounted(async () => {
   // Modal Hirarki: garis penghubung dihitung ulang kalau window di-resize
   // selagi modal terbuka (posisi kartu bisa berubah).
   window.addEventListener('resize', handleHierarchyResize)
-  // Modal Hirarki: kalau baris "rekan setingkat" / "bawahan" sampai perlu
-  // di-scroll horizontal (kasus ekstrem jumlah kartunya banyak -- lihat
-  // .hierarchy-row-wrap di CSS), garis penghubung juga wajib di-recompute
-  // biar tidak "nyasar" dari posisi kartu yang sudah bergeser kescroll.
-  // Event 'scroll' TIDAK bubble di DOM secara default, makanya listener-nya
-  // dipasang di capture-phase pada document supaya tetap ke-trigger walau
-  // event-nya berasal dari elemen far descendant manapun (baris manapun
-  // yang lagi discroll).
-  document.addEventListener('scroll', handleHierarchyResize, true)
 })
 
 onUnmounted(() => {
   window.removeEventListener('click', closeAllMenus)
   window.removeEventListener('resize', handleHierarchyResize)
-  document.removeEventListener('scroll', handleHierarchyResize, true)
   clearTimeout(hierarchyResizeTimeout)
   // FIX #1 — bersihkan timeout & abort request yang masih pending saat komponen di-unmount
   store.clearSearchTimeout()
-  // FIX (bug "kadang hapus akses submenu ga kehapus") — flush timer
-  // autosave permission yang masih pending (kalau ada) sebelum komponen
-  // di-unmount, supaya perubahan checkbox terakhir tidak hilang diam-diam.
-  // Lihat accessSubMenuStore.js::clearAllAutoSaveTimeouts().
-  accessSubMenu.clearAllAutoSaveTimeouts()
 })
 
 /* ─────────────────────────────────────────
@@ -538,13 +523,6 @@ async function openAccessModal(user) {
 }
 
 function closeAccessModal() {
-  // FIX (bug "kadang hapus akses submenu ga kehapus") — flush dulu semua
-  // timer autosave yang masih pending SEBELUM modal ditutup, supaya kalau
-  // ada checkbox yang baru saja di-toggle (belum sempat "settle" 300ms)
-  // tetap terkirim ke backend, bukan hilang diam-diam. Ini juga mencegah
-  // timer nyangkut yang bisa nembak belakangan ke user yang salah kalau
-  // modal ini dibuka lagi buat user lain sebelum 300ms-nya habis.
-  accessSubMenu.clearAllAutoSaveTimeouts()
   isAccessModalVisible.value = false
   accessTargetUser.value     = null
 }
@@ -708,16 +686,16 @@ async function handlePermissionChange(row) {
         <thead>
           <tr>
             <th style="width:60px">NO.</th>
-            <th>NAME</th>
+            <th>FULL NAME</th>
             <th>EMAIL</th>
             <th>ROLE</th>
             <th>DIVISION</th>
-            <th>COMPANY</th>
-            <th>REPORT TO</th>
-            <th>BRANCH</th>
+            <th>GROUP</th>
+            <th>ATASAN</th>
+            <th>CABANG</th>
             <th style="width:70px; text-align:center">PHOTO</th>
-            <!-- <th style="width:130px">CREATED</th>
-            <th style="width:130px">UPDATED</th> -->
+            <th style="width:130px">CREATED</th>
+            <th style="width:130px">UPDATED</th>
             <th style="text-align:center; width:160px">ACTIONS</th>
           </tr>
         </thead>
@@ -776,8 +754,8 @@ async function handlePermissionChange(row) {
                 class="user-avatar"
               />
             </td>
-            <!-- <td class="td-muted">{{ store.formatDate(item.created_at) }}</td>
-            <td class="td-muted">{{ store.formatDate(item.updated_at) }}</td> -->
+            <td class="td-muted">{{ store.formatDate(item.created_at) }}</td>
+            <td class="td-muted">{{ store.formatDate(item.updated_at) }}</td>
 
             <td class="td-actions">
               <button v-if="canUpdate" class="act-btn act-edit"    title="Edit"   @click="openEditModal(item)">
@@ -1606,57 +1584,11 @@ async function handlePermissionChange(row) {
   background: var(--bg-card);
   padding: 0 12px;
 }
-.hierarchy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-items: flex-start; gap: 16px; flex-wrap: wrap; width: 100%; row-gap: 30px; }
-
-/* ── PERUBAHAN (permintaan user) ──
-   Rekan setingkat & bawahan yang posisinya SAMA (satu tier) sekarang
-   dipaksa melebar ke kiri-kanan dalam SATU baris (flex-wrap: nowrap),
-   bukan wrap turun ke baris baru -- sebelumnya kalau jumlah kartunya
-   banyak, mereka wrap ke baris ke-2/ke-3, dan garis penghubung yang
-   turun ke baris ke-2/ke-3 itu jadi kelihatan "numpuk lewat" kartu di
-   baris pertama, seolah-olah ada hubungan atasan-bawahan antar kartu
-   yang sebenarnya SETARA. Supaya tetap muat dalam satu baris, kartu
-   (.hierarchy-card) dibuat bisa menyusut (flex-shrink) sampai batas
-   min-width -- baru kalau sampai jumlahnya sangat banyak dan tetap
-   tidak muat walau sudah menyusut ke ukuran minimal, baris ini boleh
-   di-scroll horizontal (overflow-x: auto) sebagai jalan keluar
-   terakhir (garis penghubungnya tetap ikut di-recompute saat discroll,
-   lihat listener 'scroll' di computeHierarchyLines/onMounted). */
-.hierarchy-row-wrap {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  justify-content: safe center;
-  padding-bottom: 6px;
-}
-.hierarchy-row-wrap::-webkit-scrollbar { height: 6px; }
-.hierarchy-row-wrap::-webkit-scrollbar-track { background: transparent; }
-.hierarchy-row-wrap::-webkit-scrollbar-thumb { background: var(--border-main); border-radius: 999px; }
-
+.hierarchy-row { position: relative; z-index: 1; display: flex; justify-content: center; align-items: flex-start; gap: 14px; flex-wrap: wrap; width: 100%; row-gap: 30px; }
+.hierarchy-row-wrap { flex-wrap: wrap; }
 .hierarchy-empty { font-size: 0.82rem; color: var(--text-muted); font-style: italic; padding: 10px 0; }
 
-.hierarchy-card {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  /* was: width: 150px; -- sekarang bisa menyusut (flex-shrink) supaya
-     satu tier tetap muat dalam satu baris tanpa wrap, lihat catatan
-     PERUBAHAN di .hierarchy-row-wrap di atas. Basis & batas minimalnya
-     dilebarkan (150 -> 190, 96 -> 140) biar kartu tidak kelihatan
-     sempit/mepet -- kalau jumlah kartu di satu tier banyak dan sampai
-     tidak muat lagi walau sudah di lebar minimal, baris itu baru
-     discroll ke samping (lihat overflow-x di .hierarchy-row-wrap). */
-  flex: 0 1 190px;
-  min-width: 140px;
-  max-width: 190px;
-  padding: 14px 12px;
-  border-radius: 10px;
-  background: var(--bg-input);
-  border: 1.5px solid var(--border-main);
-  text-align: center;
-}
+.hierarchy-card { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 150px; padding: 12px 10px; border-radius: 10px; background: var(--bg-input); border: 1.5px solid var(--border-main); text-align: center; }
 .hc-avatar-img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; margin-bottom: 4px; }
 .hc-name { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
 .hc-role-badge { font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: rgba(99,102,241,0.1); color: #6366f1; }

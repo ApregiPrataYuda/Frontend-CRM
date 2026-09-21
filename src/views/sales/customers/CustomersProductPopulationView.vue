@@ -72,9 +72,9 @@ const canAssignSales = computed(() => Number(loggedInRoleId) !== 2)
 
 // ── VIEW MODE (all / mine / incomplete) — config statis buat tab ──
 const viewModes = [
-  { key: 'all',        icon: 'table-list',            label: 'Semua Data',        desc: 'Menampilkan seluruh data product population tanpa filter.',                     color: '#6366f1' },
-  { key: 'mine',       icon: 'user-check',             label: 'Customer Saya',     desc: 'Data yang sudah di-assign ke sales yang login.',                                 color: '#16a34a' },
-  { key: 'incomplete', icon: 'triangle-exclamation',   label: 'Data Belum Lengkap',desc: 'Data yang belum ada nama customer dan belum ada PIC/sales sama sekali.',        color: '#ef4444' },
+  { key: 'all',        icon: 'table-list',            label: 'All Data',        desc: 'Displays all product population data without filters.',                     color: '#6366f1' },
+  { key: 'mine',       icon: 'user-check',             label: 'My Customer',     desc: 'Data that has been assigned to the logged-in sales.',                                 color: '#16a34a' },
+  { key: 'incomplete', icon: 'triangle-exclamation',   label: 'Incomplete Data',desc: 'Data that does not have a customer name and does not have a PIC/sales at all.',        color: '#ef4444' },
 ]
 const activeViewInfo = () => viewModes.find(v => v.key === store.view)
 
@@ -455,7 +455,7 @@ async function submitBulkAssign() {
       <div class="breadcrumb-right">
         <button class="btn-help" type="button" @click="openHelpModal">
           <font-awesome-icon icon="circle-question" />
-          <span>Apa itu halaman ini?</span>
+          <span>What is this page?</span>
         </button>
       </div>
     </div>
@@ -534,7 +534,7 @@ async function submitBulkAssign() {
                 <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu" :class="{ show: showPerPageProductPopulations }">
-                <div class="drop-label">Per Halaman</div>
+                <div class="drop-label">Per Page</div>
                 <div class="perpage-grid">
                   <button
                     v-for="opt in [5, 10, 25, 50]" :key="opt"
@@ -551,7 +551,7 @@ async function submitBulkAssign() {
           <div class="drop-wrap">
             <button class="btn-select" @click="showCompanyFilterProductPopulations = !showCompanyFilterProductPopulations">
               <font-awesome-icon icon="building" />
-              {{ store.selectedCompanyName || 'Semua Company' }}
+              {{ store.selectedCompanyName || 'All Company' }}
               <font-awesome-icon icon="chevron-down" class="btn-arrow" />
             </button>
             <div class="drop-menu drop-company" :class="{ show: showCompanyFilterProductPopulations }">
@@ -561,14 +561,14 @@ async function submitBulkAssign() {
                 type="text"
                 class="form-input"
                 style="margin-bottom:8px"
-                placeholder="Cari company..."
+                placeholder="Search company..."
               />
               <div class="cs-list">
                 <button
                   class="drop-item"
                   :class="{ active: !store.selectedCompanyId }"
                   @click="pickCompanyFilter(null)"
-                >Semua Company</button>
+                >All Company</button>
                 <button
                   v-for="c in filteredCompanySelect" :key="c.id"
                   class="drop-item"
@@ -653,10 +653,10 @@ async function submitBulkAssign() {
         <div class="empty-state">
           <h5 class="empty-title">Tidak Ada Data</h5>
           <p class="empty-text">
-            Belum ada data product population untuk filter/tab ini.
+            There is no product population data for this filter/tab yet.
           </p>
           <button v-if="canCreate" class="btn-toolbar btn-purple mt-2" @click="openAddModal">
-            <font-awesome-icon icon="plus" /> Tambah Data
+            <font-awesome-icon icon="plus" /> Add Data
           </button>
         </div>
       </div>

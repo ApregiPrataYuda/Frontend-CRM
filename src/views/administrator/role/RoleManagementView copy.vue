@@ -2,16 +2,18 @@
 import { ref, computed, onMounted } from 'vue'
 import AppModal from '@/components/AppModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
-import { useCabangStore } from '@/stores/CabangStore'
+import { useRoleStore } from '@/stores/roleStore'
+import { useAccessMenuStore } from '@/stores/accessMenuStore'   
 import { usePermissionStore } from '@/stores/PermissionStore'
 import { useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
 
 const { confirm } = useConfirm()
-const toast       = useToast()
-const cabangStore  = useCabangStore()
-const permission  = usePermissionStore()
-const route       = useRoute()
+const toast           = useToast()
+const roleStore       = useRoleStore()
+const accessMenuStore = useAccessMenuStore()                    
+const permission      = usePermissionStore()
+const route           = useRoute()
 
 // ── PERMISSIONS ────────────────────────────
 const currentUrl = computed(() => route.path.replace('/app', ''))
@@ -21,7 +23,7 @@ const canDelete  = computed(() => permission.canDelete(currentUrl.value))
 const canView    = computed(() => permission.canView(currentUrl.value))
 
 // ── FETCH AWAL ─────────────────────────────
-onMounted(() => cabangStore.fetchCabang())
+onMounted(() => roleStore.fetchRoles())
 
 // ── DROPDOWN TOGGLES ───────────────────────
 const showExportMenu  = ref(false)
@@ -32,11 +34,11 @@ const showSortDirMenu = ref(false)
 
 // ── SORT OPTIONS ───────────────────────────
 const sortByOptions = [
-  { label: 'Created Date',  value: 'created_at' },
-  { label: 'Nama Cabang',   value: 'cabang' },
+  { label: 'Created Date', value: 'created_at' },
+  { label: 'Role Name',    value: 'role' },
 ]
 const sortByLabel = computed(
-  () => sortByOptions.find(o => o.value === cabangStore.sort.column)?.label ?? 'Created Date'
+  () => sortByOptions.find(o => o.value === roleStore.sort.column)?.label ?? 'Created Date'
 )
 
 // ── RESET ──────────────────────────────────
@@ -46,19 +48,19 @@ function handleReset() {
   showPerPageMenu.value = false
   showSortByMenu.value  = false
   showSortDirMenu.value = false
-  cabangStore.resetFilters()
+  roleStore.resetFilters()
 }
 
 // ── EXPORT ─────────────────────────────────
 function exportCSV() {
-  const header = 'ID,Cabang,Company,Alamat,No Telp,Created\n'
-  const rows   = cabangStore.cabangData
-    .map(c => `${c.id_cabang},"${c.cabang}","${c.group?.name_group || ''}","${c.alamat || ''}","${c.no_telp || ''}","${cabangStore.formatDate(c.created_at)}"`)
+  const header = 'ID,Role,Description,Created\n'
+  const rows   = roleStore.rolesData
+    .map(r => `${r.id_role},"${r.role}","${r.description || ''}","${roleStore.formatDate(r.created_at)}"`)
     .join('\n')
   const blob = new Blob([header + rows], { type: 'text/csv' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
-  a.href = url; a.download = 'master-cabang.csv'; a.click()
+  a.href = url; a.download = 'roles.csv'; a.click()
   URL.revokeObjectURL(url)
   showExportMenu.value = false
 }
@@ -66,74 +68,50 @@ function exportExcel() { showExportMenu.value = false }
 function exportPDF()   { showExportMenu.value = false }
 
 // ── ADD / EDIT MODAL ───────────────────────
-const isAddModalVisible = ref(false)
+const isAddModalVisible  = ref(false)
 const isEdit             = ref(false)
-const selectedEditCabang = ref(null)
-const newCabangName      = ref('')
-const newCabangAlamat    = ref('')
-const newCabangNoTelp    = ref('')
-const newCabangGroupId   = ref('')
+const selectedEditMenu   = ref(null)
+const newMenuName        = ref('')
+const newMenuDescription = ref('')
 
 function openAddModal() {
-  isEdit.value              = false
-  selectedEditCabang.value  = null
-  newCabangName.value       = ''
-  newCabangAlamat.value     = ''
-  newCabangNoTelp.value     = ''
-  newCabangGroupId.value    = ''
-  cabangStore.errorCabang   = null
-  isAddModalVisible.value   = true
-  cabangStore.fetchFormOptions()
+  isEdit.value            = false
+  selectedEditMenu.value  = null
+  newMenuName.value       = ''
+  newMenuDescription.value = ''
+  roleStore.errorRole     = null
+  isAddModalVisible.value = true
 }
 
 function openEditModal(item) {
   isEdit.value             = true
-  selectedEditCabang.value = item
-  newCabangName.value      = item.cabang
-  newCabangAlamat.value    = item.alamat || ''
-  newCabangNoTelp.value    = item.no_telp || ''
-  newCabangGroupId.value   = item.group_id || ''
-  cabangStore.errorCabang  = null
+  selectedEditMenu.value   = item
+  newMenuName.value        = item.role
+  newMenuDescription.value = item.description || ''
+  roleStore.errorRole      = null
   isAddModalVisible.value  = true
-  cabangStore.fetchFormOptions()
 }
 
 function closeAddModal() {
   isAddModalVisible.value = false
-  cabangStore.errorCabang = null
+  roleStore.errorRole     = null
 }
 
 async function submitAddData() {
-  if (!newCabangName.value.trim()) {
-    toast.error('Nama cabang wajib diisi!')
+  if (!newMenuName.value.trim()) {
+    toast.error('Role name is required!')
     return
   }
-  if (!newCabangAlamat.value.trim()) {
-    toast.error('Alamat cabang wajib diisi!')
-    return
-  }
-  if (!newCabangNoTelp.value.trim()) {
-    toast.error('No telp cabang wajib diisi!')
-    return
-  }
-  if (!newCabangGroupId.value) {
-    toast.error('Company wajib dipilih!')
-    return
-  }
-
   const payload = {
-    cabang:   newCabangName.value.trim(),
-    alamat:   newCabangAlamat.value.trim(),
-    no_telp:  newCabangNoTelp.value.trim(),
-    group_id: newCabangGroupId.value,
+    role:        newMenuName.value.trim(),
+    description: newMenuDescription.value.trim(),
   }
-
-  if (isEdit.value && selectedEditCabang.value) {
-    const ok = await cabangStore.updateCabang(selectedEditCabang.value.id_cabang, payload)
-    if (ok) { toast.success('Cabang berhasil diperbarui'); closeAddModal() }
+  if (isEdit.value && selectedEditMenu.value) {
+    const ok = await roleStore.updateRole(selectedEditMenu.value.id_role, payload)
+    if (ok) { toast.success('Role updated successfully'); closeAddModal() }
   } else {
-    const ok = await cabangStore.saveCabang(payload)
-    if (ok) { toast.success('Cabang berhasil ditambahkan'); closeAddModal() }
+    const ok = await roleStore.saveRole(payload)
+    if (ok) { toast.success('Role added successfully'); closeAddModal() }
   }
 }
 
@@ -142,7 +120,7 @@ const isDetailModalVisible = ref(false)
 
 async function openDetailModal(item) {
   isDetailModalVisible.value = true
-  await cabangStore.fetchCabangDetail(item.id_cabang)
+  await roleStore.fetchRoleDetail(item.id_role)
 }
 function closeDetailModal() {
   isDetailModalVisible.value = false
@@ -152,17 +130,39 @@ function closeDetailModal() {
 async function openDeleteModal(item) {
   const isConfirmed = await confirm({
     type:        'danger',
-    title:       'Hapus Data Cabang',
-    message:     `Yakin ingin menghapus cabang "${item.cabang}"?`,
+    title:       'Hapus Data Role',
+    message:     `Yakin ingin menghapus role "${item.role}"?`,
     detail:      'Tindakan ini tidak bisa dibatalkan dan akan menghapus data secara permanen.',
     confirmText: 'Yes, Delete',
     cancelText:  'Cancel',
   })
   if (isConfirmed) {
-    const ok = await cabangStore.deleteCabang(item.id_cabang)
-    if (ok) toast.success('Cabang berhasil dihapus')
-    else    toast.error('Gagal menghapus cabang')
+    const ok = await roleStore.deleteRole(item.id_role)
+    if (ok) toast.success('Role deleted successfully')
+    else    toast.error('Failed to delete role')
   }
+}
+
+// ── ACCESS MODAL ───────────────────────────
+const isAccessModalVisible = ref(false)
+const selectedAccessRole   = ref({ id: null, name: '' })
+
+// Dropdown toggle untuk modal access
+const showAccessSortByMenu  = ref(false)
+const showAccessSortDirMenu = ref(false)
+
+async function openAccessModal(item) {
+  selectedAccessRole.value = { id: item.id_role, name: item.role }
+  isAccessModalVisible.value = true
+  await accessMenuStore.setRoleId(item.id_role)
+}
+
+function closeAccessModal() {
+  isAccessModalVisible.value = false
+}
+
+async function handleAccessChange(menu) {
+  await accessMenuStore.autoSaveAccess(menu)
 }
 </script>
 
@@ -173,14 +173,14 @@ async function openDeleteModal(item) {
     <div class="breadcrumb-card mb-2">
       <div class="breadcrumb-left">
         <h4 class="breadcrumb-title">
-          <font-awesome-icon icon="table-list" /> Master Branch
+          <font-awesome-icon icon="table-list" /> Role Management
         </h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item">
             <font-awesome-icon icon="house" /> Dashboard
           </span>
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
-          <span class="breadcrumb-item active">Branch Data</span>
+          <span class="breadcrumb-item active">Role Table</span>
         </div>
       </div>
     </div>
@@ -235,7 +235,7 @@ async function openDeleteModal(item) {
             <span class="showing-label">Showing:</span>
             <div class="drop-wrap">
               <button class="btn-select" @click="showPerPageMenu = !showPerPageMenu">
-                {{ cabangStore.pagination.per_page }}
+                {{ roleStore.pagination.per_page }}
                 <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu" :class="{ show: showPerPageMenu }">
@@ -244,8 +244,8 @@ async function openDeleteModal(item) {
                   <button
                     v-for="opt in [5, 10, 25, 50]" :key="opt"
                     class="perpage-opt"
-                    :class="{ active: cabangStore.pagination.per_page === opt }"
-                    @click="cabangStore.pagination.per_page = opt; cabangStore.changePageSize(); showPerPageMenu = false"
+                    :class="{ active: roleStore.pagination.per_page === opt }"
+                    @click="roleStore.pagination.per_page = opt; roleStore.changePageSize(); showPerPageMenu = false"
                   >{{ opt }}</button>
                 </div>
               </div>
@@ -260,11 +260,11 @@ async function openDeleteModal(item) {
         <div class="controls-right">
           <div class="search-wrap">
             <input
-              v-model="cabangStore.searchCabang"
+              v-model="roleStore.searchRoles"
               type="text"
               placeholder="Searching...."
               class="search-input"
-              @input="cabangStore.searchWithDelay()"
+              @input="roleStore.searchWithDelay()"
             />
             <button class="search-btn">
               <font-awesome-icon icon="magnifying-glass" />
@@ -282,15 +282,15 @@ async function openDeleteModal(item) {
                 <button
                   v-for="opt in sortByOptions" :key="opt.value"
                   class="drop-item"
-                  :class="{ active: cabangStore.sort.column === opt.value }"
-                  @click="cabangStore.sort.column = opt.value; cabangStore.changeSorting(); showSortByMenu = false"
+                  :class="{ active: roleStore.sort.column === opt.value }"
+                  @click="roleStore.sort.column = opt.value; roleStore.changeSorting(); showSortByMenu = false"
                 >{{ opt.label }}</button>
               </div>
             </div>
 
             <div class="drop-wrap">
               <button class="btn-select" @click="showSortDirMenu = !showSortDirMenu">
-                {{ cabangStore.sort.direction.toUpperCase() }}
+                {{ roleStore.sort.direction.toUpperCase() }}
                 <font-awesome-icon icon="chevron-down" class="btn-arrow" />
               </button>
               <div class="drop-menu drop-right" :class="{ show: showSortDirMenu }">
@@ -299,8 +299,8 @@ async function openDeleteModal(item) {
                   v-for="opt in [{ label: 'DESC', value: 'desc' }, { label: 'ASC', value: 'asc' }]"
                   :key="opt.value"
                   class="drop-item"
-                  :class="{ active: cabangStore.sort.direction === opt.value }"
-                  @click="cabangStore.sort.direction = opt.value; cabangStore.changeSorting(); showSortDirMenu = false"
+                  :class="{ active: roleStore.sort.direction === opt.value }"
+                  @click="roleStore.sort.direction = opt.value; roleStore.changeSorting(); showSortDirMenu = false"
                 >{{ opt.label }}</button>
               </div>
             </div>
@@ -315,20 +315,18 @@ async function openDeleteModal(item) {
         <thead>
           <tr>
             <th style="width:70px">NO.</th>
-            <th>Branch</th>
-            <!-- <th>COMPANY</th> -->
-            <th>Address</th>
-            <th style="width:160px">Number Phone</th>
-            <!-- <th style="width:200px">CREATED</th>
-            <th style="width:200px">UPDATED</th> -->
-            <th style="width:140px; text-align:center">ACTIONS</th>
+            <th>ROLE NAME</th>
+            <th>DESCRIPTION</th>
+            <th style="width:200px">CREATED</th>
+            <th style="width:200px">UPDATED</th>
+            <th style="width:180px; text-align:center">ACTIONS</th>
           </tr>
         </thead>
         <tbody>
 
           <!-- Loading -->
-          <tr v-if="cabangStore.loadingCabang">
-            <td colspan="8" class="td-center">
+          <tr v-if="roleStore.loadingRoles">
+            <td colspan="6" class="td-center">
               <div style="display:flex; justify-content:center;">
                 <div class="spinner-custom"></div>
               </div>
@@ -336,8 +334,8 @@ async function openDeleteModal(item) {
           </tr>
 
           <!-- Empty -->
-          <tr v-else-if="!cabangStore.cabangData.length">
-            <td colspan="8" class="td-center">
+          <tr v-else-if="!roleStore.rolesData.length">
+            <td colspan="6" class="td-center">
               <div class="empty-state">
                 <img
                   src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
@@ -352,24 +350,21 @@ async function openDeleteModal(item) {
           <!-- Data -->
           <tr
             v-else
-            v-for="(item, index) in cabangStore.cabangData"
-            :key="item.id_cabang"
+            v-for="(item, index) in roleStore.rolesData"
+            :key="item.id_role"
             class="data-row"
           >
             <td class="td-no">
-              {{ (cabangStore.pagination.current_page - 1) * cabangStore.pagination.per_page + index + 1 }}.
+              {{ (roleStore.pagination.current_page - 1) * roleStore.pagination.per_page + index + 1 }}.
             </td>
             <td class="td-name">
-              <span class="menu-badge">{{ item.cabang }}</span>
+              <span class="menu-badge">{{ item.role }}</span>
             </td>
-            <!-- <td class="td-muted">
-              <span v-if="item.group?.name_group" class="detail-badge">{{ item.group.name_group }}</span>
-              <span v-else>-</span>
-            </td> -->
-            <td class="td-muted">{{ item.alamat || '-' }}</td>
-            <td class="td-muted">{{ item.no_telp || '-' }}</td>
-            <!-- <td class="td-muted">{{ cabangStore.formatDate(item.created_at) }}</td>
-            <td class="td-muted">{{ cabangStore.formatDate(item.updated_at) }}</td> -->
+            <td class="td-name">
+              <span class="menu-badge">{{ item.description || '-' }}</span>
+            </td>
+            <td class="td-muted">{{ roleStore.formatDate(item.created_at) }}</td>
+            <td class="td-muted">{{ roleStore.formatDate(item.updated_at) }}</td>
             <td class="td-actions">
               <!-- Edit -->
               <button
@@ -386,7 +381,7 @@ async function openDeleteModal(item) {
                 v-if="canDelete"
                 class="act-btn act-delete"
                 title="Hapus"
-                :disabled="cabangStore.deletingCabang"
+                :disabled="roleStore.deletingRole"
                 @click="openDeleteModal(item)"
               >
                 <font-awesome-icon icon="trash-can" />
@@ -401,6 +396,16 @@ async function openDeleteModal(item) {
               >
                 <font-awesome-icon icon="circle-info" />
               </button>
+
+              <!-- Access Role to Menu -->
+              <button
+                v-if="canCreate"
+                class="act-btn act-access"
+                title="Access Menu"
+                @click="openAccessModal(item)"
+              >
+                <font-awesome-icon icon="shield-halved" />
+              </button>
             </td>
           </tr>
 
@@ -413,115 +418,80 @@ async function openDeleteModal(item) {
       <div class="pagination-nav">
         <button
           class="btn-prev-next"
-          :disabled="!cabangStore.pagination.prev_page_url || cabangStore.loadingCabang"
-          @click="cabangStore.fetchCabang(cabangStore.pagination.prev_page_url)"
+          :disabled="!roleStore.pagination.prev_page_url || roleStore.loadingRoles"
+          @click="roleStore.fetchRoles(roleStore.pagination.prev_page_url)"
         >
           <font-awesome-icon icon="circle-left" /> Prev
         </button>
         <button
           class="btn-prev-next"
-          :disabled="!cabangStore.pagination.next_page_url || cabangStore.loadingCabang"
-          @click="cabangStore.fetchCabang(cabangStore.pagination.next_page_url)"
+          :disabled="!roleStore.pagination.next_page_url || roleStore.loadingRoles"
+          @click="roleStore.fetchRoles(roleStore.pagination.next_page_url)"
         >
           Next <font-awesome-icon icon="circle-right" />
         </button>
       </div>
       <div class="page-badges">
         <span class="page-badge">
-          {{ cabangStore.cabangData.length }} DATA | ON PAGE {{ cabangStore.pagination.current_page }}
+          {{ roleStore.rolesData.length }} DATA | ON PAGE {{ roleStore.pagination.current_page }}
         </span>
-        <span class="page-badge">TOTAL: {{ cabangStore.pagination.total }}</span>
+        <span class="page-badge">TOTAL: {{ roleStore.pagination.total }}</span>
       </div>
     </div>
 
     <!-- ── MODAL ADD / EDIT ── -->
     <AppModal
       :show="isAddModalVisible"
-      :title="isEdit ? 'Edit Cabang' : 'Add New Cabang'"
+      :title="isEdit ? 'Edit Role' : 'Add New Role'"
       :icon="isEdit ? 'pen' : 'plus'"
       size="md"
       @close="closeAddModal"
     >
       <div class="form-container-gap">
         <div class="form-group">
-          <label>Company <span style="color:#ef4444">*</span></label>
-          <select
-            v-model="newCabangGroupId"
-            class="form-input"
-            :class="{ 'input-error': cabangStore.errorCabang?.group_id }"
-            :disabled="cabangStore.loadingOptions"
-            @change="cabangStore.errorCabang = null"
-          >
-            <option value="" disabled>-- Select Company --</option>
-            <option
-              v-for="opt in cabangStore.groupsOptions"
-              :key="opt.id_group"
-              :value="opt.id_group"
-            >{{ opt.name_group }}</option>
-          </select>
-          <span v-if="cabangStore.errorCabang?.group_id" class="field-error">
-            {{ cabangStore.errorCabang.group_id[0] }}
-          </span>
-        </div>
-
-        <div class="form-group">
-          <label>Branch <span style="color:#ef4444">*</span></label>
+          <label>Role Name</label>
           <input
-            v-model="newCabangName"
+            v-model="newMenuName"
             class="form-input"
-            :class="{ 'input-error': cabangStore.errorCabang?.cabang }"
-            placeholder="e.g. Palembang"
-            @input="cabangStore.errorCabang = null"
+            :class="{ 'input-error': roleStore.errorRole?.role }"
+            placeholder="e.g. supervisor, content manager"
+            @input="roleStore.errorRole = null"
           />
-          <span v-if="cabangStore.errorCabang?.cabang" class="field-error">
-            {{ cabangStore.errorCabang.cabang[0] }}
+          <span v-if="roleStore.errorRole?.role" class="field-error">
+            {{ roleStore.errorRole.role[0] }}
           </span>
         </div>
 
         <div class="form-group">
-          <label>Address <span style="color:#ef4444">*</span></label>
+          <label>Description</label>
           <textarea
-            v-model="newCabangAlamat"
+            v-model="newMenuDescription"
             class="form-input form-textarea"
-            :class="{ 'input-error': cabangStore.errorCabang?.alamat }"
-            rows="3"
-            placeholder="e.g. Jl. AH Nasution"
-            @input="cabangStore.errorCabang = null"
+            :class="{ 'input-error': roleStore.errorRole?.description }"
+            rows="4"
+            placeholder="e.g. this role is for users who have role as supervisor..."
+            @input="roleStore.errorRole = null"
           ></textarea>
-          <span v-if="cabangStore.errorCabang?.alamat" class="field-error">
-            {{ cabangStore.errorCabang.alamat[0] }}
-          </span>
-        </div>
-
-        <div class="form-group">
-          <label>Number Phone <span style="color:#ef4444">*</span></label>
-          <input
-            v-model="newCabangNoTelp"
-            class="form-input"
-            :class="{ 'input-error': cabangStore.errorCabang?.no_telp }"
-            placeholder="e.g. 0271-2789009"
-            @input="cabangStore.errorCabang = null"
-          />
-          <span v-if="cabangStore.errorCabang?.no_telp" class="field-error">
-            {{ cabangStore.errorCabang.no_telp[0] }}
+          <span v-if="roleStore.errorRole?.description" class="field-error">
+            {{ roleStore.errorRole.description[0] }}
           </span>
         </div>
       </div>
 
       <template #footer>
-        <button class="btn-cancel" :disabled="cabangStore.savingCabang || cabangStore.updatingCabang" @click="closeAddModal">
+        <button class="btn-cancel" :disabled="roleStore.savingRole || roleStore.updatingRole" @click="closeAddModal">
           Cancel
         </button>
         <button
           class="btn-save"
-          :disabled="cabangStore.savingCabang || cabangStore.updatingCabang"
+          :disabled="roleStore.savingRole || roleStore.updatingRole"
           @click="submitAddData"
         >
-          <font-awesome-icon v-if="cabangStore.savingCabang || cabangStore.updatingCabang" icon="spinner" spin />
+          <font-awesome-icon v-if="roleStore.savingRole || roleStore.updatingRole" icon="spinner" spin />
           <font-awesome-icon v-else icon="check" />
           {{ isEdit
-            ? (cabangStore.updatingCabang ? 'Updating...' : 'Update')
-            : (cabangStore.savingCabang   ? 'Saving...'   : 'Save Data') }}
+            ? (roleStore.updatingRole ? 'Updating...' : 'Update')
+            : (roleStore.savingRole   ? 'Saving...'   : 'Save Data') }}
         </button>
       </template>
     </AppModal>
@@ -529,42 +499,34 @@ async function openDeleteModal(item) {
     <!-- ── MODAL DETAIL ── -->
     <AppModal
       :show="isDetailModalVisible"
-      title="Cabang Details"
+      title="Role Details"
       icon="circle-info"
       size="md"
       @close="closeDetailModal"
     >
-      <div v-if="cabangStore.loadingDetail" class="td-center">
+      <div v-if="roleStore.loadingDetail" class="td-center">
         <div class="spinner-custom" style="margin: 20px auto;"></div>
       </div>
-      <div v-else-if="cabangStore.cabangDetail" class="detail-list">
+      <div v-else-if="roleStore.roleDetail" class="detail-list">
         <div class="detail-row">
-          <span class="detail-label">Cabang ID</span>
-          <span class="detail-value mono">#{{ cabangStore.cabangDetail.id_cabang }}</span>
+          <span class="detail-label">Role ID</span>
+          <span class="detail-value mono">#{{ roleStore.roleDetail.id_role }}</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">Cabang</span>
-          <span class="detail-badge">{{ cabangStore.cabangDetail.cabang }}</span>
+          <span class="detail-label">Role Name</span>
+          <span class="detail-badge">{{ roleStore.roleDetail.role }}</span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">Company</span>
-          <span class="detail-badge">{{ cabangStore.cabangDetail.group?.name_group || '-' }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Alamat</span>
-          <span class="detail-value">{{ cabangStore.cabangDetail.alamat || '-' }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">No Telp</span>
-          <span class="detail-value">{{ cabangStore.cabangDetail.no_telp || '-' }}</span>
+          <span class="detail-label">Description</span>
+          <span class="detail-value">{{ roleStore.roleDetail.description || '-' }}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Created At</span>
-          <span class="detail-value">{{ cabangStore.formatDate(cabangStore.cabangDetail.created_at) }}</span>
+          <span class="detail-value">{{ roleStore.formatDate(roleStore.roleDetail.created_at) }}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Updated At</span>
-          <span class="detail-value">{{ cabangStore.formatDate(cabangStore.cabangDetail.updated_at) }}</span>
+          <span class="detail-value">{{ roleStore.formatDate(roleStore.roleDetail.updated_at) }}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Status</span>
@@ -577,8 +539,217 @@ async function openDeleteModal(item) {
       </template>
     </AppModal>
 
+    <!-- ── MODAL ACCESS ROLE TO MENU ── -->
+    <div v-if="isAccessModalVisible" class="modal-overlay" @click.self="closeAccessModal">
+      <div class="modal-access-box">
+
+        <!-- Header -->
+        <div class="modal-access-header">
+          <div class="modal-access-title">
+            <font-awesome-icon icon="shield-halved" class="modal-access-icon" />
+            Access Role to Menu
+          </div>
+          <button class="modal-close-btn" @click="closeAccessModal">
+            <font-awesome-icon icon="xmark" />
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-access-body">
+
+          <!-- Role Badge Info -->
+          <div class="access-role-info">
+            <span class="access-role-label">Role :</span>
+            <span class="access-role-badge">{{ selectedAccessRole.name }}</span>
+          </div>
+
+          <!-- Toolbar: per-page, search, sort -->
+          <div class="access-toolbar">
+            <div class="access-toolbar-left">
+              <div class="showing-wrap">
+                <font-awesome-icon icon="list" class="text-muted-color" />
+                <span class="showing-label">Showing:</span>
+                <div class="drop-wrap">
+                  <button class="btn-select" @click="accessMenuStore.pagination.per_page_open = !accessMenuStore.pagination.per_page_open">
+                    {{ accessMenuStore.pagination.per_page }}
+                    <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+                  </button>
+                  <div class="drop-menu" :class="{ show: accessMenuStore.pagination.per_page_open }">
+                    <div class="drop-label">Per halaman</div>
+                    <div class="perpage-grid">
+                      <button
+                        v-for="opt in [10, 25, 50, 100]" :key="opt"
+                        class="perpage-opt"
+                        :class="{ active: accessMenuStore.pagination.per_page === opt }"
+                        @click="accessMenuStore.pagination.per_page = opt; accessMenuStore.changePageSize(); accessMenuStore.pagination.per_page_open = false"
+                      >{{ opt }}</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="access-toolbar-right">
+              <!-- Search -->
+              <div class="search-wrap">
+                <input
+                  :value="accessMenuStore.searchAccessMenu"
+                  type="text"
+                  placeholder="Search menu...."
+                  class="search-input"
+                  @input="accessMenuStore.searchWithDelay($event.target.value)"
+                />
+                <button class="search-btn">
+                  <font-awesome-icon icon="magnifying-glass" />
+                </button>
+              </div>
+
+              <!-- Sort -->
+              <div class="sort-wrap">
+                <span class="showing-label">Sort:</span>
+                <div class="drop-wrap">
+                  <button class="btn-select" @click="showAccessSortByMenu = !showAccessSortByMenu">
+                    {{ accessMenuStore.sort.column === 'menu' ? 'Menu Name' : 'ID Menu' }}
+                    <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+                  </button>
+                  <div class="drop-menu" :class="{ show: showAccessSortByMenu }">
+                    <div class="drop-label">Sort By</div>
+                    <button
+                      v-for="opt in [{ label: 'Menu Name', value: 'menu' }, { label: 'ID Menu', value: 'id_menu' }]"
+                      :key="opt.value"
+                      class="drop-item"
+                      :class="{ active: accessMenuStore.sort.column === opt.value }"
+                      @click="accessMenuStore.sort.column = opt.value; accessMenuStore.fetchAccessMenu(); showAccessSortByMenu = false"
+                    >{{ opt.label }}</button>
+                  </div>
+                </div>
+
+                <div class="drop-wrap">
+                  <button class="btn-select" @click="showAccessSortDirMenu = !showAccessSortDirMenu">
+                    {{ accessMenuStore.sort.direction.toUpperCase() }}
+                    <font-awesome-icon icon="chevron-down" class="btn-arrow" />
+                  </button>
+                  <div class="drop-menu drop-right" :class="{ show: showAccessSortDirMenu }">
+                    <div class="drop-label">Urutan</div>
+                    <button
+                      v-for="opt in [{ label: 'ASC', value: 'asc' }, { label: 'DESC', value: 'desc' }]"
+                      :key="opt.value"
+                      class="drop-item"
+                      :class="{ active: accessMenuStore.sort.direction === opt.value }"
+                      @click="accessMenuStore.sort.direction = opt.value; accessMenuStore.fetchAccessMenu(); showAccessSortDirMenu = false"
+                    >{{ opt.label }}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel Menu Access -->
+          <div class="access-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:60px; text-align:center">#</th>
+                  <th>MENU NAME</th>
+                  <th style="width:100px; text-align:center">ACCESS</th>
+                </tr>
+              </thead>
+              <tbody>
+
+                <!-- Loading -->
+                <tr v-if="accessMenuStore.loadingAccessMenu">
+                  <td colspan="3" class="td-center">
+                    <div style="display:flex; justify-content:center;">
+                      <div class="spinner-custom"></div>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Empty -->
+                <tr v-else-if="!accessMenuStore.accessMenuStoreData.length">
+                  <td colspan="3" class="td-center">
+                    <div class="empty-state">
+                      <img
+                        src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
+                        alt="No data"
+                        class="empty-img"
+                      />
+                      <div class="empty-text">Menu access data not found</div>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Data -->
+                <tr
+                  v-else
+                  v-for="(access, index) in accessMenuStore.accessMenuStoreData"
+                  :key="access.id_menu"
+                  class="data-row"
+                >
+                  <td class="td-no" style="text-align:center">
+                    {{
+                      index + 1 +
+                      accessMenuStore.pagination.per_page *
+                      (accessMenuStore.pagination.current_page - 1)
+                    }}
+                  </td>
+                  <td class="td-name">{{ access.menu }}</td>
+                  <td style="text-align:center; vertical-align:middle;">
+                    <label class="toggle-switch">
+                      <input
+                        type="checkbox"
+                        v-model="access.has_access"
+                        @change="handleAccessChange(access)"
+                      />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+
+          <p class="access-note">
+            <font-awesome-icon icon="circle-info" /> Toggle untuk memberikan atau mencabut akses role ke menu.
+          </p>
+        </div>
+
+        <!-- Footer Pagination -->
+        <div class="modal-access-footer">
+          <div class="pagination-nav">
+            <button
+              class="btn-prev-next"
+              :disabled="!accessMenuStore.pagination.prev_page_url || accessMenuStore.loadingAccessMenu"
+              @click="accessMenuStore.fetchAccessMenu(accessMenuStore.pagination.prev_page_url)"
+            >
+              <font-awesome-icon icon="circle-left" /> Prev
+            </button>
+            <button
+              class="btn-prev-next"
+              :disabled="!accessMenuStore.pagination.next_page_url || accessMenuStore.loadingAccessMenu"
+              @click="accessMenuStore.fetchAccessMenu(accessMenuStore.pagination.next_page_url)"
+            >
+              Next <font-awesome-icon icon="circle-right" />
+            </button>
+          </div>
+
+          <div class="page-badges">
+            <span class="page-badge">
+              {{ accessMenuStore.accessMenuStoreData.length }} DATA | PAGE {{ accessMenuStore.pagination.current_page }}
+            </span>
+            <span class="page-badge">TOTAL: {{ accessMenuStore.pagination.total }}</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </template>
+
+
+
 
 <style scoped>
 /* ── CSS VARIABLES ── */
@@ -672,6 +843,8 @@ async function openDeleteModal(item) {
 .act-delete:hover { background: #ef4444; color: #fff; }
 .act-info         { color: #6366f1; border-color: #6366f1; }
 .act-info:hover   { background: #6366f1; color: #fff; }
+.act-access       { color: #8b5cf6; border-color: #8b5cf6; }         /* ← BARU */
+.act-access:hover { background: #8b5cf6; color: #fff; }              /* ← BARU */
 
 /* ── PAGINATION ── */
 .pagination-card { background: var(--bg-card); border-radius: 10px; padding: 14px 18px; box-shadow: 0 1px 3px var(--shadow-color); display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; gap: 12px; }
@@ -695,7 +868,7 @@ async function openDeleteModal(item) {
 .form-group label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
 .form-input { padding: 9px 12px; border: 1px solid var(--border-main); border-radius: 8px; font-size: 0.875rem; background: var(--bg-input); color: var(--text-primary); outline: none; transition: border 0.18s; width: 100%; box-sizing: border-box; }
 .form-input:focus { border-color: #6366f1; }
-.form-textarea { resize: none; min-height: 70px; line-height: 1.5; }
+.form-textarea { resize: none; min-height: 90px; line-height: 1.5; }
 .input-error { border-color: #ef4444 !important; }
 .field-error { font-size: 0.75rem; color: #ef4444; margin-top: 2px; }
 
@@ -716,4 +889,137 @@ async function openDeleteModal(item) {
 .mono { font-family: monospace; font-weight: 700; }
 .detail-badge { font-size: 0.82rem; font-weight: 600; padding: 3px 12px; border-radius: 6px; background: rgba(99,102,241,0.1); color: #6366f1; border: 1px solid rgba(99,102,241,0.2); }
 .badge-active { font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: rgba(34,197,94,0.1); color: #16a34a; }
+
+/* ═══════════════════════════════════════════════════
+   ACCESS MODAL — custom overlay (bukan AppModal)
+   ═══════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-access-box {
+  background: var(--bg-card);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.modal-access-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-main);
+  flex-shrink: 0;
+}
+.modal-access-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.modal-access-icon { color: #8b5cf6; font-size: 1.1rem; }
+.modal-close-btn {
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-input); border: 1px solid var(--border-main);
+  border-radius: 7px; cursor: pointer; color: var(--text-muted);
+  transition: all 0.15s;
+}
+.modal-close-btn:hover { background: #ef4444; border-color: #ef4444; color: #fff; }
+
+/* Body — scrollable */
+.modal-access-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Role info strip */
+.access-role-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-main);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.access-role-label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.access-role-badge {
+  font-size: 0.85rem; font-weight: 700;
+  color: #7c3aed;
+  background: rgba(139,92,246,0.1);
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 6px;
+  padding: 2px 12px;
+  text-transform: capitalize;
+}
+
+/* Toolbar inside modal */
+.access-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.access-toolbar-left  { display: flex; align-items: center; gap: 8px; }
+.access-toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Table wrapper */
+.access-table-wrap { border: 1px solid var(--border-main); border-radius: 10px; overflow: hidden; }
+.access-table-wrap .data-table thead tr { position: static; } /* override sticky dalam modal */
+
+/* Note */
+.access-note { font-size: 0.78rem; color: var(--text-muted); font-style: italic; display: flex; align-items: center; gap: 6px; margin: 0; }
+
+/* Footer */
+.modal-access-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-main);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ── TOGGLE SWITCH ── */
+.toggle-switch { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider {
+  width: 38px; height: 22px;
+  background: var(--border-main);
+  border-radius: 99px;
+  transition: background 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 16px; height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease;
+}
+.toggle-switch input:checked + .toggle-slider { background: #8b5cf6; }
+.toggle-switch input:checked + .toggle-slider::after { transform: translateX(16px); }
 </style>

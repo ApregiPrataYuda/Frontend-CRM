@@ -43,6 +43,11 @@ onUnmounted(() => {
   clearTimeout(hierarchyResizeTimeout)
   // FIX #1 — bersihkan timeout & abort request yang masih pending saat komponen di-unmount
   store.clearSearchTimeout()
+  // FIX (bug "kadang hapus akses submenu ga kehapus") — flush timer
+  // autosave permission yang masih pending (kalau ada) sebelum komponen
+  // di-unmount, supaya perubahan checkbox terakhir tidak hilang diam-diam.
+  // Lihat accessSubMenuStore.js::clearAllAutoSaveTimeouts().
+  accessSubMenu.clearAllAutoSaveTimeouts()
 })
 
 /* ─────────────────────────────────────────
@@ -523,6 +528,13 @@ async function openAccessModal(user) {
 }
 
 function closeAccessModal() {
+  // FIX (bug "kadang hapus akses submenu ga kehapus") — flush dulu semua
+  // timer autosave yang masih pending SEBELUM modal ditutup, supaya kalau
+  // ada checkbox yang baru saja di-toggle (belum sempat "settle" 300ms)
+  // tetap terkirim ke backend, bukan hilang diam-diam. Ini juga mencegah
+  // timer nyangkut yang bisa nembak belakangan ke user yang salah kalau
+  // modal ini dibuka lagi buat user lain sebelum 300ms-nya habis.
+  accessSubMenu.clearAllAutoSaveTimeouts()
   isAccessModalVisible.value = false
   accessTargetUser.value     = null
 }

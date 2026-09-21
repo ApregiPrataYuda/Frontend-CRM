@@ -34,8 +34,9 @@ const showSortDirMenu = ref(false)
 
 // ── SORT OPTIONS ───────────────────────────
 const sortByOptions = [
-  { label: 'Created Date', value: 'created_at' },
-  { label: 'Role Name',    value: 'role' },
+  { label: 'Created Date',    value: 'created_at' },
+  { label: 'Role Name',       value: 'role' },
+  { label: 'Urutan Hirarki',  value: 'hierarchy_order' },
 ]
 const sortByLabel = computed(
   () => sortByOptions.find(o => o.value === roleStore.sort.column)?.label ?? 'Created Date'
@@ -73,12 +74,19 @@ const isEdit             = ref(false)
 const selectedEditMenu   = ref(null)
 const newMenuName        = ref('')
 const newMenuDescription = ref('')
+// ── Urutan tier hirarki (opsional) -- dipakai Administrator::userHierarchy()
+// untuk menentukan urutan tampil role di modal "Hirarki User". Semakin
+// kecil angkanya, semakin tinggi posisinya di struktur hirarki. Boleh
+// dikosongkan (null): role yang belum diisi otomatis jatuh ke paling
+// bawah (lihat migration add_hierarchy_order_to_ms_role_table). ──
+const newHierarchyOrder  = ref(null)
 
 function openAddModal() {
   isEdit.value            = false
   selectedEditMenu.value  = null
   newMenuName.value       = ''
   newMenuDescription.value = ''
+  newHierarchyOrder.value  = null
   roleStore.errorRole     = null
   isAddModalVisible.value = true
 }
@@ -88,6 +96,7 @@ function openEditModal(item) {
   selectedEditMenu.value   = item
   newMenuName.value        = item.role
   newMenuDescription.value = item.description || ''
+  newHierarchyOrder.value  = item.hierarchy_order ?? null
   roleStore.errorRole      = null
   isAddModalVisible.value  = true
 }
@@ -105,6 +114,12 @@ async function submitAddData() {
   const payload = {
     role:        newMenuName.value.trim(),
     description: newMenuDescription.value.trim(),
+    // ── String kosong dari input number dianggap "tidak diisi" -> null,
+    // konsisten dengan RoleValidationRequest::prepareForValidation() di
+    // backend yang juga menormalisasi hierarchy_order jadi null/integer. ──
+    hierarchy_order: (newHierarchyOrder.value === '' || newHierarchyOrder.value === null)
+      ? null
+      : Number(newHierarchyOrder.value),
   }
   if (isEdit.value && selectedEditMenu.value) {
     const ok = await roleStore.updateRole(selectedEditMenu.value.id_role, payload)
@@ -317,6 +332,7 @@ async function handleAccessChange(menu) {
             <th style="width:70px">NO.</th>
             <th>ROLE NAME</th>
             <th>DESCRIPTION</th>
+            <th style="width:110px; text-align:center" title="Urutan Hirarki">URUTAN</th>
             <th style="width:200px">CREATED</th>
             <th style="width:200px">UPDATED</th>
             <th style="width:180px; text-align:center">ACTIONS</th>
@@ -326,7 +342,7 @@ async function handleAccessChange(menu) {
 
           <!-- Loading -->
           <tr v-if="roleStore.loadingRoles">
-            <td colspan="6" class="td-center">
+            <td colspan="7" class="td-center">
               <div style="display:flex; justify-content:center;">
                 <div class="spinner-custom"></div>
               </div>
@@ -335,7 +351,7 @@ async function handleAccessChange(menu) {
 
           <!-- Empty -->
           <tr v-else-if="!roleStore.rolesData.length">
-            <td colspan="6" class="td-center">
+            <td colspan="7" class="td-center">
               <div class="empty-state">
                 <img
                   src="https://cdn.dribbble.com/users/285475/screenshots/2083086/dribbble_1.gif"
@@ -363,6 +379,7 @@ async function handleAccessChange(menu) {
             <td class="td-name">
               <span class="menu-badge">{{ item.description || '-' }}</span>
             </td>
+            <td class="td-muted" style="text-align:center">{{ item.hierarchy_order ?? '-' }}</td>
             <td class="td-muted">{{ roleStore.formatDate(item.created_at) }}</td>
             <td class="td-muted">{{ roleStore.formatDate(item.updated_at) }}</td>
             <td class="td-actions">
@@ -476,6 +493,24 @@ async function handleAccessChange(menu) {
             {{ roleStore.errorRole.description[0] }}
           </span>
         </div>
+
+        <div class="form-group">
+          <label>Urutan Hirarki</label>
+          <input
+            v-model="newHierarchyOrder"
+            type="number"
+            class="form-input"
+            :class="{ 'input-error': roleStore.errorRole?.hierarchy_order }"
+            placeholder="Kosongkan jika tidak perlu diurutkan"
+            @input="roleStore.errorRole = null"
+          />
+          <span class="field-hint">
+            Semakin kecil angkanya, semakin tinggi posisi role ini di struktur Hirarki User. Boleh dikosongkan.
+          </span>
+          <span v-if="roleStore.errorRole?.hierarchy_order" class="field-error">
+            {{ roleStore.errorRole.hierarchy_order[0] }}
+          </span>
+        </div>
       </div>
 
       <template #footer>
@@ -519,6 +554,10 @@ async function handleAccessChange(menu) {
         <div class="detail-row">
           <span class="detail-label">Description</span>
           <span class="detail-value">{{ roleStore.roleDetail.description || '-' }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Urutan Hirarki</span>
+          <span class="detail-value">{{ roleStore.roleDetail.hierarchy_order ?? '-' }}</span>
         </div>
         <div class="detail-row">
           <span class="detail-label">Created At</span>
@@ -871,6 +910,7 @@ async function handleAccessChange(menu) {
 .form-textarea { resize: none; min-height: 90px; line-height: 1.5; }
 .input-error { border-color: #ef4444 !important; }
 .field-error { font-size: 0.75rem; color: #ef4444; margin-top: 2px; }
+.field-hint  { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
 
 /* ── MODAL FOOTER BUTTONS ── */
 .btn-cancel { padding: 8px 18px; background: var(--bg-main, #f1f5f9); color: var(--text-muted); border: 1px solid var(--border-main); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }

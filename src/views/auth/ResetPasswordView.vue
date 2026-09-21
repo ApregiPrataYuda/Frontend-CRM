@@ -165,9 +165,7 @@ async function handleResetPassword() {
           <h2>Create New Password</h2>
 
           <p>
-            Buat password baru yang aman
-            untuk melindungi akun Anda dan
-            menjaga akses tetap aman.
+            Don't worry if you forget your password. We'll help you securely navigate to account recovery steps.
           </p>
 
         </div>

@@ -992,8 +992,8 @@ const fuTypeIcon = (type) => {
             <th>Lead / Customer</th>
             <th>Status Follow Up</th>
             <th v-if="showVisitColumn">Status From Lead</th>
-            <th>Tgl Dibuat</th>
-            <th>Estimasi Follow-up</th>
+            <th>Created Date</th>
+            <th>Estimate Follow-up</th>
             <th style="width:160px; text-align:center">ACTIONS</th>
           </tr>
         </thead>

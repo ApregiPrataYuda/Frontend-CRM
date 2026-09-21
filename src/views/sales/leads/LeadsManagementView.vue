@@ -1284,14 +1284,14 @@ const handleStoreBulk = async () => {
 
         <div class="form-group">
           <label>Address</label>
-          <textarea :value="formData.address" class="form-input form-textarea" rows="2" placeholder="Alamat lengkap..."
+          <textarea :value="formData.address" class="form-input form-textarea" rows="2" placeholder="Complete address..."
             @input="onSentenceInput($event, formData, 'address')"
           ></textarea>
         </div>
 
         <div class="form-group">
           <label>Notes</label>
-          <textarea :value="formData.notes" class="form-input form-textarea" rows="2" placeholder="Catatan tambahan..."
+          <textarea :value="formData.notes" class="form-input form-textarea" rows="2" placeholder="Additional note..."
              @input="onSentenceInput($event, formData, 'notes')">
           </textarea>
         </div>

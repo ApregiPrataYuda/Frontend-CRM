@@ -28,8 +28,8 @@ const showStatusMenu  = ref(false)
 const showCategoryMenu = ref(false)
 
 const statusLabelMap = { pending: 'Pending', approved: 'Approved', rejected: 'Ditolak' }
-const statusLabel = computed(() => filterStatus.value ? (statusLabelMap[filterStatus.value] ?? filterStatus.value) : 'Semua Status')
-const categoryLabel = computed(() => filterCategory.value || 'Semua Kategori')
+const statusLabel = computed(() => filterStatus.value ? (statusLabelMap[filterStatus.value] ?? filterStatus.value) : 'All Status')
+const categoryLabel = computed(() => filterCategory.value || 'All Kategori')
 
 // ════════════════════════════════════════════
 // FORM: AJUKAN EXPENSE
@@ -196,7 +196,7 @@ function odooBadge(item) {
     <!-- BREADCRUMB -->
     <div class="breadcrumb-card mb-2">
       <div class="breadcrumb-left">
-        <h4 class="breadcrumb-title"><font-awesome-icon icon="money-bill-wave" /> Expenses Saya</h4>
+        <h4 class="breadcrumb-title"><font-awesome-icon icon="money-bill-wave" /> My Expenses</h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item"><font-awesome-icon icon="house" /> Dashboard</span>
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
@@ -204,26 +204,26 @@ function odooBadge(item) {
         </div>
       </div>
       <button class="btn-toolbar btn-purple" @click="openCreateModal">
-        <font-awesome-icon icon="plus" /> Ajukan Expense
+        <font-awesome-icon icon="plus" /> Submit Expense
       </button>
     </div>
 
     <!-- SUMMARY -->
     <div class="summary-grid mb-2">
       <div class="summary-card warn">
-        <p class="summary-label">Menunggu Approval</p>
+        <p class="summary-label">Waiting for Approval</p>
         <p class="summary-value amber">{{ summaryData.total_pending }}</p>
       </div>
       <div class="summary-card">
-        <p class="summary-label">Disetujui</p>
+        <p class="summary-label">Approved</p>
         <p class="summary-value green">{{ summaryData.total_approved }}</p>
       </div>
       <div class="summary-card">
-        <p class="summary-label">Ditolak</p>
+        <p class="summary-label">Rejected</p>
         <p class="summary-value red">{{ summaryData.total_rejected }}</p>
       </div>
       <div class="summary-card">
-        <p class="summary-label">Total Nominal Disetujui</p>
+        <p class="summary-label">Total Amount Approved</p>
         <p class="summary-value">{{ store.formatCurrency(summaryData.total_amount_approved) }}</p>
       </div>
     </div>
@@ -237,7 +237,7 @@ function odooBadge(item) {
               {{ statusLabel }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
             </button>
             <div class="drop-menu" :class="{ show: showStatusMenu }">
-              <button class="drop-item" :class="{ active: !filterStatus }" @click="store.changeStatusFilter(''); showStatusMenu = false">Semua Status</button>
+              <button class="drop-item" :class="{ active: !filterStatus }" @click="store.changeStatusFilter(''); showStatusMenu = false">All Status</button>
               <button class="drop-item" :class="{ active: filterStatus === 'pending' }" @click="store.changeStatusFilter('pending'); showStatusMenu = false">Pending</button>
               <button class="drop-item" :class="{ active: filterStatus === 'approved' }" @click="store.changeStatusFilter('approved'); showStatusMenu = false">Approved</button>
               <button class="drop-item" :class="{ active: filterStatus === 'rejected' }" @click="store.changeStatusFilter('rejected'); showStatusMenu = false">Ditolak</button>
@@ -249,14 +249,14 @@ function odooBadge(item) {
               {{ categoryLabel }} <font-awesome-icon icon="chevron-down" class="btn-arrow" />
             </button>
             <div class="drop-menu" :class="{ show: showCategoryMenu }">
-              <button class="drop-item" :class="{ active: !filterCategory }" @click="store.changeCategoryFilter(''); showCategoryMenu = false">Semua Kategori</button>
+              <button class="drop-item" :class="{ active: !filterCategory }" @click="store.changeCategoryFilter(''); showCategoryMenu = false">All Kategori</button>
               <button v-for="opt in categoryOptions" :key="opt.value" class="drop-item" :class="{ active: filterCategory === opt.value }" @click="store.changeCategoryFilter(opt.value); showCategoryMenu = false">{{ opt.label }}</button>
             </div>
           </div>
         </div>
         <div class="controls-right">
           <div class="search-wrap">
-            <input v-model="searchQuery" @input="store.searchWithDelay(searchQuery)" type="text" placeholder="Cari keterangan / kategori..." class="search-input" />
+            <input v-model="searchQuery" @input="store.searchWithDelay(searchQuery)" type="text" placeholder="Search Description / Category..." class="search-input" />
             <button class="search-btn"><font-awesome-icon icon="magnifying-glass" /></button>
           </div>
         </div>
@@ -269,8 +269,8 @@ function odooBadge(item) {
         <thead>
           <tr>
             <th style="width:50px">NO.</th>
-            <th>Tanggal</th><th>Kategori</th><th>Nominal</th><th>Keterangan</th>
-            <th>Kunjungan</th><th>Status</th><th>Odoo</th><th style="width:120px; text-align:center">Aksi</th>
+            <th>Date</th><th>Category</th><th>Nominal</th><th>Description</th>
+            <th>Visit</th><th>Status</th><th>Odoo</th><th style="width:120px; text-align:center">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -325,7 +325,7 @@ function odooBadge(item) {
               <font-awesome-icon icon="eye" /> Detail
             </button>
             <button v-if="item.status === 'pending'" class="exp-action-btn exp-action-delete" @click="deleteExpense(item)">
-              <font-awesome-icon icon="trash" /> Hapus
+              <font-awesome-icon icon="trash" /> Delete
             </button>
           </div>
         </div>
@@ -345,7 +345,7 @@ function odooBadge(item) {
     </div>
 
     <!-- ══════════════ MODAL: AJUKAN EXPENSE ══════════════ -->
-    <AppModal :show="showCreateModal" title="Ajukan Expense" icon="money-bill-wave" size="md" @close="closeCreateModal">
+    <AppModal :show="showCreateModal" title="Expense" icon="money-bill-wave" size="md" @close="closeCreateModal">
       <div class="form-container-gap">
         <div class="form-group">
           <label>Tanggal <span style="color:#ef4444">*</span></label>
@@ -363,7 +363,7 @@ function odooBadge(item) {
           />
         </div>
         <div class="form-group">
-          <label>Kategori <span style="color:#ef4444">*</span></label>
+          <label>Category <span style="color:#ef4444">*</span></label>
           <div class="cat-grid">
             <button v-for="opt in categoryOptions" :key="opt.value" type="button"
               class="cat-btn" :class="{ active: form.category === opt.value }"
@@ -371,11 +371,11 @@ function odooBadge(item) {
           </div>
         </div>
         <div class="form-group">
-          <label>Keterangan</label>
-          <textarea v-model="form.description" rows="3" class="form-input form-textarea" placeholder="Contoh: Lunch meeting dengan team Mechanical (Bpk. Ardi, Bpk. Agus)"></textarea>
+          <label>Description</label>
+          <textarea v-model="form.description" rows="3" class="form-input form-textarea" placeholder="Contoh: Lunch meeting with the Mechanical team (Bpk. Ardi, Bpk. Agus)"></textarea>
         </div>
         <div class="form-group">
-          <label>Kunjungan (opsional)</label>
+          <label>Visit (opsional)</label>
           <div class="drop-wrap" style="width:100%">
             <div class="kunjungan-input-wrap">
               <font-awesome-icon icon="magnifying-glass" class="kunjungan-input-icon" />
@@ -385,10 +385,10 @@ function odooBadge(item) {
                 @focus="focusLocationInput"
                 @blur="blurLocationInput"
                 type="text"
-                placeholder="Cari nama customer, atau ketik nama tempat manual..."
+                placeholder="Search for customer name, or type place name manually..."
                 class="form-input kunjungan-input"
               />
-              <font-awesome-icon v-if="form.customer_id" icon="circle-check" class="kunjungan-linked-icon" title="Terhubung ke data customer" />
+              <font-awesome-icon v-if="form.customer_id" icon="circle-check" class="kunjungan-linked-icon" title="connected to customer data" />
             </div>
             <div class="drop-menu" :class="{ show: showLocationSuggestions }" style="width:100%; max-height:220px; overflow:auto">
               <div v-if="loadingCustomerOptions" class="td-muted" style="padding:8px">Mencari...</div>
@@ -399,17 +399,17 @@ function odooBadge(item) {
             </div>
           </div>
           <p v-if="form.location_name && !form.customer_id" class="kunjungan-hint">
-            <font-awesome-icon icon="circle-info" /> Nama ini diisi manual, tidak terhubung ke data customer manapun.
+            <font-awesome-icon icon="circle-info" /> This name is filled in manually, it is not connected to any customer data.
           </p>
         </div>
         <div class="form-group">
-          <label>Lampiran (Foto Struk/Bill) <span style="color:#ef4444">*</span></label>
+          <label>Attachment (Photo of Receipt/Bill) * <span style="color:#ef4444">*</span></label>
           <input type="file" accept=".jpg,.jpeg,.png,.pdf" class="form-input" @change="onAttachmentChange" />
           <p v-if="form.attachment" class="kunjungan-hint" style="color:#16a34a">
             <font-awesome-icon icon="circle-check" /> {{ form.attachment.name }}
           </p>
           <p v-else class="kunjungan-hint">
-            <font-awesome-icon icon="circle-info" /> Wajib upload foto struk/bill sebagai bukti pengeluaran (JPG/PNG/PDF, maks 4 MB).
+            <font-awesome-icon icon="circle-info" /> It is mandatory to upload a photo of the receipt/bill as proof of expenditure. (JPG/PNG/PDF, maks 4 MB).
           </p>
         </div>
       </div>
@@ -418,7 +418,7 @@ function odooBadge(item) {
         <button class="btn-save" @click="submitCreate" :disabled="!isFormValid || loadingCreate">
           <font-awesome-icon v-if="loadingCreate" icon="spinner" spin />
           <font-awesome-icon v-else icon="paper-plane" />
-          {{ loadingCreate ? 'Mengirim...' : 'Ajukan Expense' }}
+          {{ loadingCreate ? 'Send...' : 'Submit Expense' }}
         </button>
       </template>
     </AppModal>
@@ -427,17 +427,17 @@ function odooBadge(item) {
     <AppModal :show="showDetailModal" title="Detail Expense" icon="circle-info" size="md" @close="closeDetail">
       <div v-if="loadingDetail" class="td-center"><div class="spinner-wrap"><div class="spinner"></div><span>Loading...</span></div></div>
       <div v-else-if="expenseDetail" class="detail-list">
-        <div class="detail-row"><span class="detail-label">Tanggal</span><span class="detail-value">{{ store.formatDate(expenseDetail.expense_date) }}</span></div>
-        <div class="detail-row"><span class="detail-label">Kategori</span><span class="cat-chip">{{ expenseDetail.category }}</span></div>
+        <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value">{{ store.formatDate(expenseDetail.expense_date) }}</span></div>
+        <div class="detail-row"><span class="detail-label">Category</span><span class="cat-chip">{{ expenseDetail.category }}</span></div>
         <div class="detail-row"><span class="detail-label">Nominal</span><span class="detail-value">{{ store.formatCurrency(expenseDetail.amount) }}</span></div>
         <div class="detail-row" style="flex-direction:column; align-items:flex-start; gap:6px">
-          <span class="detail-label">Keterangan</span>
+          <span class="detail-label">Description</span>
           <div style="font-size:0.85rem">{{ expenseDetail.description || '-' }}</div>
         </div>
-        <div class="detail-row"><span class="detail-label">Kunjungan</span><span class="detail-value">{{ expenseDetail.location_name ?? '-' }}</span></div>
+        <div class="detail-row"><span class="detail-label">Visit</span><span class="detail-value">{{ expenseDetail.location_name ?? '-' }}</span></div>
         <div class="detail-row"><span class="detail-label">Status</span><span class="status-badge" :class="statusBadgeClass(expenseDetail.status)">{{ statusLabelMap[expenseDetail.status] ?? expenseDetail.status }}</span></div>
         <div v-if="expenseDetail.status === 'rejected'" class="detail-row" style="flex-direction:column; align-items:flex-start; gap:6px">
-          <span class="detail-label">Alasan Ditolak</span>
+          <span class="detail-label">Reasons for Rejection</span>
           <div style="font-size:0.85rem; color:#991b1b">{{ expenseDetail.rejection_reason }}</div>
         </div>
         <div v-if="expenseDetail.status === 'approved'" class="detail-row">
@@ -447,11 +447,11 @@ function odooBadge(item) {
           </span>
         </div>
         <div v-if="expenseDetail.odoo_push_status === 'failed'" class="detail-row" style="flex-direction:column; align-items:flex-start; gap:6px">
-          <span class="detail-label">Pesan Error Odoo</span>
+          <span class="detail-label">Message Error Odoo</span>
           <div style="font-size:0.82rem; color:#991b1b">{{ expenseDetail.odoo_push_error }}</div>
         </div>
         <div v-if="expenseDetail.attachment_url" style="margin-top:8px">
-          <span class="detail-label" style="display:block; margin-bottom:8px">Lampiran</span>
+          <span class="detail-label" style="display:block; margin-bottom:8px">Attachment</span>
           <img :src="expenseDetail.attachment_url" style="width:100%; border-radius:10px; object-fit:contain; max-height:280px;" />
         </div>
       </div>

@@ -31,7 +31,10 @@ export const useRoleStore = defineStore('role', () => {
     direction: 'desc',
   })
 
-  const allowedSortColumns = ['role', 'created_at']
+  // ── 'hierarchy_order' ditambahkan supaya tabel Role Management juga
+  // bisa di-sort berdasarkan urutan tier hirarki (lihat MsRole /
+  // RoleResources -- kolom ini sudah diekspos backend). ──
+  const allowedSortColumns = ['role', 'created_at', 'hierarchy_order']
 
   // ───────────────── BUILD URL ─────────────────
   const buildUrl = () => {

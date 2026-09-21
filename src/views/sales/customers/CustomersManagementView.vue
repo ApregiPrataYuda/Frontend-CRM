@@ -1089,12 +1089,12 @@ async function fetchCoordinatesFromAddress() {
     // Nominatim cuma nemu sampai kelurahan/kecamatan/kota-nya aja -- kasih
     // tau user biar ga salah kira itu titik pas di lokasi customer.
     if (result.precisionLevel >= 2) {
-      showToast('info', 'Koordinat cuma perkiraan area (alamat detailnya belum ada di peta) — mohon cek & geser pin manual kalau perlu.')
+      showToast('info', 'The coordinates are only an estimate of the area (the detailed address is not yet on the map) — please check & move the pin manually if necessary.')
     } else {
-      showToast('success', 'Koordinat lokasi otomatis terisi dari alamat.')
+      showToast('success', 'Location coordinates are automatically filled in from the address..')
     }
   } else {
-    showToast('error', store.geocodeError || 'Koordinat tidak ditemukan, silakan isi manual.')
+    showToast('error', store.geocodeError || 'Coordinates not found, please enter manually.')
   }
 }
 
@@ -1635,20 +1635,20 @@ async function fetchCoordinatesFromBranchAddress() {
         <template v-if="store.matchedCompany">
   <div class="form-group">
     <label>Branch Name <span class="required">*</span></label>
-    <input :value="branchFormData.branch_name" class="form-input" placeholder="Contoh: Cabang Bandung"
+    <input :value="branchFormData.branch_name" class="form-input" placeholder="example: branch Bandung"
            @input="onCapitalizedInput($event, branchFormData, 'branch_name')" />
     <span v-if="getError('branch_name')" class="form-error">{{ getError('branch_name') }}</span>
   </div>
 
   <div class="form-group">
     <label>City</label>
-    <input :value="branchFormData.city" class="form-input" placeholder="Contoh: Bandung"
+    <input :value="branchFormData.city" class="form-input" placeholder="example: Bandung"
              @input="onCapitalizedInput($event, branchFormData, 'city')" />
   </div>
 
   <div class="form-group">
     <label>Branch Address</label>
-    <textarea :value="branchFormData.address" class="form-input form-textarea" rows="2" placeholder="Alamat lengkap cabang..."
+    <textarea :value="branchFormData.address" class="form-input form-textarea" rows="2" placeholder="Complete branch address..."
                @input="onCapitalizedInput($event, branchFormData, 'address', 'sentences')" />
   </div>
 
@@ -1657,7 +1657,7 @@ async function fetchCoordinatesFromBranchAddress() {
       @click="fetchCoordinatesFromBranchAddress">
       <font-awesome-icon v-if="geocodingAddress" icon="spinner" spin />
       <font-awesome-icon v-else icon="location-dot" />
-      {{ geocodingAddress ? 'Mencari koordinat...' : 'Cari Koordinat dari Address' }}
+      {{ geocodingAddress ? 'Searching koordinat...' : 'Find Coordinates from Address' }}
     </button>
   </div>
 
@@ -1665,17 +1665,17 @@ async function fetchCoordinatesFromBranchAddress() {
     <div class="form-group">
       <label>Latitude</label>
       <input v-model.number="branchFormData.latitude" type="number" step="0.0000001"
-        class="form-input" placeholder="Klik 'Cari Koordinat' atau isi manual" />
+        class="form-input" placeholder="Click 'Search Coordinates' or fill in manually" />
     </div>
     <div class="form-group">
       <label>Longitude</label>
       <input v-model.number="branchFormData.longitude" type="number" step="0.0000001"
-        class="form-input" placeholder="Klik 'Cari Koordinat' atau isi manual" />
+        class="form-input" placeholder="Click 'Search Coordinates' or fill in manually" />
     </div>
   </div>
   <div class="form-hint">
     <font-awesome-icon icon="circle-info" />
-    Latitude/Longitude bisa didapat otomatis dari tombol di atas, atau diisi/dikoreksi manual (misalnya salin langsung dari Google Maps) kalau hasilnya kurang tepat.
+    Latitude/Longitude can be obtained automatically from the button above, or filled in/corrected manually (for example, copying directly from Google Maps) if the results are not accurate.
   </div>
 
   <div class="form-group">
@@ -1722,7 +1722,7 @@ async function fetchCoordinatesFromBranchAddress() {
                     :value="contact.name"
                     class="form-input"
                     :class="{ 'input-error': getContactError(index, 'name') }"
-                    placeholder="Nama kontak"
+                    placeholder="Contact Name"
                     @input="onCapitalizedInput($event, contact, 'name')"
                   />
                   <span v-if="getContactError(index, 'name')" class="form-error">
@@ -1886,7 +1886,7 @@ async function fetchCoordinatesFromBranchAddress() {
         <div v-if="!store.matchedCompany" class="form-group">
           <label>Address</label>
           <textarea :value="formData.address" class="form-input form-textarea" rows="2"
-            placeholder="Alamat lengkap... (paste alamat dari Google Maps di sini)"
+            placeholder="Complete address... (paste the address from Google Maps here)"
             @input="onCapitalizedInput($event, formData, 'address', 'sentences')" />
         </div>
 
@@ -1895,7 +1895,7 @@ async function fetchCoordinatesFromBranchAddress() {
             @click="fetchCoordinatesFromAddress">
             <font-awesome-icon v-if="geocodingAddress" icon="spinner" spin />
             <font-awesome-icon v-else icon="location-dot" />
-            {{ geocodingAddress ? 'Mencari koordinat...' : 'Cari Koordinat dari Address' }}
+            {{ geocodingAddress ? 'Searching coordinate...' : 'Searching coordinate From Address' }}
           </button>
         </div>
 
@@ -1903,17 +1903,17 @@ async function fetchCoordinatesFromBranchAddress() {
           <div class="form-group">
             <label>Latitude</label>
             <input v-model.number="formData.latitude" type="number" step="0.0000001"
-              class="form-input" placeholder="Klik 'Cari Koordinat' atau isi manual" />
+              class="form-input" placeholder="Click 'Search Coordinates' or fill in manually" />
           </div>
           <div class="form-group">
             <label>Longitude</label>
             <input v-model.number="formData.longitude" type="number" step="0.0000001"
-              class="form-input" placeholder="Klik 'Cari Koordinat' atau isi manual" />
+              class="form-input" placeholder="Click 'Search Coordinates' or fill in manually" />
           </div>
         </div>
         <div v-if="!store.matchedCompany" class="form-hint">
           <font-awesome-icon icon="circle-info" />
-          Latitude/Longitude bisa didapat otomatis dari tombol di atas, atau diisi/dikoreksi manual (misalnya salin langsung dari Google Maps) kalau hasilnya kurang tepat.
+          Latitude/Longitude can be obtained automatically from the button above, or filled in/corrected manually (for example, copying directly from Google Maps) if the results are not accurate.
         </div>
 
         <div v-if="!store.matchedCompany" class="form-group">
@@ -1925,7 +1925,7 @@ async function fetchCoordinatesFromBranchAddress() {
         <div v-if="!store.matchedCompany" class="form-group">
           <label>Notes</label>
           <textarea :value="formData.notes" class="form-input form-textarea" rows="2"
-            placeholder="Catatan tambahan..."
+            placeholder="Additional note..."
             @input="onCapitalizedInput($event, formData, 'notes', 'sentences')" />
         </div>
 

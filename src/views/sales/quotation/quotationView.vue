@@ -313,7 +313,7 @@ function odooBadge(item) {
     <!-- BREADCRUMB -->
     <div class="breadcrumb-card mb-2">
       <div class="breadcrumb-left">
-        <h4 class="breadcrumb-title"><font-awesome-icon icon="file-signature" /> Quotation Saya</h4>
+        <h4 class="breadcrumb-title"><font-awesome-icon icon="file-signature" /> Quotation My</h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item"><font-awesome-icon icon="house" /> Dashboard</span>
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
@@ -321,7 +321,7 @@ function odooBadge(item) {
         </div>
       </div>
       <button class="btn-toolbar btn-purple" @click="openCreateModal">
-        <font-awesome-icon icon="plus" /> Buat Quotation
+        <font-awesome-icon icon="plus" /> Create Quotation
       </button>
     </div>
 
@@ -336,11 +336,11 @@ function odooBadge(item) {
         <p class="summary-value">{{ store.formatCurrency(summaryData.total_net_amount) }}</p>
       </div>
       <div class="summary-card">
-        <p class="summary-label">Terkirim ke Odoo</p>
+        <p class="summary-label">Sent to Odoo</p>
         <p class="summary-value green">{{ summaryData.total_pushed }}</p>
       </div>
       <div class="summary-card" :class="{ danger: summaryData.total_failed_push > 0 }">
-        <p class="summary-label">Push ke Odoo Gagal</p>
+        <p class="summary-label">Push to Odoo Failed</p>
         <p class="summary-value" :class="summaryData.total_failed_push > 0 ? 'red' : ''">{{ summaryData.total_failed_push }}</p>
       </div>
     </div>
@@ -351,7 +351,7 @@ function odooBadge(item) {
         <div class="controls-left"></div>
         <div class="controls-right">
           <div class="search-wrap">
-            <input v-model="searchQuery" @input="store.searchWithDelay(searchQuery)" type="text" placeholder="Cari no. customer ref / customer..." class="search-input" />
+            <input v-model="searchQuery" @input="store.searchWithDelay(searchQuery)" type="text" placeholder="Search no. customer ref / customer..." class="search-input" />
             <button class="search-btn"><font-awesome-icon icon="magnifying-glass" /></button>
           </div>
         </div>
@@ -364,8 +364,8 @@ function odooBadge(item) {
         <thead>
           <tr>
             <th style="width:50px">NO.</th>
-            <th>No. Ref</th><th>Customer</th><th>Tanggal</th><th>Net Amount</th>
-            <th>Status Odoo</th><th style="width:160px; text-align:center">Aksi</th>
+            <th>No. Ref</th><th>Customer</th><th>Date</th><th>Net Amount</th>
+            <th>Status Odoo</th><th style="width:160px; text-align:center">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -420,7 +420,7 @@ function odooBadge(item) {
               <font-awesome-icon icon="rotate-right" /> Push Odoo
             </button>
             <button v-if="item.odoo_push_status !== 'pushed'" class="quo-action-btn quo-action-delete" :disabled="loadingAction" @click="deleteQuotation(item)">
-              <font-awesome-icon icon="trash" /> Hapus
+              <font-awesome-icon icon="trash" /> Delete
             </button>
           </div>
         </div>
@@ -473,7 +473,7 @@ function odooBadge(item) {
 
         <div class="form-grid">
           <div class="form-group">
-            <label>Nama Perusahaan</label>
+            <label>Company name</label>
             <input v-model="form.customer_company_name" type="text" class="form-input" />
           </div>
           <div class="form-group">
@@ -482,7 +482,7 @@ function odooBadge(item) {
           </div>
         </div>
         <div class="form-group">
-          <label>Alamat</label>
+          <label>Address</label>
           <textarea v-model="form.customer_address" rows="2" class="form-input form-textarea"></textarea>
         </div>
 
@@ -497,27 +497,27 @@ function odooBadge(item) {
           </div>
           <div class="form-group">
             <label>Payment Terms <span style="color:#ef4444">*</span></label>
-            <input v-model="form.payment_terms" type="text" placeholder="Contoh: 30 Hari setelah invoice" class="form-input" />
+            <input v-model="form.payment_terms" type="text" placeholder="example: 30 Days after invoice" class="form-input" />
           </div>
           <div class="form-group">
-            <label>Tanggal Quotation <span style="color:#ef4444">*</span></label>
+            <label>Date Quotation <span style="color:#ef4444">*</span></label>
             <input v-model="form.quotation_date" type="date" class="form-input" />
           </div>
           <div class="form-group">
-            <label>Halaman</label>
-            <input v-model="form.pages" type="text" placeholder="Jumlah Halaman (contoh: 1 page)" class="form-input" />
+            <label>Page</label>
+            <input v-model="form.pages" type="text" placeholder="Number of pages (example: 1 page)" class="form-input" />
           </div>
           <div class="form-group">
             <label>Validity <span style="color:#ef4444">*</span></label>
-            <input v-model="form.validity" type="text" placeholder="Contoh: 30 DAYS AFTER DATE OF ISSUE" class="form-input" />
+            <input v-model="form.validity" type="text" placeholder="example: 30 DAYS AFTER DATE OF ISSUE" class="form-input" />
           </div>
           <div class="form-group">
             <label>Delivery Time <span style="color:#ef4444">*</span></label>
-            <input v-model="form.delivery_time" type="text" placeholder="Contoh: 16 WORKING WEEKS FOT CILEGON" class="form-input" />
+            <input v-model="form.delivery_time" type="text" placeholder="example: 16 WORKING WEEKS FOT CILEGON" class="form-input" />
           </div>
           <div class="form-group">
             <label>Signature</label>
-            <input v-model="form.signature" type="text" placeholder="Nama Sales" class="form-input" />
+            <input v-model="form.signature" type="text" placeholder="Name Sales" class="form-input" />
           </div>
         </div>
 
@@ -536,7 +536,7 @@ TAG#: PX300B
              biar search product-nya lega dan dropdown hasil pencariannya kelihatan
              penuh (dulu ke-crop sama overflow tabel). ═══ -->
         <div class="form-group">
-          <label>Rincian Item <span style="color:#ef4444">*</span></label>
+          <label>Item Detail<span style="color:#ef4444">*</span></label>
 
           <div class="items-list">
             <div v-for="(row, idx) in items" :key="row.key" class="item-card">
@@ -549,12 +549,12 @@ TAG#: PX300B
                   title="Hapus Baris"
                   @click="removeItemRow(row.key)"
                 >
-                  <font-awesome-icon icon="trash" /> Hapus
+                  <font-awesome-icon icon="trash" /> Delete
                 </button>
               </div>
 
               <div class="form-group">
-                <label>Product / Deskripsi</label>
+                <label>Product / Description</label>
                 <div class="product-cell">
                   <div class="kunjungan-input-wrap">
                     <font-awesome-icon icon="magnifying-glass" class="kunjungan-input-icon" />
@@ -564,13 +564,13 @@ TAG#: PX300B
                       @focus="focusProductInput(row)"
                       @blur="blurProductInput"
                       rows="1"
-                      placeholder="Cari product dari katalog, atau ketik manual..."
+                      placeholder="Search for a product from the catalog, or type it manually..."
                       class="form-input kunjungan-input cell-input"
                     ></textarea>
                     <font-awesome-icon v-if="row.odoo_product_id" icon="circle-check" class="kunjungan-linked-icon" title="Terhubung ke katalog Odoo" />
                   </div>
                   <div v-if="activeProductRowKey === row.key" class="drop-menu product-drop-menu" :class="{ show: showProductSuggestions }">
-                    <div v-if="loadingProductOptions" class="td-muted" style="padding:10px">Mencari...</div>
+                    <div v-if="loadingProductOptions" class="td-muted" style="padding:10px">Searching...</div>
                     <div v-else-if="productOptions.length === 0" class="td-muted" style="padding:10px">Product tidak ditemukan — boleh lanjut isi manual.</div>
                     <button
                       v-else v-for="opt in productOptions" :key="opt.id" type="button"
@@ -593,11 +593,11 @@ TAG#: PX300B
                   <input v-model="row.quantity" type="number" min="0" step="any" class="form-input" />
                 </div>
                 <div class="form-group">
-                  <label>Satuan</label>
+                  <label>Unit</label>
                   <input v-model="row.unit" type="text" placeholder="SET/PCS/UNIT" class="form-input" />
                 </div>
                 <div class="form-group">
-                  <label>Harga Satuan</label>
+                  <label>Unit price</label>
                   <input v-model="row.unit_price" type="number" min="0" step="any" class="form-input" />
                 </div>
                 <div class="form-group">
@@ -608,7 +608,7 @@ TAG#: PX300B
             </div>
           </div>
 
-          <button type="button" class="btn-add-row" @click="addItemRow"><font-awesome-icon icon="plus" /> Tambah Baris</button>
+          <button type="button" class="btn-add-row" @click="addItemRow"><font-awesome-icon icon="plus" /> Add Row</button>
         </div>
 
         <div class="totals-box">
@@ -632,7 +632,7 @@ TAG#: PX300B
         <button class="btn-save" @click="submitForm" :disabled="!isFormValid || loadingSave">
           <font-awesome-icon v-if="loadingSave" icon="spinner" spin />
           <font-awesome-icon v-else icon="floppy-disk" />
-          {{ loadingSave ? 'Menyimpan...' : (isEditing ? 'Perbarui Quotation' : 'Simpan Quotation') }}
+          {{ loadingSave ? 'Savingg...' : (isEditing ? 'Update Quotation' : 'Save Quotation') }}
         </button>
       </template>
     </AppModal>

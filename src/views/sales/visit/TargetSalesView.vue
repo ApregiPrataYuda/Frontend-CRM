@@ -425,7 +425,7 @@ async function submitCustomerCheckOut() {
       <div class="breadcrumb-left">
         <h4 class="breadcrumb-title">
           <font-awesome-icon icon="bullseye" />
-          Target Visit Saya
+          My Visit Target
         </h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item">
@@ -452,12 +452,12 @@ async function submitCustomerCheckOut() {
         />
       </div>
       <div class="toolbar-hint">
-        <font-awesome-icon icon="circle-info" /> Target ini dikasih sama Manager kamu, di-update otomatis tiap kali kamu selesai visit.
+        <font-awesome-icon icon="circle-info" /> This target is given by your Manager, it is updated automatically every time you finish a visit.
       </div>
     </div>
 
     <div v-if="store.loading" class="td-center-loading">
-      <font-awesome-icon icon="spinner" spin /> Memuat data target visit...
+      <font-awesome-icon icon="spinner" spin /> Loading target visit data...
     </div>
 
     <template v-else>
@@ -473,36 +473,36 @@ async function submitCustomerCheckOut() {
           </svg>
           <div class="hero-ring-label">
             <div class="hero-ring-value">{{ store.avgPercentage }}%</div>
-            <div class="hero-ring-sub">Rata-rata</div>
+            <div class="hero-ring-sub">Average</div>
           </div>
         </div>
 
         <div class="hero-stats">
           <div class="hero-stat-item">
             <div class="hero-stat-value">{{ store.totalVisitsDone }} / {{ store.totalVisitsPlanned }}</div>
-            <div class="hero-stat-label">Total Kunjungan (dari semua target)</div>
+            <div class="hero-stat-label">Total Visits (from all targets)</div>
           </div>
           <div class="hero-stat-item">
             <div class="hero-stat-value">{{ store.achievedCount }} / {{ store.totalTargets }}</div>
-            <div class="hero-stat-label">Target Visit Sudah Tercapai</div>
+            <div class="hero-stat-label">Visit Target Has Been Achieved</div>
           </div>
           <div class="hero-stat-item">
             <div class="hero-stat-value">{{ store.totalTargets - store.achievedCount }}</div>
-            <div class="hero-stat-label">Target Visit Masih Berjalan</div>
+            <div class="hero-stat-label">Target Visit Still Running</div>
           </div>
         </div>
       </div>
 
       <div class="section-title">
         <font-awesome-icon icon="list-check" />
-        <span>Daftar Target Bulan Ini</span>
+        <span>List of Targets for the Month</span>
         <span class="count">{{ store.totalTargets }}</span>
       </div>
 
       <div class="target-grid flex-grow-1 overflow-auto mb-3">
         <div v-if="store.sortedTargets.length === 0" class="empty-state">
           <font-awesome-icon icon="inbox" class="empty-icon" />
-          <div>Belum ada target visit buat bulan ini.</div>
+          <div>There is no target visit for this month yet.</div>
         </div>
 
         <div v-else v-for="row in store.sortedTargets" :key="row.id" class="target-card" :class="{ done: row.is_achieved }">
