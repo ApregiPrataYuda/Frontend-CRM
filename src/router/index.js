@@ -491,6 +491,16 @@ const routes = [
         }
       },
 
+      {
+        path: 'contact',
+        name: 'Contact',
+        component: () =>
+          import('@/views/sales/contact/contactView.vue'),
+        meta: {
+          role: [2]
+        }
+      },
+
       
 
       
@@ -757,6 +767,16 @@ const routes = [
         name: 'Approvals Branch Customer',
         component: () =>
           import('@/views/manager/approvalCustomers/approvalBranchCustomersView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
+        path: 'contact/list',
+        name: 'Contact List',
+        component: () =>
+          import('@/views/manager/contact/contactView.vue'),
         meta: {
           role: [3]
         }
