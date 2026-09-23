@@ -492,6 +492,16 @@ const routes = [
       },
 
       {
+        path: 'sales/products-catalog-sales',
+        name: 'Products Catalog',
+        component: () =>
+          import('@/views/sales/catalog/productCatalogSalesView.vue'),
+        meta: {
+          role: [2]
+        }
+      },
+
+      {
         path: 'contact',
         name: 'Contact',
         component: () =>
@@ -777,6 +787,27 @@ const routes = [
         name: 'Contact List',
         component: () =>
           import('@/views/manager/contact/contactView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
+
+      {
+        path: 'catalog/category/product',
+        name: 'Catalog Category',
+        component: () =>
+          import('@/views/manager/catalog/category/categoryCatalogView.vue'),
+        meta: {
+          role: [3]
+        }
+      },
+
+      {
+        path: 'product/catalog',
+        name: 'Catalog Product',
+        component: () =>
+          import('@/views/manager/catalog/productCatalog/productCatalogManagement.vue'),
         meta: {
           role: [3]
         }

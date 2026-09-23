@@ -214,8 +214,10 @@ import {
   faSitemap,
   faPlug,
   faAddressBook,
-  faLinkSlash
-
+  faLinkSlash,
+  faPhotoFilm,
+  faFileVideo,
+  faBookOpen,
 } from '@fortawesome/free-solid-svg-icons'
 
 library.add(
@@ -417,7 +419,10 @@ library.add(
   faSitemap,
   faPlug,
   faAddressBook,
-  faLinkSlash
+  faLinkSlash,
+  faPhotoFilm,
+  faFileVideo,
+  faBookOpen,
 )
 
 const app = createApp(App)
