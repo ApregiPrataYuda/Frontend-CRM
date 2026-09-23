@@ -299,8 +299,8 @@ function onChangeMediaFile(e) {
     toast.error(isPdf ? 'File harus berformat .pdf' : 'File harus berformat mp4/mov/avi/mkv/webm')
     return
   }
-  if (file.size > 20 * 1024 * 1024) {
-    toast.error('Ukuran file maksimal 20MB')
+  if (file.size > 10 * 1024 * 1024) {
+    toast.error('Ukuran file maksimal 10MB')
     return
   }
   mediaFile.value = file
@@ -379,7 +379,7 @@ function mediaIcon(item) {
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
           <span class="breadcrumb-item">Product Catalog</span>
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
-          <span class="breadcrumb-item active">Produk</span>
+          <span class="breadcrumb-item active">Product</span>
         </div>
       </div>
     </div>
@@ -501,7 +501,7 @@ function mediaIcon(item) {
           <tr>
             <th style="width:60px">NO.</th>
             <th style="width:60px">THUMB</th>
-            <th>SKU</th>
+            <th>SKU/KODE</th>
             <th>PRODUCT NAME</th>
             <th>CATEGORY</th>
             <th style="width:130px">PRICE</th>
@@ -632,7 +632,7 @@ function mediaIcon(item) {
     <!-- ── MODAL ADD / EDIT PRODUK ── -->
     <AppModal
       :show="isProductModalVisible"
-      :title="isEdit ? 'Edit Produk' : 'Add Produk'"
+      :title="isEdit ? 'Edit Product' : 'Add Product'"
       :icon="isEdit ? 'pen' : 'plus'"
       size="lg"
       @close="closeProductModal"
@@ -648,7 +648,7 @@ function mediaIcon(item) {
               :class="{ 'input-error': productStore.errorProduct?.category_id }"
               @change="productStore.clearFieldError('category_id')"
             >
-              <option value="" disabled>-- Pilih Kategori --</option>
+              <option value="" disabled>-- Select Category --</option>
               <option v-for="opt in categoryStore.categoryOptions" :key="opt.id" :value="opt.id">
                 {{ opt.name }}
               </option>
@@ -659,7 +659,7 @@ function mediaIcon(item) {
           </div>
 
           <div class="form-group">
-            <label>SKU</label>
+            <label>SKU/KODE</label>
             <input
               v-model="form.sku"
               class="form-input"
@@ -796,7 +796,7 @@ function mediaIcon(item) {
       </div>
       <div v-else-if="productStore.productDetail" class="detail-list">
         <div class="detail-row">
-          <span class="detail-label">SKU</span>
+          <span class="detail-label">SKU/KODE</span>
           <span class="detail-value mono">{{ productStore.productDetail.sku }}</span>
         </div>
         <div class="detail-row">
@@ -839,7 +839,7 @@ function mediaIcon(item) {
     ══════════════════════════════════════════ -->
     <AppModal
       :show="isMediaModalVisible"
-      :title="`Manage Media — ${mediaTargetProduct?.name ?? ''}`"
+      :title="`Kelola Media — ${mediaTargetProduct?.name ?? ''}`"
       icon="photo-film"
       size="lg"
       @close="closeMediaModal"
@@ -848,10 +848,10 @@ function mediaIcon(item) {
 
         <div class="d-flex justify-content-between align-items-center">
           <span class="toolbar-note">
-            <font-awesome-icon icon="circle-info" /> Media with a smaller sort_order appears first on the Sales page.
+            <font-awesome-icon icon="circle-info" /> Media dengan sort_order lebih kecil tampil lebih dulu di halaman Sales.
           </span>
           <button v-if="!isMediaFormVisible" class="btn-toolbar btn-purple" @click="openAddMediaForm">
-            <font-awesome-icon icon="plus" /> Add Media
+            <font-awesome-icon icon="plus" /> Tambah Media
           </button>
         </div>
 
@@ -892,7 +892,7 @@ function mediaIcon(item) {
               @change="onChangeMediaFile"
             />
             <p class="photo-hint">
-              {{ mediaForm.media_type === 'pdf' ? 'Format: PDF' : 'Format: mp4/mov/avi/mkv/webm' }} — Max 20MB
+              {{ mediaForm.media_type === 'pdf' ? 'Format: PDF' : 'Format: mp4/mov/avi/mkv/webm' }} — Max 10MB
               <span v-if="isMediaEdit"> (kosongkan kalau tidak ingin ganti file)</span>
             </p>
             <p v-if="mediaFile" class="photo-filename">
