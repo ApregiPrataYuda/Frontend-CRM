@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import { authService }        from '@/services/authServices'
 import { useSidebarStore }    from '@/stores/sidebarStore'
 import { usePermissionStore } from '@/stores/PermissionStore'
-import { initEcho, disconnectEcho } from '@/services/echo'
 import router from '@/router'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -78,22 +77,6 @@ export const useAuthStore = defineStore('auth', () => {
         permissionStore.fetchPermissions(user.value.id),
       ])
 
-      // ── Notifikasi real-time (lonceng): connect Echo/Reverb & dengerin
-      // channel private notifications.{id_user} milik user yang baru
-      // login. Dipanggil di sini (bukan cuma hydrate()) supaya notifikasi
-      // langsung nyala tanpa perlu refresh dulu setelah login.
-      //
-      // Sengaja dibungkus try/catch SENDIRI (terpisah dari try/catch
-      // login di luar) -- kalau Reverb belum jalan / env VITE_REVERB_*
-      // belum diisi / server WebSocket down, itu TIDAK BOLEH bikin
-      // seluruh proses login dianggap gagal. Notifikasi real-time
-      // sifatnya progressive enhancement, bukan syarat login. ──
-      try {
-        initEcho(user.value.id_user)
-      } catch (echoErr) {
-        console.warn('Gagal connect notifikasi real-time (Echo/Reverb):', echoErr)
-      }
-
       return data
 
     } catch (err) {
@@ -118,16 +101,6 @@ export const useAuthStore = defineStore('auth', () => {
 
       sidebarStore.clearMenus()
       permissionStore.clearPermissions()
-
-      // ── Putus koneksi Echo/Reverb supaya tidak nyisa listen ke channel
-      // notifikasi user yang barusan logout. Dibungkus try/catch supaya
-      // gagal disconnect tidak sampai menggagalkan proses clear
-      // token/user & redirect ke /login di bawah. ──
-      try {
-        disconnectEcho()
-      } catch (echoErr) {
-        console.warn('Gagal disconnect Echo/Reverb:', echoErr)
-      }
 
       token.value       = null
       user.value        = null
@@ -164,18 +137,6 @@ export const useAuthStore = defineStore('auth', () => {
           ? Promise.resolve()
           : permissionStore.fetchPermissions(user.value.id),
       ])
-
-      // ── Halaman di-refresh (F5) tapi token JWT masih valid -- Echo
-      // belum tentu masih connect (instance-nya hidup di memory, hilang
-      // begitu halaman reload), jadi connect ulang di sini juga.
-      // Dibungkus try/catch sendiri -- gagal connect Echo tidak boleh
-      // ikut memicu logout() di catch bawah (itu buat fetchMe/menu/
-      // permission yang beneran gagal). ──
-      try {
-        initEcho(user.value.id_user)
-      } catch (echoErr) {
-        console.warn('Gagal connect notifikasi real-time (Echo/Reverb):', echoErr)
-      }
 
     } catch (err) {
       await logout()

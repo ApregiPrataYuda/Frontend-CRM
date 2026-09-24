@@ -11,6 +11,7 @@ import { ref, onMounted, onUnmounted, computed  } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingAppStore } from '@/stores/settingAppStore'
+import NotificationBell from '@/components/NotificationBell.vue'
 const settingStore = useSettingAppStore()
 
 const { isDark, toggleTheme } = useTheme()
@@ -123,6 +124,9 @@ const pageTitle = computed(() => {
 
       <!-- Right -->
       <CHeaderNav class="d-flex align-items-center gap-2">
+
+        <!-- Notifikasi -->
+        <NotificationBell />
 
         <!-- Theme Toggle -->
         <button class="theme-toggle" @click="toggleTheme" :title="isDark ? 'Light Mode' : 'Dark Mode'">

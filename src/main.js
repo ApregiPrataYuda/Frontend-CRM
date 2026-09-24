@@ -218,6 +218,8 @@ import {
   faPhotoFilm,
   faFileVideo,
   faBookOpen,
+  faBullhorn,
+  faPowerOff
 } from '@fortawesome/free-solid-svg-icons'
 
 library.add(
@@ -423,6 +425,8 @@ library.add(
   faPhotoFilm,
   faFileVideo,
   faBookOpen,
+  faBullhorn,
+  faPowerOff
 )
 
 const app = createApp(App)

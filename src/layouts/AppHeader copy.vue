@@ -83,11 +83,21 @@ const userName = computed(() =>
   authStore.user?.fullname || 'User'
 )
 
+const userEmail = computed(() =>
+  authStore.user?.email || 'mailNotFound@example.com'
+)
+
 const userRole = computed(() =>
   authStore.user?.role?.role
     ? authStore.user.role.role.charAt(0).toUpperCase() +
       authStore.user.role.role.slice(1)
     : 'User'
+)
+
+// Label role di bawah nama sengaja disembunyiin khusus buat Manager
+// (case-insensitive, jaga-jaga backend ngirim "Manager"/"manager"/"MANAGER").
+const isManagerRole = computed(() =>
+  (authStore.user?.role?.role || '').toLowerCase() === 'manager'
 )
 
 const pageTitle = computed(() => {
@@ -140,7 +150,7 @@ const pageTitle = computed(() => {
             </div>
             <div class="user-chip-info d-none d-md-block">
               <div class="user-chip-name">{{ userName }}</div>
-              <div class="user-chip-role">{{ userRole }}</div>
+              <div v-if="!isManagerRole" class="user-chip-role">{{ userRole }}</div>
             </div>
             <font-awesome-icon
               icon="chevron-down"
@@ -155,18 +165,18 @@ const pageTitle = computed(() => {
             <!-- Header dropdown -->
             <div class="dropdown-header">
               <div class="dropdown-avatar">
-              <img
-                v-if="photoUrl"
-                :src="photoUrl"
-                :alt="userName"
-                class="avatar-img"
-                @error="$event.target.style.display = 'none'"
-              />
+                <img
+                  v-if="photoUrl"
+                  :src="photoUrl"
+                  :alt="userName"
+                  class="avatar-img"
+                  @error="$event.target.style.display = 'none'"
+                />
                 <span v-else>{{ userAvatar }}</span>
               </div>
-              <div>
-                <div class="dropdown-name">{{ userName }}</div>
-                <div class="dropdown-email">{{ authStore.user?.email || 'mailNotFound@example.com' }}</div>
+              <div class="dropdown-userinfo">
+                <div class="dropdown-name" :title="userName">{{ userName }}</div>
+                <div class="dropdown-email" :title="userEmail">{{ userEmail }}</div>
               </div>
             </div>
 
@@ -309,11 +319,17 @@ const pageTitle = computed(() => {
 .user-chip:hover {
   background: var(--bg-icon-hover);
 }
+
+/* Avatar bulat dipakai di 2 tempat: chip atas (.user-avatar, 34px) &
+   panel dropdown (.dropdown-avatar, 38px). Dua-duanya WAJIB punya
+   overflow:hidden, kalau nggak foto profil (.avatar-img) bakal "meleber"
+   keluar lingkaran (kotak) alih-alih ke-crop bulat. */
 .user-avatar {
   width: 34px;
   height: 34px;
   min-width: 34px;
   border-radius: 50%;
+  overflow: hidden;
   background: linear-gradient(135deg, #6366f1, #818cf8);
   color: #fff;
   font-size: 0.75rem;
@@ -321,6 +337,7 @@ const pageTitle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 .user-chip-info { line-height: 1.2; }
 .user-chip-name {
@@ -347,7 +364,7 @@ const pageTitle = computed(() => {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 230px;
+  width: 260px;
   background: var(--bg-card);
   border: 1px solid var(--border-main);
   border-radius: 12px;
@@ -376,6 +393,7 @@ const pageTitle = computed(() => {
   height: 38px;
   min-width: 38px;
   border-radius: 50%;
+  overflow: hidden;
   background: linear-gradient(135deg, #6366f1, #818cf8);
   color: #fff;
   font-size: 0.8rem;
@@ -383,16 +401,31 @@ const pageTitle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+/* Wrapper nama+email -- flex:1 + min-width:0 WAJIB ada biar
+   text-overflow:ellipsis di bawah ini kepakai (tanpa min-width:0,
+   flex item ga akan pernah nyusut buat ellipsis-nya jalan). Ini yang
+   benerin email panjang yang tadinya "keluar" dari box dropdown. */
+.dropdown-userinfo {
+  flex: 1;
+  min-width: 0;
 }
 .dropdown-name {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .dropdown-email {
   font-size: 0.72rem;
   color: var(--text-muted);
   margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dropdown-divider {
@@ -435,21 +468,6 @@ const pageTitle = computed(() => {
 }
 .item-logout:hover {
   background: rgba(239,68,68,0.06) !important;
-}
-
-.user-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;        /* ← bulat */
-  overflow: hidden;           /* ← foto tidak keluar lingkaran */
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .avatar-img {

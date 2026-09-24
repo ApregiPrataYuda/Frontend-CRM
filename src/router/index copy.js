@@ -135,7 +135,7 @@ const routes = [
       /* ========================================
          ADMIN
       ========================================= */
-
+       
       {
         path: 'administrator-dashboard',
 
@@ -158,7 +158,7 @@ const routes = [
           import('@/views/administrator/menu/MenuManagementView.vue'),
 
         meta: {
-          role: [1],  title: 'Menu Management'
+          role: [1],  title: 'Menu Management' 
         }
       },
 
@@ -171,7 +171,7 @@ const routes = [
           import('@/views/administrator/submenu/SubMenuManagementView.vue'),
 
         meta: {
-          role: [1],  title: 'Sub Menu Management'
+          role: [1],  title: 'Sub Menu Management' 
         }
       },
 
@@ -185,7 +185,7 @@ const routes = [
           import('@/views/administrator/role/RoleManagementView.vue'),
 
         meta: {
-          role: [1],  title: 'Role Management'
+          role: [1],  title: 'Role Management' 
         }
       },
 
@@ -198,7 +198,7 @@ const routes = [
           import('@/views/administrator/user/UserManagementView.vue'),
 
         meta: {
-          role: [1],  title: 'User Management'
+          role: [1],  title: 'User Management' 
         }
       },
 
@@ -210,7 +210,7 @@ const routes = [
           import('@/views/administrator/setting/SettingAppGlobalView.vue'),
 
         meta: {
-          role: [1],  title: 'Setting Management'
+          role: [1],  title: 'Setting Management' 
         }
       },
 
@@ -223,7 +223,7 @@ const routes = [
           import('@/views/administrator/employe/EmployeManagementView.vue'),
 
         meta: {
-          role: [1],  title: 'Employe Management'
+          role: [1],  title: 'Employe Management' 
         }
       },
 
@@ -235,7 +235,7 @@ const routes = [
           import('@/views/administrator/cabang/CabangManagementView.vue'),
 
         meta: {
-          role: [1],  title: 'Branch Management'
+          role: [1],  title: 'Branch Management' 
         }
       },
 
@@ -248,7 +248,7 @@ const routes = [
           import('@/views/administrator/configOdoo/odooConfigurationView.vue'),
 
         meta: {
-          role: [1],  title: 'Odoo Configuration'
+          role: [1],  title: 'Odoo Configuration' 
         }
       },
 
@@ -501,7 +501,7 @@ const routes = [
         }
       },
 
-
+      
 
       {
         path: 'contact',
@@ -513,9 +513,9 @@ const routes = [
         }
       },
 
+      
 
-
-
+      
 
       /* ========================================
          MANAGER
@@ -587,23 +587,13 @@ const routes = [
       },
 
 
-      // ── Notification Center: SENGAJA tidak dikasih `role` meta --
-      // halaman ini dipakai SEMUA role (Admin/Sales/Manager), bukan
-      // cuma Manager. Tab "Notifikasi Saya" & "Reminder Saya" terbuka
-      // buat siapa saja; tab "Kelola Notifikasi" sudah di-gate sendiri
-      // di dalam notificationCenter.vue lewat canCreate (permission),
-      // jadi tidak perlu dibatasi lagi di level route. Supaya semua
-      // role bisa buka route ini (termasuk yang belum tentu punya menu
-      // "Notification Center" di sidebar-nya), path-nya juga didaftarkan
-      // di `sharedPages` pada router guard di bawah -- sama seperti
-      // /app/profile & /app/settings. ──
       {
         path: 'notification-center',
         name: 'Notification',
         component: () =>
           import('@/views/notification/notificationCenter.vue'),
         meta: {
-          title: 'My Notif'
+          role: [3]
         }
       },
 
@@ -672,7 +662,7 @@ const routes = [
           role: [3]
         }
       },
-
+      
 
       {
         path: 'manager-activity-report',
@@ -988,15 +978,11 @@ router.beforeEach((to, from) => {
     // console.log('allowedUrls:', allowedUrls)
     // console.log('to.path:', to.path)
 
-    // Halaman shared yang selalu boleh diakses -- terlepas dari
-    // menu/permission per role. notification-center masuk sini karena
-    // dipakai SEMUA role (Admin/Sales/Manager), bukan cuma yang
-    // kebetulan punya menu "Notification Center" di sidebar-nya.
+    // Halaman shared yang selalu boleh diakses
     const sharedPages = [
       '/app/profile',
       '/app/settings',
       '/app/unauthorized',
-      '/app/notification-center',
     ]
 
     if (
@@ -1009,7 +995,7 @@ router.beforeEach((to, from) => {
 
   //  Cek permission berdasarkan URL
   if (to.path.startsWith('/app/')) {
-    const sharedPages = ['/app/profile', '/app/settings', '/app/unauthorized', '/app/notification-center']
+    const sharedPages = ['/app/profile', '/app/settings', '/app/unauthorized']
 
     if (
       !sharedPages.includes(to.path) &&
