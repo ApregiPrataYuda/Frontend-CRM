@@ -172,29 +172,6 @@ onBeforeUnmount(() => {
 }
 .notif-dropdown.show { opacity: 1; transform: translateY(0); pointer-events: all; }
 
-/* ── FIX bug tampilan: di layar sempit (mobile), .notif-bell-wrap
-  (cuma 38px, selebar ikon lonceng) TIDAK selalu berada di ujung kanan
-  header -- masih ada theme toggle & user chip di sebelahnya (lihat
-  TheHeader.vue). Dropdown selebar 340px yang "digantung" absolute
-  dari right:0 titik itu jadi gampang nyembur keluar tepi kiri layar.
-  Di bawah breakpoint md (768px, sama dengan breakpoint d-md-block yang
-  dipakai TheHeader.vue buat nyembunyiin info user), dropdown-nya
-  diubah jadi position:fixed nempel ke lebar layar (bukan lagi relatif
-  ke posisi lonceng), jadi selalu muat di dalam layar. top:68px
-  disesuaikan ke tinggi header (.crm-header { min-height: 64px } di
-  TheHeader.vue) + sedikit jarak -- update juga di sini kalau tinggi
-  header itu pernah diubah. ──*/
-@media (max-width: 767.98px) {
-  .notif-dropdown {
-    position: fixed;
-    top: 68px;
-    left: 12px;
-    right: 12px;
-    width: auto;
-    max-width: none;
-  }
-}
-
 .notif-dropdown-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 14px;
