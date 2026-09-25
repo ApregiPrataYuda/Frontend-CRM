@@ -11,7 +11,7 @@ import { ref, onMounted, onUnmounted, computed  } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingAppStore } from '@/stores/settingAppStore'
-import NotificationBell from '@/components/NotificationBell.vue'
+import NotificationBell from '@/components/notificationBell.vue'
 const settingStore = useSettingAppStore()
 
 const { isDark, toggleTheme } = useTheme()
