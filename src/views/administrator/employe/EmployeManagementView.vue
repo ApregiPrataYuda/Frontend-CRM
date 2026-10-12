@@ -63,6 +63,8 @@ const form = ref({
   attendance_mode:  'FREE',
   status_karyawan:  'CONTRACT',
   alamat:           '',
+  village_code:     '',
+  kode_pos:         '',
 })
 
 const resetForm = () => {
@@ -70,6 +72,7 @@ const resetForm = () => {
     user_id: '', nik: '', tempat_lahir: '', tanggal_lahir: '',
     jenis_kelamin: 'L', no_hp: '', tanggal_masuk: '',
     office_id: '', attendance_mode: '', status_karyawan: '', alamat: '',
+    village_code: '', kode_pos: '',
   }
   // reset select states
   selectedUser.value       = null
@@ -77,16 +80,18 @@ const resetForm = () => {
   selectedOffice.value     = null
   selectedAttendance.value = null
   selectedStatus.value     = null
+  resetRegion()
 }
 
 
 
-function openAddModal() {
+async function openAddModal() {
   isEdit.value = false
   selectedEditItem.value = null
   resetForm()
   store.fetchUserSelect()
   store.fetchOfficeSelect()  // ← tambah ini
+  if (!store.regionOptions.province.length) store.fetchRegionOptions('province')
   isAddModalVisible.value = true
 }
 
@@ -106,12 +111,15 @@ async function openEditModal(item) {
     attendance_mode: item.attendance_mode,
     status_karyawan: item.status_karyawan,
     alamat:          item.alamat,
+    village_code:    item.village_code ?? '',
+    kode_pos:        item.kode_pos ?? '',
   }
 
   // fetch dulu, baru sync
   await Promise.all([
     store.fetchUserSelect(),
     store.fetchOfficeSelect(),
+    syncRegionFromCode(item.village_code),
   ])
 
   // sync semua custom select
@@ -231,6 +239,104 @@ function clearStatus() {
 }
 
 
+// ── REGION SELECT (province → city → district → village) ──
+// 4 dropdown berjenjang, 1 state per level. Yang disimpan ke backend cuma
+// village_code (10 digit) -- level di atasnya cuma buat nyaring pilihan.
+const regionLevels = [
+  { key: 'province', label: 'Province',       placeholder: 'Select Province...' },
+  { key: 'city',     label: 'City / Regency', placeholder: 'Select City...' },
+  { key: 'district', label: 'District',       placeholder: 'Select District...' },
+  { key: 'village',  label: 'Village',        placeholder: 'Select Village...' },
+]
+const levelKeys = regionLevels.map(l => l.key)
+
+const regionSelected = ref({ province: null, city: null, district: null, village: null })
+const regionOpen     = ref({ province: false, city: false, district: false, village: false })
+const regionSearch   = ref({ province: '', city: '', district: '', village: '' })
+
+const filteredRegion = (level) => {
+  const list = store.regionOptions[level] ?? []
+  const keyword = regionSearch.value[level]?.toLowerCase()
+  if (!keyword) return list
+  return list.filter(o => o.label?.toLowerCase().includes(keyword))
+}
+
+// level di bawah province baru bisa dibuka kalau level atasnya udah dipilih
+const isRegionDisabled = (level) => {
+  const idx = levelKeys.indexOf(level)
+  return idx > 0 && !regionSelected.value[levelKeys[idx - 1]]
+}
+
+function toggleRegion(level) {
+  if (isRegionDisabled(level)) return
+  regionOpen.value[level] = !regionOpen.value[level]
+}
+
+// kosongin semua level DI BAWAH level ini (pilihan + list-nya)
+function resetRegionBelow(level) {
+  const idx = levelKeys.indexOf(level)
+  levelKeys.slice(idx + 1).forEach(k => {
+    regionSelected.value[k] = null
+    regionSearch.value[k]   = ''
+    store.regionOptions[k]  = []
+  })
+}
+
+async function selectRegion(level, opt) {
+  regionSelected.value[level] = opt
+  regionOpen.value[level]     = false
+  regionSearch.value[level]   = ''
+
+  resetRegionBelow(level)
+  form.value.village_code = level === 'village' ? opt.value : ''
+
+  const next = levelKeys[levelKeys.indexOf(level) + 1]
+  if (next) await store.fetchRegionOptions(next, opt.value)
+}
+
+function clearRegion(level) {
+  regionSelected.value[level] = null
+  resetRegionBelow(level)
+  form.value.village_code = ''
+}
+
+function resetRegion() {
+  levelKeys.forEach(k => {
+    regionSelected.value[k] = null
+    regionOpen.value[k]     = false
+    regionSearch.value[k]   = ''
+    if (k !== 'province') store.regionOptions[k] = []
+  })
+}
+
+// form edit: isi ulang 4 dropdown dari village_code yang tersimpan.
+// kode Laravolt berjenjang -> kode induk tinggal dipotong dari depan
+// (2 = province, 4 = city, 7 = district, 10 = village)
+async function syncRegionFromCode(code) {
+  resetRegion()
+  if (!store.regionOptions.province.length) await store.fetchRegionOptions('province')
+  if (!code) return
+
+  const codes = {
+    province: code.slice(0, 2),
+    city:     code.slice(0, 4),
+    district: code.slice(0, 7),
+    village:  code,
+  }
+
+  for (let i = 0; i < levelKeys.length; i++) {
+    const level = levelKeys[i]
+    const found = store.regionOptions[level].find(o => o.value === codes[level])
+    if (!found) break
+
+    regionSelected.value[level] = found
+
+    const next = levelKeys[i + 1]
+    if (next) await store.fetchRegionOptions(next, found.value)
+  }
+}
+
+
 async function submitAddData() {
   formErrors.value = {}
 
@@ -242,12 +348,25 @@ async function submitAddData() {
   if (!form.value.attendance_mode)     return formErrors.value = { attendance_mode: 'Attendance mode wajib dipilih!' }
   if (!form.value.status_karyawan)     return formErrors.value = { status_karyawan: 'Status karyawan wajib dipilih!' }
 
+  // wilayah opsional -- tapi kalau udah mulai dipilih, harus sampai village
+  if (regionSelected.value.province && !form.value.village_code)
+    return formErrors.value = { village_code: 'Pilih wilayah sampai Village, atau kosongkan Province.' }
+  if (form.value.kode_pos && !/^\d{5}$/.test(form.value.kode_pos))
+    return formErrors.value = { kode_pos: 'Kode pos harus 5 digit angka!' }
+
+  // field kosong dikirim null, bukan string kosong
+  const payload = {
+    ...form.value,
+    village_code: form.value.village_code || null,
+    kode_pos:     form.value.kode_pos || null,
+  }
+
   try {
     if (isEdit.value && selectedEditItem.value) {
-      await store.updateEmploye(selectedEditItem.value.id_employee, form.value)
+      await store.updateEmploye(selectedEditItem.value.id_employee, payload)
       toast.success('Data employee berhasil diupdate!')
     } else {
-      await store.storeEmploye(form.value)
+      await store.storeEmploye(payload)
       toast.success('Data employee berhasil ditambahkan!')
     }
     closeAddModal()
@@ -805,6 +924,68 @@ async function openDeleteModal(item) {
   <p v-if="getError('alamat')" class="error-msg">{{ getError('alamat') }}</p>
 </div>
 
+<!-- Region: Province → City → District → Village -->
+<div class="form-row-2">
+  <div v-for="lvl in regionLevels" :key="lvl.key" class="form-group">
+    <label>{{ lvl.label }}</label>
+    <div
+      class="custom-select"
+      :class="{
+        'is-error': lvl.key === 'village' && getError('village_code'),
+        'is-disabled': isRegionDisabled(lvl.key),
+      }"
+    >
+      <div class="custom-select-trigger" @click="toggleRegion(lvl.key)">
+        <span v-if="!regionSelected[lvl.key]" class="placeholder">
+          {{ store.regionLoading[lvl.key] ? 'Loading...' : lvl.placeholder }}
+        </span>
+        <span v-else class="selected-tag">
+          {{ regionSelected[lvl.key].label }}
+          <button type="button" @click.stop="clearRegion(lvl.key)">×</button>
+        </span>
+        <font-awesome-icon icon="chevron-down" class="select-arrow" :class="{ rotated: regionOpen[lvl.key] }" />
+      </div>
+      <div class="custom-select-dropdown" v-if="regionOpen[lvl.key]">
+        <input
+          v-model="regionSearch[lvl.key]"
+          type="text"
+          :placeholder="`search ${lvl.label.toLowerCase()}...`"
+          class="select-search"
+          @click.stop
+        />
+        <div class="select-options">
+          <p v-if="store.regionLoading[lvl.key]" class="select-empty">Loading...</p>
+          <p v-else-if="!filteredRegion(lvl.key).length" class="select-empty">Not found</p>
+          <div
+            v-for="opt in filteredRegion(lvl.key)"
+            :key="opt.value"
+            class="select-option"
+            :class="{ active: regionSelected[lvl.key]?.value === opt.value }"
+            @click="selectRegion(lvl.key, opt)"
+          >{{ opt.label }}</div>
+        </div>
+      </div>
+    </div>
+    <p v-if="lvl.key === 'village' && getError('village_code')" class="error-msg">
+      {{ getError('village_code') }}
+    </p>
+  </div>
+</div>
+
+<!-- Postal Code -->
+<div class="form-group">
+  <label>Postal Code</label>
+  <input
+    v-model="form.kode_pos"
+    class="form-input"
+    :class="{ 'is-error': getError('kode_pos') }"
+    placeholder="e.g. 40151"
+    maxlength="5"
+    inputmode="numeric"
+  />
+  <p v-if="getError('kode_pos')" class="error-msg">{{ getError('kode_pos') }}</p>
+</div>
+
   </div>
 
  <template #footer>
@@ -887,6 +1068,16 @@ async function openDeleteModal(item) {
     <div class="detail-row">
       <span class="detail-label">Address</span>
       <span class="detail-value" style="text-align:right; max-width:60%;">{{ detailItem.alamat }}</span>
+    </div>
+
+    <div class="detail-row">
+      <span class="detail-label">Region</span>
+      <span class="detail-value" style="text-align:right; max-width:60%;">{{ detailItem.village_label || '-' }}</span>
+    </div>
+
+    <div class="detail-row">
+      <span class="detail-label">Postal Code</span>
+      <span class="detail-value mono">{{ detailItem.kode_pos || '-' }}</span>
     </div>
 
     <!-- EMPLOYMENT INFO -->
@@ -1203,6 +1394,14 @@ async function openDeleteModal(item) {
 .select-option:hover { background: var(--bg-nav-hover); }
 .select-option.active { background: rgba(99,102,241,0.1); color: #6366f1; font-weight: 600; }
 .select-empty { text-align: center; color: var(--text-muted); font-size: 0.82rem; padding: 12px 0; }
+
+/* custom select nonaktif (level wilayah yang induknya belum dipilih) */
+.custom-select.is-disabled .custom-select-trigger {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.custom-select.is-disabled .custom-select-trigger:hover { border-color: var(--border-main); }
+
 /* MODAL FOOTER BUTTONS */
 /* Cari class .btn-cancel di bagian <style scoped> file tabel kamu, lalu ganti menjadi ini: */
 .btn-cancel {

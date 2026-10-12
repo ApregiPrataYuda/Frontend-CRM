@@ -167,6 +167,35 @@ const fetchUserSelect = async () => {
   }
 }
 
+  // ── REGION SELECT (alamat employee: province → city → district → village) ──
+  // 1 level = 1 list, diisi bertahap sesuai pilihan level di atasnya
+  const regionOptions = reactive({
+    province: [],
+    city:     [],
+    district: [],
+    village:  [],
+  })
+
+  const regionLoading = reactive({
+    province: false,
+    city:     false,
+    district: false,
+    village:  false,
+  })
+
+  const fetchRegionOptions = async (level, parent = null) => {
+    regionLoading[level] = true
+    try {
+      const data = await masterEmployeServices.getRegions(level, parent)
+      regionOptions[level] = data ?? []
+    } catch (error) {
+      console.error(`Gagal fetch region ${level}:`, error)
+      regionOptions[level] = []
+    } finally {
+      regionLoading[level] = false
+    }
+  }
+
   // ── STATIC OPTIONS ──
   const statusGender = ref([
     { value: 'L', label: 'Male' },
@@ -256,6 +285,7 @@ const fetchUserSelect = async () => {
     savingEmploye, updatingEmploye, deletingEmploye,
     employeDetail, loadingDetail,
     officeSelectData, userSelectData,
+    regionOptions, regionLoading,
     statusGender, statusJobsEmploye, AttendanceMode,
     // actions
     buildUrl,
@@ -265,6 +295,7 @@ const fetchUserSelect = async () => {
     formatDate,getImageUrl,
     detailEmploye,
     fetchOfficeSelect, fetchUserSelect,
+    fetchRegionOptions,
     storeEmploye, updateEmploye, deleteEmploye,
   }
 })

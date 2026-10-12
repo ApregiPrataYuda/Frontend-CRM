@@ -49,4 +49,13 @@ async getUsers() {
   const response = await api.get('/employee-available-users')
   return response.data.data  // response.data = body JSON, .data lagi = array users
 },
+
+  // wilayah berjenjang (Laravolt) -- level: province | city | district | village
+  // parent wajib untuk selain province (kode wilayah induknya)
+  async getRegions(level, parent = null) {
+    const params = { level }
+    if (parent) params.parent = parent
+    const response = await api.get('/employee-coverages/options/regions', { params })
+    return response.data.data  // array { value, label, level }
+  },
 }
