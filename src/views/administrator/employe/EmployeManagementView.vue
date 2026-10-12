@@ -320,7 +320,7 @@ async function syncRegionFromCode(code) {
   const codes = {
     province: code.slice(0, 2),
     city:     code.slice(0, 4),
-    district: code.slice(0, 7),
+    district: code.slice(0, 6),
     village:  code,
   }
 

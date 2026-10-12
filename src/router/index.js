@@ -560,6 +560,8 @@ const routes = [
         }
       },
 
+
+
       {
         path: 'manager-sales-target',
 
@@ -570,6 +572,19 @@ const routes = [
 
         meta: {
           role: [3], title: 'Sales Target'
+        }
+      },
+
+      {
+        path: 'setting-cover-area-sales',
+
+        name: 'Sales Coverage',
+
+        component: () =>
+          import('@/views/admin/settingSalesCoverArea/settingCoverAreaSales.vue'),
+
+        meta: {
+          role: [3], title: 'Sales Coverage'
         }
       },
 
