@@ -32,9 +32,9 @@ export const useProductStore = defineStore('product', () => {
     { value: 'qty_available', label: 'Stok' },
   ])
 
-  // ── SYNC (manual, tombol "Sync Sekarang") ──
-  const syncing      = ref(false)
-  const lastSyncedAt = ref(null)
+  // ── DETAIL PRODUCT (modal) ──
+  const productDetail = ref(null)
+  const loadingDetail = ref(false)
 
   // ── BUILD URL ──
   const buildProductsUrl = () => {
@@ -46,59 +46,63 @@ export const useProductStore = defineStore('product', () => {
       params.append('sort_by', sort.column)
       params.append('sort_dir', sort.direction)
     }
-    return `/products?${params.toString()}`
+    return `/mobile/products?${params.toString()}`
   }
 
   // ── FETCH PRODUCTS ──
+  // Format response /mobile/products:
+  //   data.items[]  data.meta{ current_page, last_page, per_page, total }
+  //   data.links{ prev, next }
+  // dipetakan ke struktur `pagination` yang sama dengan halaman lain.
   const fetchProducts = async (url = null) => {
     loadingProducts.value = true
+    errorProduct.value    = null
+
     try {
-      // SAFETY NET: next_page_url/prev_page_url dari Laravel paginator kadang
-      // ke-generate pakai http:// (bukan https://) kalau backend di belakang
-      // reverse proxy yang belum di-trust dengan benar -- browser nge-block
-      // ini sebagai "mixed content" karena halamannya sendiri udah https.
-      // Fix SEBENARNYA harus di backend (TrustProxies / URL::forceScheme di
-      // AppServiceProvider), ini cuma tameng biar pagination ga patah di
-      // frontend selagi itu belum dibenerin.
+      // SAFETY NET: link prev/next dari Laravel kadang http:// walau halamannya
+      // https:// (reverse proxy) -> diblok browser sebagai mixed content.
       let finalUrl = url || buildProductsUrl()
       if (typeof finalUrl === 'string' && finalUrl.startsWith('http://')) {
         finalUrl = finalUrl.replace('http://', 'https://')
       }
+
       const response = await productServices.getByUrl(finalUrl)
-      const result = response.data
+      const payload  = response.data?.data ?? {}
 
-      const dataArray = Array.isArray(result.data)
-        ? result.data
-        : result.data?.data ?? []
-
+      const dataArray = payload.items ?? []
       productsData.value.splice(0, productsData.value.length, ...dataArray)
 
-      const pag = result.pagination ?? result.data?.pagination
-      if (pag) {
-        pagination.current_page  = pag.current_page
-        pagination.per_page      = pag.per_page
-        pagination.prev_page_url = pag.prev_page_url
-        pagination.next_page_url = pag.next_page_url
-        pagination.last_page     = pag.last_page
-        pagination.total         = pag.total
-      }
+      const meta = payload.meta ?? {}
+      pagination.current_page  = meta.current_page ?? 1
+      pagination.per_page      = meta.per_page ?? pagination.per_page
+      pagination.last_page     = meta.last_page ?? 1
+      pagination.total         = meta.total ?? 0
+      pagination.prev_page_url = payload.links?.prev ?? null
+      pagination.next_page_url = payload.links?.next ?? null
 
-      // last synced ditarik dari updated_at paling baru di halaman ini --
-      // cuma perkiraan tampilan, bukan sumber kebenaran (nilai pastinya
-      // dikirim balik oleh syncProducts() tiap habis sync).
-      if (dataArray.length) {
-        const latest = dataArray
-          .map(p => p.updated_at)
-          .filter(Boolean)
-          .sort()
-          .reverse()[0]
-        if (latest) lastSyncedAt.value = latest
-      }
     } catch (error) {
       errorProduct.value = error
       console.error('Gagal fetch products:', error)
+      throw error
     } finally {
       loadingProducts.value = false
+    }
+  }
+
+  // ── DETAIL ──
+  const fetchProductDetail = async (id) => {
+    loadingDetail.value = true
+    productDetail.value = null
+
+    try {
+      const response = await productServices.show(id)
+      productDetail.value = response.data?.data ?? null
+      return productDetail.value
+    } catch (error) {
+      console.error('Gagal fetch detail product:', error)
+      throw error
+    } finally {
+      loadingDetail.value = false
     }
   }
 
@@ -108,20 +112,20 @@ export const useProductStore = defineStore('product', () => {
     searchProduct.value = val
     pagination.current_page = 1
     searchTimeout = setTimeout(() => {
-      fetchProducts(buildProductsUrl())
+      fetchProducts(buildProductsUrl()).catch(() => {})
     }, 500)
   }
 
   // ── CHANGE PAGE SIZE ──
   const changePageSize = () => {
     pagination.current_page = 1
-    fetchProducts(buildProductsUrl())
+    fetchProducts(buildProductsUrl()).catch(() => {})
   }
 
   // ── SORTING ──
   const changeSorting = () => {
     pagination.current_page = 1
-    fetchProducts(buildProductsUrl())
+    fetchProducts(buildProductsUrl()).catch(() => {})
   }
 
   const toggleSort = (col) => {
@@ -132,21 +136,6 @@ export const useProductStore = defineStore('product', () => {
       sort.direction = 'asc'
     }
     changeSorting()
-  }
-
-  // ── SYNC SEKARANG ──
-  const syncProducts = async () => {
-    syncing.value = true
-    try {
-      const res = await productServices.syncProducts()
-      const result = res.data.data
-      lastSyncedAt.value = result?.last_synced_at ?? lastSyncedAt.value
-      pagination.current_page = 1
-      await fetchProducts(buildProductsUrl())
-      return result
-    } finally {
-      syncing.value = false
-    }
   }
 
   // ── FORMAT ──
@@ -161,20 +150,18 @@ export const useProductStore = defineStore('product', () => {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-'
-    const date = new Date(dateStr)
+    const date = new Date(String(dateStr).replace(' ', 'T'))
     if (isNaN(date.getTime())) return '-'
-    return date.toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'long',
+    return date.toLocaleString('id-ID', {
       day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     })
   }
 
-  // qty_available sudah dari dulu ke-sync dari Odoo (lihat SyncOdooProducts
-  // -- field qty_available sudah ada di domain fetch & sudah disimpan ke
-  // kolom odoo_products.qty_available), cuma belum ditampilkan di UI.
-  // Helper format angka stok biar konsisten (ribuan pakai titik, ga perlu
-  // desimal kalau bulat).
+  // Format angka stok: ribuan pakai titik, desimal hanya kalau ada.
   const formatStock = (val) => {
     const num = Number(val ?? 0)
     return new Intl.NumberFormat('id-ID', {
@@ -187,10 +174,10 @@ export const useProductStore = defineStore('product', () => {
     // state
     productsData, loadingProducts, errorProduct,
     searchProduct, pagination, sort, sortOptions,
-    syncing, lastSyncedAt,
+    productDetail, loadingDetail,
     // actions
-    buildProductsUrl, fetchProducts,
+    buildProductsUrl, fetchProducts, fetchProductDetail,
     searchWithDelay, changePageSize, changeSorting, toggleSort,
-    syncProducts, formatCurrency, formatDate, formatStock,
+    formatCurrency, formatDate, formatStock,
   }
 })

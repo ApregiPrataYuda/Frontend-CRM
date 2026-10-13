@@ -577,14 +577,21 @@ const routes = [
 
       {
         path: 'setting-cover-area-sales',
-
         name: 'Sales Coverage',
-
         component: () =>
           import('@/views/admin/settingSalesCoverArea/settingCoverAreaSales.vue'),
-
         meta: {
           role: [3], title: 'Sales Coverage'
+        }
+      },
+
+      {
+        path: 'product-assignment-sales',
+        name: 'Product Assignment',
+        component: () =>
+          import('@/views/admin/productAssignment/ProductAssignment.vue'),
+        meta: {
+          role: [3], title: 'Product Assignment'
         }
       },
 

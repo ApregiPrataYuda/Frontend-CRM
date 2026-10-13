@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import AppModal from '@/components/AppModal.vue'
 import { useProductStore } from '@/stores/productStore'
 import { useToast } from 'vue-toastification'
 
@@ -25,23 +26,37 @@ const showSortDirMenu = ref(false)
 const sortByLabel = () =>
   store.sortOptions.find(o => o.value === store.sort.column)?.label ?? 'Nama Produk'
 
-// ── SYNC SEKARANG ──
-// CATATAN: tombol ini SELALU ditampilkan di sini (ga ada pengecekan role
-// Manager/Sales di frontend), karena project ini belum kasih tau field
-// role user login disimpan di store mana. Backend (ProductController@sync)
-// SUDAH aman -- kalau yang klik bukan Manager, request-nya di-reject 403
-// dan toast error di bawah bakal muncul. Kalau kamu mau tombol ini juga
-// DISEMBUNYIKAN dari Sales (bukan cuma direject di backend), kasih tau
-// nama store/field buat cek role user login-nya, biar saya tambahin
-// v-if di tombolnya.
-async function handleSync() {
-  if (store.syncing) return
+// ── PAGINATION ──
+async function goTo(url) {
   try {
-    const result = await store.syncProducts()
-    toast.success(`Sync berhasil. Total product: ${result?.total_products ?? '-'}.`)
+    await store.fetchProducts(url)
   } catch (err) {
-    toast.error(err.response?.data?.message || 'Gagal sync product dari Odoo.')
+    toast.error('Gagal memuat halaman product.')
   }
+}
+
+// ── DETAIL MODAL (stok WH / GRN / Consignment) ──
+const isDetailVisible = ref(false)
+
+async function openDetail(item) {
+  isDetailVisible.value = true
+  try {
+    await store.fetchProductDetail(item.id)
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Gagal memuat detail product.')
+    isDetailVisible.value = false
+  }
+}
+
+function closeDetail() {
+  isDetailVisible.value = false
+}
+
+const bucketLabel = {
+  wh: 'WH',
+  grn: 'GRN',
+  consignment: 'Consignment',
+  other: 'Lainnya',
 }
 </script>
 
@@ -52,7 +67,7 @@ async function handleSync() {
       <div class="breadcrumb-left">
         <h4 class="breadcrumb-title">
           <font-awesome-icon icon="box-open" />
-          Product Catalog
+          Product Master Integration From Odoo
         </h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item">
@@ -62,17 +77,6 @@ async function handleSync() {
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
           <span class="breadcrumb-item active">Product</span>
         </div>
-      </div>
-
-      <div class="sync-info">
-        <span v-if="store.lastSyncedAt" class="sync-last">
-          <font-awesome-icon icon="clock" /> Terakhir sync: {{ store.formatDate(store.lastSyncedAt) }}
-        </span>
-        <button class="btn-toolbar btn-purple" :disabled="store.syncing" @click="handleSync">
-          <font-awesome-icon v-if="store.syncing" icon="spinner" spin />
-          <font-awesome-icon v-else icon="rotate" />
-          {{ store.syncing ? 'Menyinkronkan...' : 'Sync Sekarang' }}
-        </button>
       </div>
     </div>
 
@@ -114,7 +118,7 @@ async function handleSync() {
             <input
               :value="store.searchProduct"
               type="text"
-              placeholder="Cari nama / kode / barcode produk..."
+              placeholder="Cari nama / kode / barcode / brand..."
               class="search-input"
               @input="store.searchWithDelay($event.target.value)"
             />
@@ -162,44 +166,55 @@ async function handleSync() {
     <div v-else-if="store.productsData.length === 0" class="state-card mb-3">
       <div class="empty-state">
         <font-awesome-icon icon="inbox" class="empty-icon" />
-        <div>Belum ada data product. Klik "Sync Sekarang" buat ambil data dari Odoo.</div>
+        <div v-if="store.searchProduct">Tidak ada product yang cocok dengan "{{ store.searchProduct }}".</div>
+        <div v-else>Belum ada product yang di-assign ke Anda. Hubungi manager Anda untuk mendapatkan akses product.</div>
       </div>
     </div>
 
     <!-- ===== CARD VIEW ===== -->
     <div v-else-if="viewMode === 'card'" class="product-grid flex-grow-1 overflow-auto mb-3">
-      <div v-for="p in store.productsData" :key="p.id" class="product-card">
+      <div
+        v-for="p in store.productsData"
+        :key="p.id"
+        class="product-card clickable"
+        role="button"
+        tabindex="0"
+        @click="openDetail(p)"
+        @keydown.enter="openDetail(p)"
+      >
+        <div class="product-image">
+          <img v-if="p.image_url" :src="p.image_url" :alt="p.name" loading="lazy" />
+          <font-awesome-icon v-else icon="box-open" class="product-image-empty" />
+        </div>
+
         <div class="product-card-head">
-          <span class="mono product-code">{{ p.default_code || '-' }}</span>
+          <span class="mono product-code">{{ p.sku || '-' }}</span>
+          <span v-if="p.brand" class="brand-chip">{{ p.brand.name }}</span>
         </div>
         <div class="product-name">{{ p.name }}</div>
         <div class="product-meta">
           <span v-if="p.category"><font-awesome-icon icon="tags" /> {{ p.category }}</span>
           <span v-if="p.uom"><font-awesome-icon icon="ruler" /> {{ p.uom }}</span>
         </div>
-        <!-- BARCODE masih di-hidden sesuai request sebelumnya, belum dihapus
-             total field-nya di store/API -- gampang dimunculin lagi kalau
-             nanti dibutuhin, tinggal un-comment blok ini. HARGA JUAL / HARGA
-             POKOK & STOK sekarang ditampilkan. -->
-        <!--
-        <div v-if="p.barcode" class="product-barcode mono">
-          <font-awesome-icon icon="barcode" /> {{ p.barcode }}
-        </div>
-        -->
+
         <div class="product-price-row">
           <div class="price-block">
             <div class="price-label">Harga Jual</div>
-            <div class="price-value">{{ store.formatCurrency(p.list_price) }}</div>
-          </div>
-          <div class="price-block muted">
-            <div class="price-label">Harga Pokok</div>
-            <div class="price-value">{{ store.formatCurrency(p.standard_price) }}</div>
+            <div class="price-value">{{ store.formatCurrency(p.price) }}</div>
           </div>
         </div>
-        <div class="product-stock-row">
-          <span class="stock-chip" :class="{ low: Number(p.qty_available) <= 0 }">
+               <div class="product-stock-row">
+          <span v-if="p.is_storable" class="stock-chip" :class="{ low: Number(p.qty_available) <= 0 }">
             <font-awesome-icon icon="boxes-stacked" />
             Stok: {{ store.formatStock(p.qty_available) }}<span v-if="p.uom"> {{ p.uom }}</span>
+          </span>
+          <span
+            v-else
+            class="stock-chip untracked"
+            title="Product ini belum dicentang Track Inventory di Odoo, jadi stoknya tidak dihitung."
+          >
+            <font-awesome-icon icon="boxes-stacked" />
+            Stok tidak dilacak
           </span>
         </div>
       </div>
@@ -213,28 +228,37 @@ async function handleSync() {
             <th style="width:56px">NO.</th>
             <th style="width:120px">KODE / SKU</th>
             <th>NAMA PRODUK</th>
+            <th style="width:150px">BRAND</th>
             <th style="width:160px">KATEGORI</th>
             <th style="width:90px">SATUAN</th>
             <th style="width:130px" class="text-end">HARGA JUAL</th>
-            <th style="width:130px" class="text-end">HARGA POKOK</th>
             <th style="width:110px" class="text-end">STOK</th>
-            <!-- BARCODE masih di-hidden sesuai request -- lihat catatan yang
-                 sama di blok Card View di atas. -->
+            <th style="width:80px; text-align:center">DETAIL</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(p, index) in store.productsData" :key="p.id" class="data-row">
             <td class="td-no">{{ (store.pagination.current_page - 1) * store.pagination.per_page + index + 1 }}.</td>
-            <td class="mono">{{ p.default_code || '-' }}</td>
+            <td class="mono">{{ p.sku || '-' }}</td>
             <td class="font-semibold">{{ p.name }}</td>
+            <td class="td-muted">{{ p.brand?.name || '-' }}</td>
             <td class="td-muted">{{ p.category || '-' }}</td>
             <td class="td-muted">{{ p.uom || '-' }}</td>
-            <td class="td-price text-end">{{ store.formatCurrency(p.list_price) }}</td>
-            <td class="td-price text-end td-muted">{{ store.formatCurrency(p.standard_price) }}</td>
+            <td class="td-price text-end">{{ store.formatCurrency(p.price) }}</td>
             <td class="td-stock text-end">
-              <span class="stock-chip" :class="{ low: Number(p.qty_available) <= 0 }">
+              <span v-if="p.is_storable" class="stock-chip" :class="{ low: Number(p.qty_available) <= 0 }">
                 {{ store.formatStock(p.qty_available) }}
               </span>
+              <span
+                v-else
+                class="stock-chip untracked"
+                title="Product ini belum dicentang Track Inventory di Odoo, jadi stoknya tidak dihitung."
+              >Tidak dilacak</span>
+            </td>
+            <td style="text-align:center">
+              <button class="act-btn act-info" title="Detail" @click="openDetail(p)">
+                <font-awesome-icon icon="circle-info" />
+              </button>
             </td>
           </tr>
         </tbody>
@@ -245,15 +269,15 @@ async function handleSync() {
       <div class="pagination-nav">
         <button
           class="btn-prev-next"
-          :disabled="store.pagination.current_page === 1"
-          @click="store.fetchProducts(store.pagination.prev_page_url)"
+          :disabled="!store.pagination.prev_page_url || store.loadingProducts"
+          @click="goTo(store.pagination.prev_page_url)"
         >
           <font-awesome-icon icon="circle-left" /> Prev
         </button>
         <button
           class="btn-prev-next"
-          :disabled="store.pagination.current_page === store.pagination.last_page"
-          @click="store.fetchProducts(store.pagination.next_page_url)"
+          :disabled="!store.pagination.next_page_url || store.loadingProducts"
+          @click="goTo(store.pagination.next_page_url)"
         >
           Next <font-awesome-icon icon="circle-right" />
         </button>
@@ -263,6 +287,112 @@ async function handleSync() {
         <span class="page-badge">TOTAL: {{ store.pagination.total }}</span>
       </div>
     </div>
+
+    <!-- ===== MODAL DETAIL ===== -->
+    <AppModal
+      :show="isDetailVisible"
+      title="Product Details"
+      icon="circle-info"
+      size="md"
+      @close="closeDetail"
+    >
+      <div v-if="store.loadingDetail" class="td-center">
+        <font-awesome-icon icon="spinner" spin /> Memuat detail...
+      </div>
+
+      <template v-else-if="store.productDetail">
+        <div class="detail-head">
+          <div class="detail-image">
+            <img v-if="store.productDetail.image_url" :src="store.productDetail.image_url" :alt="store.productDetail.name" />
+            <font-awesome-icon v-else icon="box-open" class="product-image-empty" />
+          </div>
+          <div>
+            <div class="detail-title">{{ store.productDetail.name }}</div>
+            <div class="detail-sub mono">SKU {{ store.productDetail.sku || '-' }}</div>
+            <div class="detail-price">{{ store.formatCurrency(store.productDetail.price) }}</div>
+          </div>
+        </div>
+
+        <!-- Stok per kotak (hanya product yang dilacak stoknya) -->
+        <template v-if="store.productDetail.stock">
+          <div class="stock-boxes">
+            <div class="stock-box">
+              <div class="stock-box-label">Stock WH</div>
+              <div class="stock-box-value">{{ store.formatStock(store.productDetail.stock.wh) }}</div>
+            </div>
+            <div class="stock-box">
+              <div class="stock-box-label">Stock GRN</div>
+              <div class="stock-box-value">{{ store.formatStock(store.productDetail.stock.grn) }}</div>
+            </div>
+            <div class="stock-box">
+              <div class="stock-box-label">Consignment</div>
+              <div class="stock-box-value">{{ store.formatStock(store.productDetail.stock.consignment) }}</div>
+            </div>
+          </div>
+          <div v-if="store.productDetail.stock.other > 0" class="stock-note">
+            {{ store.formatStock(store.productDetail.stock.other) }} unit lain berada di lokasi yang belum dipetakan.
+          </div>
+
+          <template v-if="store.productDetail.stock.locations.length">
+            <div class="loc-title">Stok per lokasi</div>
+            <div class="loc-list">
+              <div v-for="(loc, i) in store.productDetail.stock.locations" :key="i" class="loc-row">
+                <span class="loc-name">
+                  {{ loc.location }}
+                  <span class="loc-bucket">{{ bucketLabel[loc.bucket] || loc.bucket }}</span>
+                </span>
+                <span class="loc-qty">{{ store.formatStock(loc.quantity) }}</span>
+              </div>
+            </div>
+          </template>
+        </template>
+
+             
+
+        <div v-else class="stock-info">
+          <font-awesome-icon icon="circle-info" />
+          <div>
+            <strong>Stok belum tersedia.</strong>
+            Product ini belum dicentang <em>Track Inventory</em> di Odoo, sehingga Stock WH, GRN,
+            dan Consignment tidak dihitung. Stok akan muncul otomatis setelah pengaturan di Odoo
+            diperbarui dan data di-sync ulang.
+          </div>
+        </div>
+
+        
+
+        <div class="detail-list">
+          <div class="detail-row">
+            <span class="detail-label">Brand</span>
+            <span class="detail-value">{{ store.productDetail.brand?.name || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Product Group</span>
+            <span class="detail-value">{{ store.productDetail.product_group || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Kategori</span>
+            <span class="detail-value">{{ store.productDetail.category || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Satuan</span>
+            <span class="detail-value">{{ store.productDetail.uom || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Barcode</span>
+            <span class="detail-value mono">{{ store.productDetail.barcode || '-' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Terakhir sync</span>
+            <span class="detail-value">{{ store.formatDate(store.productDetail.last_synced_at) }}</span>
+          </div>
+        </div>
+      </template>
+
+      <template #footer>
+        <button class="btn-cancel" @click="closeDetail">Close</button>
+      </template>
+    </AppModal>
 
   </div>
 </template>
@@ -285,16 +415,6 @@ async function handleSync() {
 .breadcrumb-item.active { color: #6366f1; font-weight: 700; }
 .breadcrumb-separator { font-size: 0.7rem; color: var(--text-muted); opacity: 0.6; }
 
-.sync-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.sync-last { font-size: 0.78rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-
-.btn-toolbar {
-  display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: 8px;
-  font-size: 0.83rem; font-weight: 700; cursor: pointer; transition: all 0.18s ease; white-space: nowrap;
-}
-.btn-purple { background: #6366f1; color: #fff; }
-.btn-purple:hover:not(:disabled) { background: #4f46e5; }
-.btn-purple:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-arrow { font-size: 0.6rem; opacity: 0.7; }
 
 /* ===== CONTROLS ===== */
@@ -366,11 +486,15 @@ async function handleSync() {
 .td-center { text-align: center; padding: 40px; color: var(--text-muted); }
 .font-semibold { font-weight: 600; }
 .mono { font-family: monospace; font-size: 0.8rem; }
-.empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-muted); }
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-muted); max-width: 420px; margin: 0 auto; line-height: 1.5; }
 .empty-icon { font-size: 2rem; opacity: 0.3; }
 
 .stock-chip { font-weight: 700; padding: 2px 10px; border-radius: 20px; background: rgba(34,197,94,0.12); color: #16a34a; white-space: nowrap; }
 .stock-chip.low { background: rgba(239,68,68,0.1); color: #ef4444; }
+.stock-chip.untracked { background: var(--bg-input); color: var(--text-muted); border: 1px dashed var(--border-main); font-weight: 600; cursor: help; }
+
+.stock-info { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); font-size: 0.82rem; line-height: 1.5; color: var(--text-primary); }
+.stock-info svg { color: #d97706; margin-top: 3px; flex-shrink: 0; }
 
 /* ===== STATE CARD (loading/empty, dipakai bareng Card & Table) ===== */
 .state-card { background: var(--bg-card); border-radius: 10px; box-shadow: 0 1px 3px var(--shadow-color); padding: 40px; text-align: center; color: var(--text-muted); }
@@ -381,15 +505,21 @@ async function handleSync() {
   background: var(--bg-card); border: 1px solid var(--border-main); border-radius: 10px; padding: 14px 16px;
   box-shadow: 0 1px 3px var(--shadow-color); display: flex; flex-direction: column; gap: 8px;
 }
+.product-image {
+  height: 140px; margin: -14px -16px 4px; border-radius: 10px 10px 0 0; overflow: hidden;
+  background: var(--bg-input); display: flex; align-items: center; justify-content: center;
+  border-bottom: 1px solid var(--border-main);
+}
+.product-image img { width: 100%; height: 100%; object-fit: contain; }
+.product-image-empty { font-size: 2.2rem; color: var(--text-muted); opacity: 0.25; }
 .product-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .product-code { font-size: 0.76rem; color: var(--text-muted); }
+.brand-chip { font-size: 0.7rem; font-weight: 700; color: #6366f1; background: rgba(99,102,241,0.1); padding: 2px 8px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
 .product-name { font-size: 0.92rem; font-weight: 700; color: var(--text-primary); line-height: 1.35; }
 .product-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.78rem; color: var(--text-muted); }
 .product-meta span { display: inline-flex; align-items: center; gap: 5px; }
-.product-barcode { font-size: 0.76rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 5px; }
 .product-price-row { display: flex; gap: 10px; padding-top: 8px; border-top: 1px solid var(--border-main); margin-top: 2px; }
 .price-block { flex: 1; }
-.price-block.muted .price-value { color: var(--text-muted); }
 .price-label { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
 .price-value { font-size: 0.88rem; font-weight: 700; color: var(--text-primary); margin-top: 2px; }
 .product-stock-row { display: flex; padding-top: 6px; border-top: 1px solid var(--border-main); margin-top: 2px; }
@@ -405,11 +535,46 @@ async function handleSync() {
 .page-badges { display: flex; gap: 8px; align-items: center; }
 .page-badge { padding: 7px 14px; border: 1px solid var(--border-main); border-radius: 7px; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); background: var(--bg-input); white-space: nowrap; letter-spacing: 0.04em; }
 
+/* ===== DETAIL MODAL ===== */
+.clickable { cursor: pointer; }
+.product-card.clickable:hover { border-color: rgba(99,102,241,0.45); }
+.product-card.clickable:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }
+.detail-head { display: flex; gap: 14px; align-items: flex-start; }
+.detail-image { width: 96px; height: 96px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--border-main); background: var(--bg-input); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.detail-image img { width: 100%; height: 100%; object-fit: contain; }
+.detail-title { font-size: 0.98rem; font-weight: 800; color: var(--text-primary); line-height: 1.35; }
+.detail-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+.detail-price { font-size: 1rem; font-weight: 800; color: #6366f1; margin-top: 6px; }
+.detail-list { display: flex; flex-direction: column; margin-top: 12px; }
+.detail-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-main); gap: 12px; }
+.detail-row:last-child { border-bottom: none; }
+.detail-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.detail-value { font-size: 0.85rem; font-weight: 500; color: var(--text-primary); text-align: right; }
+.stock-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.stock-box { border: 1px solid rgba(99,102,241,0.25); background: rgba(99,102,241,0.05); border-radius: 10px; padding: 10px; text-align: center; }
+.stock-box-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.stock-box-value { font-size: 1.3rem; font-weight: 800; color: var(--text-primary); margin-top: 2px; }
+.stock-note { font-size: 0.76rem; color: var(--text-muted); margin-top: 8px; }
+.loc-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 16px 0 6px; }
+.loc-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border-main); border-radius: 8px; }
+.loc-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; font-size: 0.8rem; border-bottom: 1px solid var(--border-main); }
+.loc-row:last-child { border-bottom: none; }
+.loc-name { color: var(--text-primary); }
+.loc-bucket { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #6366f1; margin-left: 6px; }
+.loc-qty { font-weight: 700; white-space: nowrap; }
+.act-btn { width: 30px; height: 30px; border-radius: 6px; border: 1.5px solid; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; transition: all 0.18s ease; background: transparent; }
+.act-info { color: #6366f1; border-color: #6366f1; }
+.act-info:hover { background: #6366f1; color: #fff; }
+.btn-cancel { padding: 8px 18px; background: var(--bg-main, #f1f5f9); color: var(--text-muted); border: 1px solid var(--border-main); border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+.btn-cancel:hover { background: var(--border-main); color: var(--text-primary); }
+
 /* ===== MOBILE ===== */
 @media (max-width: 900px) {
   .breadcrumb-card { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 576px) {
+  .search-input { width: 100%; }
+  .stock-boxes { grid-template-columns: 1fr; }
   .pagination-card { flex-direction: column; padding: 12px; gap: 12px; }
   .pagination-nav { width: 100%; justify-content: space-between; }
   .btn-prev-next { flex: 1; max-width: 48%; padding: 10px 14px; }
