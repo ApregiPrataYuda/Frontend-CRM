@@ -2,6 +2,17 @@ import { defineStore } from 'pinia'
 import { ref, reactive } from 'vue'
 import { productServices } from '@/services/productServices'
 
+const currentMonth = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+// Link prev/next dari Laravel kadang http:// walau halamannya https:// (reverse proxy).
+const safeUrl = (url) =>
+  typeof url === 'string' && url.startsWith('http://') && window.location.protocol === 'https:'
+    ? url.replace('http://', 'https://')
+    : url
+
 export const useProductStore = defineStore('product', () => {
 
   // ── LIST PRODUCT ──
@@ -32,14 +43,42 @@ export const useProductStore = defineStore('product', () => {
     { value: 'qty_available', label: 'Stok' },
   ])
 
+  // ── FILTER CHIP (brand & kategori) ──
+  const filterOptions   = reactive({ brands: [], categories: [] })
+  const selectedBrand   = ref(null)   // null = All
+  const selectedCateg   = ref(null)   // null = All
+  const lowStockLimit   = ref(5)      // dari meta.low_stock_threshold
+
   // ── DETAIL PRODUCT (modal) ──
   const productDetail = ref(null)
   const loadingDetail = ref(false)
+
+  // ── TAB SOLD & PURCHASE (di modal detail) ──
+  const sold = reactive({
+    month: currentMonth(),
+    type: 'all',            // all / so / quotation
+    summary: null,
+    items: [],
+    next: null,
+    loading: false,
+    loaded: false,
+  })
+
+  const purchase = reactive({
+    month: currentMonth(),
+    summary: null,
+    items: [],
+    next: null,
+    loading: false,
+    loaded: false,
+  })
 
   // ── BUILD URL ──
   const buildProductsUrl = () => {
     const params = new URLSearchParams()
     if (searchProduct.value) params.append('search', searchProduct.value)
+    if (selectedBrand.value) params.append('brand_id', selectedBrand.value)
+    if (selectedCateg.value) params.append('categ_id', selectedCateg.value)
     if (pagination.current_page) params.append('page', pagination.current_page)
     if (pagination.per_page) params.append('per_page', pagination.per_page)
     if (sort.column) {
@@ -51,7 +90,7 @@ export const useProductStore = defineStore('product', () => {
 
   // ── FETCH PRODUCTS ──
   // Format response /mobile/products:
-  //   data.items[]  data.meta{ current_page, last_page, per_page, total }
+  //   data.items[]  data.meta{ current_page, last_page, per_page, total, low_stock_threshold }
   //   data.links{ prev, next }
   // dipetakan ke struktur `pagination` yang sama dengan halaman lain.
   const fetchProducts = async (url = null) => {
@@ -59,14 +98,7 @@ export const useProductStore = defineStore('product', () => {
     errorProduct.value    = null
 
     try {
-      // SAFETY NET: link prev/next dari Laravel kadang http:// walau halamannya
-      // https:// (reverse proxy) -> diblok browser sebagai mixed content.
-      let finalUrl = url || buildProductsUrl()
-      if (typeof finalUrl === 'string' && finalUrl.startsWith('http://')) {
-        finalUrl = finalUrl.replace('http://', 'https://')
-      }
-
-      const response = await productServices.getByUrl(finalUrl)
+      const response = await productServices.getByUrl(safeUrl(url || buildProductsUrl()))
       const payload  = response.data?.data ?? {}
 
       const dataArray = payload.items ?? []
@@ -79,6 +111,7 @@ export const useProductStore = defineStore('product', () => {
       pagination.total         = meta.total ?? 0
       pagination.prev_page_url = payload.links?.prev ?? null
       pagination.next_page_url = payload.links?.next ?? null
+      lowStockLimit.value      = meta.low_stock_threshold ?? lowStockLimit.value
 
     } catch (error) {
       errorProduct.value = error
@@ -89,10 +122,36 @@ export const useProductStore = defineStore('product', () => {
     }
   }
 
+  // ── FILTER CHIP ──
+  const fetchFilters = async () => {
+    try {
+      const response = await productServices.getFilters()
+      const data     = response.data?.data ?? {}
+      filterOptions.brands     = data.brands ?? []
+      filterOptions.categories = data.categories ?? []
+    } catch (error) {
+      // Chip hanya pelengkap -- halaman tetap jalan tanpa ini.
+      console.error('Gagal fetch filter:', error)
+    }
+  }
+
+  const selectBrand = (id) => {
+    selectedBrand.value = id
+    pagination.current_page = 1
+    fetchProducts(buildProductsUrl()).catch(() => {})
+  }
+
+  const selectCategory = (id) => {
+    selectedCateg.value = id
+    pagination.current_page = 1
+    fetchProducts(buildProductsUrl()).catch(() => {})
+  }
+
   // ── DETAIL ──
   const fetchProductDetail = async (id) => {
     loadingDetail.value = true
     productDetail.value = null
+    resetTabs()
 
     try {
       const response = await productServices.show(id)
@@ -103,6 +162,70 @@ export const useProductStore = defineStore('product', () => {
       throw error
     } finally {
       loadingDetail.value = false
+    }
+  }
+
+  // ── TAB SOLD ──
+  const resetTabs = () => {
+    Object.assign(sold, { month: currentMonth(), type: 'all', summary: null, items: [], next: null, loading: false, loaded: false })
+    Object.assign(purchase, { month: currentMonth(), summary: null, items: [], next: null, loading: false, loaded: false })
+  }
+
+  // Pertama kali tab Sold dibuka: mulai dari bulan transaksi terakhir (bila ada),
+  // supaya tidak langsung kosong ketika bulan berjalan belum ada penjualan.
+  const openSoldTab = async (productId) => {
+    if (sold.loaded) return
+    try {
+      const response = await productServices.getSalesHistory(productId, 1)
+      const latest   = response.data?.data?.items?.[0]
+      if (latest?.date) sold.month = latest.date.slice(0, 7)
+    } catch (error) {
+      console.error('Gagal fetch riwayat penjualan:', error)
+    }
+    await fetchSold(productId)
+  }
+
+  // append = true untuk tombol "Muat lebih banyak"
+  const fetchSold = async (productId, append = false) => {
+    sold.loading = true
+    try {
+      const response = append && sold.next
+        ? await productServices.getByUrl(safeUrl(sold.next))
+        : await productServices.getSales(productId, { month: sold.month, type: sold.type, per_page: 20 })
+
+      const data = response.data?.data ?? {}
+      sold.summary = data.summary ?? null
+      sold.items   = append ? [...sold.items, ...(data.items ?? [])] : (data.items ?? [])
+      sold.next    = data.links?.next ?? null
+      sold.loaded  = true
+    } catch (error) {
+      console.error('Gagal fetch penjualan:', error)
+      if (!append) { sold.items = []; sold.summary = null; sold.next = null }
+      throw error
+    } finally {
+      sold.loading = false
+    }
+  }
+
+  // ── TAB PURCHASE ──
+  const fetchPurchases = async (productId, append = false) => {
+    purchase.loading = true
+    try {
+      const response = append && purchase.next
+        ? await productServices.getByUrl(safeUrl(purchase.next))
+        : await productServices.getPurchases(productId, { month: purchase.month, per_page: 20 })
+
+      const data = response.data?.data ?? {}
+      purchase.summary = data.summary ?? null
+      purchase.items   = append ? [...purchase.items, ...(data.items ?? [])] : (data.items ?? [])
+      purchase.next    = data.links?.next ?? null
+      purchase.loaded  = true
+    } catch (error) {
+      console.error('Gagal fetch purchase:', error)
+      if (!append) { purchase.items = []; purchase.summary = null; purchase.next = null }
+      throw error
+    } finally {
+      purchase.loading = false
     }
   }
 
@@ -145,6 +268,7 @@ export const useProductStore = defineStore('product', () => {
       style: 'currency',
       currency: 'IDR',
       minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(num)
   }
 
@@ -161,6 +285,14 @@ export const useProductStore = defineStore('product', () => {
     })
   }
 
+  // "30/09/2026" -- dipakai di baris Sold / Purchase
+  const formatShortDate = (dateStr) => {
+    if (!dateStr) return '-'
+    const date = new Date(String(dateStr).replace(' ', 'T'))
+    if (isNaN(date.getTime())) return '-'
+    return date.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
+
   // Format angka stok: ribuan pakai titik, desimal hanya kalau ada.
   const formatStock = (val) => {
     const num = Number(val ?? 0)
@@ -174,10 +306,13 @@ export const useProductStore = defineStore('product', () => {
     // state
     productsData, loadingProducts, errorProduct,
     searchProduct, pagination, sort, sortOptions,
+    filterOptions, selectedBrand, selectedCateg, lowStockLimit,
     productDetail, loadingDetail,
+    sold, purchase,
     // actions
-    buildProductsUrl, fetchProducts, fetchProductDetail,
+    buildProductsUrl, fetchProducts, fetchFilters, selectBrand, selectCategory,
+    fetchProductDetail, openSoldTab, fetchSold, fetchPurchases,
     searchWithDelay, changePageSize, changeSorting, toggleSort,
-    formatCurrency, formatDate, formatStock,
+    formatCurrency, formatDate, formatShortDate, formatStock,
   }
 })

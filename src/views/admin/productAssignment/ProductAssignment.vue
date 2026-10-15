@@ -26,14 +26,14 @@ onMounted(() => {
   if (store.selectedSalesId) store.fetchProducts()
 })
 
-// ── SYNC PRODUCT + PO DARI ODOO ────────────
-// Sync bisa makan waktu (product + gambar + stok + PO), jangan tutup halaman sampai selesai.
+// ── SYNC PRODUCT + PO + SO DARI ODOO ───────
+// Sync bisa makan waktu (product + gambar + stok + PO + SO), jangan tutup halaman sampai selesai.
 async function handleSync() {
-  toast.info('Sync product dan PO dimulai, mohon tunggu sampai selesai...')
+  toast.info('Sync product, PO, dan SO dimulai, mohon tunggu sampai selesai...')
 
   const result = await store.syncProducts()
 
-  if (result.ok) toast.success(`Sync berhasil. Product: ${result.total ?? '-'}, PO: ${result.totalPo ?? '-'}`)
+  if (result.ok) toast.success(`Sync berhasil. Product: ${result.total ?? '-'}, PO: ${result.totalPo ?? '-'}, SO: ${result.totalSo ?? '-'}`)
   else           toast.error(result.message)
 }
 
