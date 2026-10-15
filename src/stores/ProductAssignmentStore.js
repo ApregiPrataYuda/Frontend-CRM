@@ -285,7 +285,8 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
     }
   }
 
-  // Return: { ok: true, total } atau { ok: false, message }
+  // Sync product (+ gambar + stok) lalu PO, dijalankan berurutan di backend.
+  // Return: { ok: true, total, totalPo } atau { ok: false, message }
   const syncProducts = async () => {
     if (syncing.value) return { ok: false, message: 'Sync masih berjalan.' }
 
@@ -301,7 +302,11 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
         selectedSalesId.value ? fetchProducts(buildUrl()) : Promise.resolve(),
       ])
 
-      return { ok: true, total: data.total_products ?? syncStatus.total_products }
+      return {
+        ok: true,
+        total: data.total_products ?? syncStatus.total_products,
+        totalPo: data.total_purchase_orders ?? null,
+      }
 
     } catch (error) {
       await fetchSyncStatus()

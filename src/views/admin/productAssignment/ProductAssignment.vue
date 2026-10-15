@@ -26,14 +26,14 @@ onMounted(() => {
   if (store.selectedSalesId) store.fetchProducts()
 })
 
-// ── SYNC PRODUCT DARI ODOO ─────────────────
-// Sync bisa makan waktu (product + gambar + stok), jangan tutup halaman sampai selesai.
+// ── SYNC PRODUCT + PO DARI ODOO ────────────
+// Sync bisa makan waktu (product + gambar + stok + PO), jangan tutup halaman sampai selesai.
 async function handleSync() {
-  toast.info('Sync product dimulai, mohon tunggu sampai selesai...')
+  toast.info('Sync product dan PO dimulai, mohon tunggu sampai selesai...')
 
   const result = await store.syncProducts()
 
-  if (result.ok) toast.success(`Sync berhasil. Total product: ${result.total ?? '-'}`)
+  if (result.ok) toast.success(`Sync berhasil. Product: ${result.total ?? '-'}, PO: ${result.totalPo ?? '-'}`)
   else           toast.error(result.message)
 }
 
@@ -166,7 +166,7 @@ const firstName = (name = '') => name.split(' ')[0] || name
         <button class="btn-toolbar btn-purple" :disabled="store.syncing" @click="handleSync">
           <font-awesome-icon v-if="store.syncing" icon="spinner" spin />
           <font-awesome-icon v-else icon="rotate" />
-          {{ store.syncing ? 'Menyinkronkan...' : 'Sync Product' }}
+          {{ store.syncing ? 'Menyinkronkan...' : 'Sync Data Odoo' }}
         </button>
       </div>
     </div>
