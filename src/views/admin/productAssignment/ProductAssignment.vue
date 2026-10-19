@@ -26,15 +26,22 @@ onMounted(() => {
   if (store.selectedSalesId) store.fetchProducts()
 })
 
-// ── SYNC PRODUCT + PO + SO DARI ODOO ───────
-// Sync bisa makan waktu (product + gambar + stok + PO + SO), jangan tutup halaman sampai selesai.
+// ── SYNC DATA ODOO ─────────────────────────
+// Urutan di backend: product (+ gambar + stok), PO, SO, invoice, pembayaran, delivery.
+// Bisa makan waktu, jangan tutup halaman sampai selesai.
 async function handleSync() {
-  toast.info('Sync product, PO, dan SO dimulai, mohon tunggu sampai selesai...')
+  toast.info('Sync data Odoo dimulai (product, PO, SO, invoice, pembayaran, delivery), mohon tunggu sampai selesai...')
 
   const result = await store.syncProducts()
 
-  if (result.ok) toast.success(`Sync berhasil. Product: ${result.total ?? '-'}, PO: ${result.totalPo ?? '-'}, SO: ${result.totalSo ?? '-'}`)
-  else           toast.error(result.message)
+  if (result.ok) {
+    toast.success(
+      `Sync berhasil. Product: ${result.total ?? '-'}, PO: ${result.totalPo ?? '-'}, SO: ${result.totalSo ?? '-'}, ` +
+      `Invoice: ${result.totalInv ?? '-'}, Delivery: ${result.totalDel ?? '-'}`
+    )
+  } else {
+    toast.error(result.message)
+  }
 }
 
 // ── DROPDOWN TOGGLES ───────────────────────
@@ -479,13 +486,6 @@ const firstName = (name = '') => name.split(' ')[0] || name
 
 /* ── BREADCRUMB ── */
 .breadcrumb-card { background: var(--bg-card); border-radius: 10px; padding: 16px 18px; box-shadow: 0 1px 3px var(--shadow-color); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.breadcrumb-left { display: flex; flex-direction: column; gap: 6px; }
-.breadcrumb-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
-.breadcrumb-title svg { color: #6366f1; }
-.breadcrumb-path { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.breadcrumb-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
-.breadcrumb-item.active { color: #6366f1; font-weight: 700; }
-.breadcrumb-separator { font-size: 0.7rem; color: var(--text-muted); opacity: 0.6; }
 
 /* ── SYNC ── */
 .sync-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -494,6 +494,13 @@ const firstName = (name = '') => name.split(' ')[0] || name
 .sync-status { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
 .sync-status.running { color: #6366f1; }
 .sync-status.failed { color: #ef4444; cursor: help; }
+.breadcrumb-left { display: flex; flex-direction: column; gap: 6px; }
+.breadcrumb-title { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+.breadcrumb-title svg { color: #6366f1; }
+.breadcrumb-path { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.breadcrumb-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
+.breadcrumb-item.active { color: #6366f1; font-weight: 700; }
+.breadcrumb-separator { font-size: 0.7rem; color: var(--text-muted); opacity: 0.6; }
 
 /* ── TOOLBAR TOP ── */
 .toolbar-top { display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 1px 3px var(--shadow-color); flex-wrap: wrap; gap: 8px; }

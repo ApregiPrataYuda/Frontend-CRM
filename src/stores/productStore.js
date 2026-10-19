@@ -73,6 +73,37 @@ export const useProductStore = defineStore('product', () => {
     loaded: false,
   })
 
+  const invoice = reactive({
+    month: currentMonth(),
+    type: 'customer',       // customer / vendor / all
+    summary: null,
+    items: [],
+    next: null,
+    loading: false,
+    loaded: false,
+  })
+
+  // Detail satu invoice yang dibuka dari tab Invoice (null = tampilkan daftar)
+  const invoiceDetail        = ref(null)
+  const loadingInvoiceDetail = ref(false)
+
+  const delivery = reactive({
+    month: currentMonth(),
+    type: 'outgoing',       // outgoing / incoming / all
+    summary: null,
+    items: [],
+    next: null,
+    loading: false,
+    loaded: false,
+  })
+
+  // Status order (4 tahap) di tab Detail
+  const orderStatus = reactive({ items: [], loading: false, loaded: false })
+
+  // Detail satu transfer yang dibuka dari tab Delivery (null = tampilkan daftar)
+  const deliveryDetail        = ref(null)
+  const loadingDeliveryDetail = ref(false)
+
   // ── BUILD URL ──
   const buildProductsUrl = () => {
     const params = new URLSearchParams()
@@ -169,6 +200,11 @@ export const useProductStore = defineStore('product', () => {
   const resetTabs = () => {
     Object.assign(sold, { month: currentMonth(), type: 'all', summary: null, items: [], next: null, loading: false, loaded: false })
     Object.assign(purchase, { month: currentMonth(), summary: null, items: [], next: null, loading: false, loaded: false })
+    Object.assign(invoice, { month: currentMonth(), type: 'customer', summary: null, items: [], next: null, loading: false, loaded: false })
+    invoiceDetail.value = null
+    Object.assign(delivery, { month: currentMonth(), type: 'outgoing', summary: null, items: [], next: null, loading: false, loaded: false })
+    deliveryDetail.value = null
+    Object.assign(orderStatus, { items: [], loading: false, loaded: false })
   }
 
   // Pertama kali tab Sold dibuka: mulai dari bulan transaksi terakhir (bila ada),
@@ -227,6 +263,106 @@ export const useProductStore = defineStore('product', () => {
     } finally {
       purchase.loading = false
     }
+  }
+
+  // ── TAB INVOICE ──
+  const fetchInvoices = async (productId, append = false) => {
+    invoice.loading = true
+    try {
+      const response = append && invoice.next
+        ? await productServices.getByUrl(safeUrl(invoice.next))
+        : await productServices.getInvoices(productId, { month: invoice.month, type: invoice.type, per_page: 20 })
+
+      const data = response.data?.data ?? {}
+      invoice.summary = data.summary ?? null
+      invoice.items   = append ? [...invoice.items, ...(data.items ?? [])] : (data.items ?? [])
+      invoice.next    = data.links?.next ?? null
+      invoice.loaded  = true
+    } catch (error) {
+      console.error('Gagal fetch invoice:', error)
+      if (!append) { invoice.items = []; invoice.summary = null; invoice.next = null }
+      throw error
+    } finally {
+      invoice.loading = false
+    }
+  }
+
+  const fetchInvoiceDetail = async (invoiceId) => {
+    loadingInvoiceDetail.value = true
+    try {
+      const response = await productServices.getInvoice(invoiceId)
+      invoiceDetail.value = response.data?.data ?? null
+      return invoiceDetail.value
+    } catch (error) {
+      console.error('Gagal fetch detail invoice:', error)
+      throw error
+    } finally {
+      loadingInvoiceDetail.value = false
+    }
+  }
+
+  const closeInvoiceDetail = () => {
+    invoiceDetail.value = null
+    Object.assign(delivery, { month: currentMonth(), type: 'outgoing', summary: null, items: [], next: null, loading: false, loaded: false })
+    deliveryDetail.value = null
+    Object.assign(orderStatus, { items: [], loading: false, loaded: false })
+  }
+
+  // ── STATUS ORDER (tab Detail) ──
+  // Tidak melempar error: bagian ini pelengkap, detail product tetap tampil walau gagal.
+  const fetchOrderStatus = async (productId, limit = 5) => {
+    orderStatus.loading = true
+    try {
+      const response = await productServices.getOrderStatus(productId, limit)
+      orderStatus.items = response.data?.data?.items ?? []
+    } catch (error) {
+      console.error('Gagal fetch status order:', error)
+      orderStatus.items = []
+    } finally {
+      orderStatus.loading = false
+      orderStatus.loaded  = true
+    }
+  }
+
+  // ── TAB DELIVERY ──
+  const fetchDeliveries = async (productId, append = false) => {
+    delivery.loading = true
+    try {
+      const response = append && delivery.next
+        ? await productServices.getByUrl(safeUrl(delivery.next))
+        : await productServices.getDeliveries(productId, { month: delivery.month, type: delivery.type, per_page: 20 })
+
+      const data = response.data?.data ?? {}
+      delivery.summary = data.summary ?? null
+      delivery.items   = append ? [...delivery.items, ...(data.items ?? [])] : (data.items ?? [])
+      delivery.next    = data.links?.next ?? null
+      delivery.loaded  = true
+    } catch (error) {
+      console.error('Gagal fetch delivery:', error)
+      if (!append) { delivery.items = []; delivery.summary = null; delivery.next = null }
+      throw error
+    } finally {
+      delivery.loading = false
+    }
+  }
+
+  const fetchDeliveryDetail = async (deliveryId) => {
+    loadingDeliveryDetail.value = true
+    try {
+      const response = await productServices.getDelivery(deliveryId)
+      deliveryDetail.value = response.data?.data ?? null
+      return deliveryDetail.value
+    } catch (error) {
+      console.error('Gagal fetch detail delivery:', error)
+      throw error
+    } finally {
+      loadingDeliveryDetail.value = false
+    }
+  }
+
+  const closeDeliveryDetail = () => {
+    deliveryDetail.value = null
+    Object.assign(orderStatus, { items: [], loading: false, loaded: false })
   }
 
   // ── SEARCH WITH DELAY ──
@@ -308,10 +444,13 @@ export const useProductStore = defineStore('product', () => {
     searchProduct, pagination, sort, sortOptions,
     filterOptions, selectedBrand, selectedCateg, lowStockLimit,
     productDetail, loadingDetail,
-    sold, purchase,
+    sold, purchase, invoice, invoiceDetail, loadingInvoiceDetail,
+    delivery, deliveryDetail, loadingDeliveryDetail, orderStatus,
     // actions
     buildProductsUrl, fetchProducts, fetchFilters, selectBrand, selectCategory,
     fetchProductDetail, openSoldTab, fetchSold, fetchPurchases,
+    fetchInvoices, fetchInvoiceDetail, closeInvoiceDetail,
+    fetchDeliveries, fetchDeliveryDetail, closeDeliveryDetail, fetchOrderStatus,
     searchWithDelay, changePageSize, changeSorting, toggleSort,
     formatCurrency, formatDate, formatShortDate, formatStock,
   }

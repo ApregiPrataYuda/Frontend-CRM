@@ -61,6 +61,7 @@ async function openDetail(item) {
   isDetailVisible.value = true
   try {
     await store.fetchProductDetail(item.id)
+    store.fetchOrderStatus(item.id)   // bagian Status Order di tab Detail (tidak ditunggu)
   } catch (err) {
     toast.error(err.response?.data?.message || 'Gagal memuat detail product.')
     isDetailVisible.value = false
@@ -80,6 +81,8 @@ async function switchTab(tab) {
   try {
     if (tab === 'sold')     await store.openSoldTab(id)
     if (tab === 'purchase' && !store.purchase.loaded) await store.fetchPurchases(id)
+    if (tab === 'invoice' && !store.invoice.loaded) await store.fetchInvoices(id)
+    if (tab === 'delivery' && !store.delivery.loaded) await store.fetchDeliveries(id)
   } catch (err) {
     toast.error(err.response?.data?.message || 'Gagal memuat data.')
   }
@@ -104,6 +107,59 @@ async function reloadPurchases(append = false) {
     await store.fetchPurchases(store.productDetail.id, append)
   } catch (err) {
     toast.error(err.response?.data?.message || 'Gagal memuat data purchase.')
+  }
+}
+
+// ── TAB INVOICE ──
+async function reloadInvoices(append = false) {
+  store.closeInvoiceDetail()
+  try {
+    await store.fetchInvoices(store.productDetail.id, append)
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Gagal memuat invoice.')
+  }
+}
+
+function setInvoiceType(type) {
+  if (store.invoice.type === type) return
+  store.invoice.type = type
+  reloadInvoices()
+}
+
+async function openInvoice(invoiceId) {
+  try {
+    await store.fetchInvoiceDetail(invoiceId)
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Gagal memuat detail invoice.')
+  }
+}
+
+// Label badge status invoice (warna dari kelas inv-badge-<status>; label dari API)
+function invoiceStatusLabel(item) {
+  return item.status_label || item.status
+}
+
+// ── TAB DELIVERY ──
+async function reloadDeliveries(append = false) {
+  store.closeDeliveryDetail()
+  try {
+    await store.fetchDeliveries(store.productDetail.id, append)
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Gagal memuat data pengiriman.')
+  }
+}
+
+function setDeliveryType(type) {
+  if (store.delivery.type === type) return
+  store.delivery.type = type
+  reloadDeliveries()
+}
+
+async function openDelivery(deliveryId) {
+  try {
+    await store.fetchDeliveryDetail(deliveryId)
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'Gagal memuat detail pengiriman.')
   }
 }
 
@@ -393,7 +449,7 @@ const bucketLabel = {
         <!-- ===== TAB (sama dengan mobile: Detail / Sold / Purchase) ===== -->
         <div class="detail-tabs" role="tablist">
           <button
-            v-for="t in [{ v: 'detail', l: 'Detail' }, { v: 'sold', l: 'Sold' }, { v: 'purchase', l: 'Purchase' }]"
+            v-for="t in [{ v: 'detail', l: 'Detail' }, { v: 'sold', l: 'Sold' }, { v: 'purchase', l: 'Purchase' }, { v: 'invoice', l: 'Invoice' }, { v: 'delivery', l: 'Delivery' }]"
             :key="t.v"
             class="detail-tab"
             :class="{ active: activeTab === t.v }"
@@ -446,6 +502,39 @@ const bucketLabel = {
               Product ini belum dicentang <em>Track Inventory</em> di Odoo, sehingga Stock WH, GRN,
               dan Consignment tidak dihitung. Stok akan muncul otomatis setelah pengaturan di Odoo
               diperbarui dan data di-sync ulang.
+            </div>
+          </div>
+
+          <!-- ===== STATUS ORDER (SO terbaru berisi product ini, 4 tahap) ===== -->
+          <div class="loc-title">Status order</div>
+          <div v-if="store.orderStatus.loading" class="tx-empty">
+            <font-awesome-icon icon="spinner" spin /> Memuat status order...
+          </div>
+          <div v-else-if="!store.orderStatus.items.length" class="tx-empty">
+            Belum ada order (SO) untuk product ini.
+          </div>
+          <div v-else class="os-list">
+            <div v-for="o in store.orderStatus.items" :key="o.order_id" class="os-card">
+              <div class="os-title">
+                <span class="mono">{{ o.order_number }}</span> · {{ o.customer || '-' }}
+              </div>
+              <div class="os-sub">{{ store.formatShortDate(o.date) }} · {{ o.salesperson || '-' }} · {{ store.formatCurrency(o.amount_total) }}</div>
+              <div class="os-steps">
+                <div
+                  v-for="(s, i) in o.stages"
+                  :key="s.key"
+                  class="os-step"
+                  :class="`os-${s.status}`"
+                  :title="s.status === 'in_progress' ? `${s.label}: sebagian` : s.label"
+                >
+                  <div class="os-track">
+                    <span class="os-line" :class="{ hidden: i === 0, on: s.status === 'done' }"></span>
+                    <span class="os-dot"></span>
+                    <span class="os-line" :class="{ hidden: i === o.stages.length - 1, on: o.stages[i + 1]?.status === 'done' }"></span>
+                  </div>
+                  <div class="os-label">{{ s.label }}</div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -576,6 +665,314 @@ const bucketLabel = {
             </button>
           </div>
           <div class="tx-note">Hanya PO yang sudah dikonfirmasi. Nilai sesudah pajak.</div>
+        </template>
+
+        <!-- ===== TAB INVOICE (invoice berisi product ini per bulan) ===== -->
+        <template v-else-if="activeTab === 'invoice'">
+
+          <!-- Detail satu invoice -->
+          <div v-if="store.loadingInvoiceDetail" class="tx-empty">
+            <font-awesome-icon icon="spinner" spin /> Memuat detail invoice...
+          </div>
+
+          <template v-else-if="store.invoiceDetail">
+            <button class="btn-back" @click="store.closeInvoiceDetail()">
+              <font-awesome-icon icon="circle-left" /> Kembali ke daftar invoice
+            </button>
+
+            <div class="inv-head">
+              <div>
+                <div class="inv-number">
+                  {{ store.invoiceDetail.number || 'Draft (belum bernomor)' }}
+                  <span class="inv-type">{{ store.invoiceDetail.type_label }}</span>
+                </div>
+                <div class="tx-sub">{{ store.invoiceDetail.partner || '-' }} · {{ store.invoiceDetail.company }}</div>
+              </div>
+              <span class="inv-badge" :class="`inv-badge-${store.invoiceDetail.status}`">
+                {{ invoiceStatusLabel(store.invoiceDetail) }}
+              </span>
+            </div>
+
+            <div class="inv-grid">
+              <div><span class="inv-label">Tanggal invoice</span>{{ store.formatShortDate(store.invoiceDetail.invoice_date) }}</div>
+              <div><span class="inv-label">Jatuh tempo</span>
+                <span :class="{ 'text-danger-strong': store.invoiceDetail.is_overdue }">{{ store.formatShortDate(store.invoiceDetail.due_date) }}</span>
+              </div>
+              <div><span class="inv-label">Sales person</span>{{ store.invoiceDetail.salesperson || '-' }}</div>
+              <div><span class="inv-label">Referensi</span>{{ store.invoiceDetail.reference || '-' }}</div>
+            </div>
+
+            <div class="inv-totals">
+              <div class="inv-total-row"><span>Sebelum pajak</span><span>{{ store.formatCurrency(store.invoiceDetail.amount_untaxed) }}</span></div>
+              <div class="inv-total-row"><span>Pajak</span><span>{{ store.formatCurrency(store.invoiceDetail.amount_tax) }}</span></div>
+              <div class="inv-total-row inv-total-main"><span>Total</span><span>{{ store.formatCurrency(store.invoiceDetail.invoice_total) }}</span></div>
+              <template v-if="store.invoiceDetail.state === 'posted'">
+                <div class="inv-total-row"><span>Sudah dibayar</span><span>{{ store.formatCurrency(store.invoiceDetail.amount_paid) }}</span></div>
+                <div class="inv-total-row inv-total-due" :class="{ 'text-danger-strong': store.invoiceDetail.is_overdue }">
+                  <span>Sisa tagihan</span><span>{{ store.formatCurrency(store.invoiceDetail.amount_due) }}</span>
+                </div>
+              </template>
+            </div>
+
+            <template v-if="store.invoiceDetail.payments?.length">
+              <div class="loc-title">Pembayaran</div>
+              <div class="inv-payments">
+                <div v-for="pm in store.invoiceDetail.payments" :key="pm.odoo_id" class="inv-payment">
+                  <div class="tx-main">
+                    <div class="tx-name mono">{{ pm.number || '-' }}</div>
+                    <div class="tx-sub">
+                      {{ store.formatShortDate(pm.date) }} · {{ pm.journal || '-' }}
+                      <span v-if="pm.is_matched"> · cocok dengan bank</span>
+                    </div>
+                  </div>
+                  <div class="tx-amount">{{ store.formatCurrency(pm.amount) }}</div>
+                </div>
+              </div>
+            </template>
+
+            <div v-if="store.invoiceDetail.sale_orders.length || store.invoiceDetail.purchase_orders.length || store.invoiceDetail.reversed_from || store.invoiceDetail.credit_notes.length" class="inv-links">
+              <span v-for="so in store.invoiceDetail.sale_orders" :key="'so' + so.odoo_id" class="inv-chip">SO {{ so.number }}</span>
+              <span v-for="po in store.invoiceDetail.purchase_orders" :key="'po' + po.odoo_id" class="inv-chip">PO {{ po.number }}</span>
+              <button v-if="store.invoiceDetail.reversed_from" class="inv-chip inv-chip-link" @click="openInvoice(store.invoiceDetail.reversed_from.invoice_id)">
+                Invoice asal {{ store.invoiceDetail.reversed_from.number }}
+              </button>
+              <button v-for="cn in store.invoiceDetail.credit_notes" :key="'cn' + cn.invoice_id" class="inv-chip inv-chip-link" @click="openInvoice(cn.invoice_id)">
+                Credit note {{ cn.number }}
+              </button>
+            </div>
+
+            <div class="loc-title">Baris invoice</div>
+            <div class="inv-lines">
+              <template v-for="line in store.invoiceDetail.lines" :key="line.line_id">
+                <div v-if="line.display_type === 'line_section'" class="inv-line-section">{{ line.name }}</div>
+                <div v-else-if="line.display_type === 'line_note'" class="inv-line-note">{{ line.name }}</div>
+                <div v-else class="inv-line" :class="{ 'inv-line-current': line.product_id === store.productDetail.id }">
+                  <div class="tx-main">
+                    <div class="tx-name">{{ line.product_name || line.name }}</div>
+                    <div class="tx-sub">
+                      {{ store.formatStock(line.quantity) }} {{ line.uom }} × {{ store.formatCurrency(line.price_unit) }}
+                      <span v-if="line.discount"> · diskon {{ store.formatStock(line.discount) }}%</span>
+                    </div>
+                  </div>
+                  <div class="tx-amount">{{ store.formatCurrency(line.price_total) }}</div>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <!-- Daftar invoice -->
+          <template v-else>
+            <div class="tx-toolbar">
+              <div class="tx-summary">
+                <template v-if="store.invoice.summary">
+                  <strong>{{ store.invoice.summary.invoice_count }} invoice</strong>
+                  · {{ store.formatCurrency(store.invoice.summary.total_amount) }}
+                  <span class="tx-summary-sub">
+                    · {{ store.invoice.summary.unpaid_count }} belum lunas
+                    <span v-if="store.invoice.summary.amount_due"> (sisa {{ store.formatCurrency(store.invoice.summary.amount_due) }})</span>
+                    <span v-if="store.invoice.summary.overdue_count" class="text-danger-strong">· {{ store.invoice.summary.overdue_count }} lewat jatuh tempo</span>
+                    <span v-if="store.invoice.summary.refund_count"> · {{ store.invoice.summary.refund_count }} credit note</span>
+                    <span v-if="store.invoice.summary.draft_count"> · {{ store.invoice.summary.draft_count }} draft</span>
+                  </span>
+                </template>
+                <template v-else>&nbsp;</template>
+              </div>
+              <label class="month-pick">
+                <input v-model="store.invoice.month" type="month" @change="reloadInvoices()" />
+              </label>
+            </div>
+
+            <div class="tx-filter">
+              <button
+                v-for="t in [{ v: 'customer', l: 'Customer' }, { v: 'vendor', l: 'Vendor' }, { v: 'all', l: 'Semua' }]"
+                :key="t.v"
+                class="chip" :class="{ active: store.invoice.type === t.v }"
+                @click="setInvoiceType(t.v)"
+              >{{ t.l }}</button>
+            </div>
+
+            <div v-if="store.invoice.loading && !store.invoice.items.length" class="tx-empty">
+              <font-awesome-icon icon="spinner" spin /> Memuat data...
+            </div>
+            <div v-else-if="!store.invoice.items.length" class="tx-empty">
+              Belum ada invoice di bulan ini.
+            </div>
+            <div v-else class="tx-list">
+              <div
+                v-for="inv in store.invoice.items"
+                :key="inv.invoice_id"
+                class="tx-row clickable"
+                role="button"
+                tabindex="0"
+                @click="openInvoice(inv.invoice_id)"
+                @keydown.enter="openInvoice(inv.invoice_id)"
+              >
+                <div class="tx-main">
+                  <div class="tx-name">{{ inv.partner || '-' }}</div>
+                  <div class="tx-sub mono">{{ inv.number || 'Draft' }} · {{ inv.type_label }}</div>
+                  <div class="tx-sub">
+                    {{ store.formatShortDate(inv.invoice_date) }}
+                    <span v-if="inv.due_date"> · jatuh tempo <span :class="{ 'text-danger-strong': inv.is_overdue }">{{ store.formatShortDate(inv.due_date) }}</span></span>
+                  </div>
+                </div>
+                <div class="tx-side">
+                  <div class="tx-amount">{{ inv.is_refund ? '−' : '' }}{{ store.formatCurrency(inv.amount) }}</div>
+                  <div class="tx-meta">
+                    <span class="inv-badge" :class="`inv-badge-${inv.status}`">{{ invoiceStatusLabel(inv) }}</span>
+                    qty {{ store.formatStock(inv.qty) }}
+                  </div>
+                  <div v-if="inv.amount_paid > 0 && inv.amount_due > 0" class="tx-sub">
+                    sisa {{ store.formatCurrency(inv.amount_due) }}
+                  </div>
+                </div>
+              </div>
+              <button v-if="store.invoice.next" class="btn-more" :disabled="store.invoice.loading" @click="reloadInvoices(true)">
+                <font-awesome-icon v-if="store.invoice.loading" icon="spinner" spin />
+                Muat lebih banyak
+              </button>
+            </div>
+            <div class="tx-note">Ringkasan hanya dari invoice yang sudah diposting; credit note mengurangi total. Sisa tagihan dihitung dari pembayaran yang tercatat. Nilai sesudah pajak. Klik invoice untuk melihat detail.</div>
+          </template>
+        </template>
+
+        <!-- ===== TAB DELIVERY (surat jalan / penerimaan berisi product ini per bulan) ===== -->
+        <template v-else-if="activeTab === 'delivery'">
+
+          <!-- Detail satu transfer -->
+          <div v-if="store.loadingDeliveryDetail" class="tx-empty">
+            <font-awesome-icon icon="spinner" spin /> Memuat detail pengiriman...
+          </div>
+
+          <template v-else-if="store.deliveryDetail">
+            <button class="btn-back" @click="store.closeDeliveryDetail()">
+              <font-awesome-icon icon="circle-left" /> Kembali ke daftar pengiriman
+            </button>
+
+            <div class="inv-head">
+              <div>
+                <div class="inv-number">
+                  {{ store.deliveryDetail.number }}
+                  <span class="inv-type">{{ store.deliveryDetail.type_label }}</span>
+                </div>
+                <div class="tx-sub">{{ store.deliveryDetail.partner || '-' }} · {{ store.deliveryDetail.company }}</div>
+              </div>
+              <span class="dlv-badge" :class="`dlv-badge-${store.deliveryDetail.status}`">
+                {{ store.deliveryDetail.state_label }}
+              </span>
+            </div>
+
+            <div class="inv-grid">
+              <div><span class="inv-label">Tanggal rencana</span>
+                <span :class="{ 'text-danger-strong': store.deliveryDetail.is_late }">{{ store.formatDate(store.deliveryDetail.scheduled_date) }}</span>
+              </div>
+              <div><span class="inv-label">Tanggal selesai</span>{{ store.formatDate(store.deliveryDetail.date_done) }}</div>
+              <div><span class="inv-label">Dari</span>{{ store.deliveryDetail.from_location || '-' }}</div>
+              <div><span class="inv-label">Ke</span>{{ store.deliveryDetail.to_location || '-' }}</div>
+              <div><span class="inv-label">Operasi</span>{{ store.deliveryDetail.operation || '-' }}</div>
+              <div><span class="inv-label">No. resi</span>{{ store.deliveryDetail.tracking_ref || '-' }}</div>
+            </div>
+
+            <div v-if="store.deliveryDetail.sale_order || store.deliveryDetail.purchase_order || store.deliveryDetail.backorder_of || store.deliveryDetail.backorders.length" class="inv-links">
+              <span v-if="store.deliveryDetail.sale_order" class="inv-chip">SO {{ store.deliveryDetail.sale_order.number }}</span>
+              <span v-if="store.deliveryDetail.purchase_order" class="inv-chip">PO {{ store.deliveryDetail.purchase_order.number }}</span>
+              <button v-if="store.deliveryDetail.backorder_of" class="inv-chip inv-chip-link" @click="openDelivery(store.deliveryDetail.backorder_of.delivery_id)">
+                Backorder dari {{ store.deliveryDetail.backorder_of.number }}
+              </button>
+              <button v-for="b in store.deliveryDetail.backorders" :key="'bo' + b.delivery_id" class="inv-chip inv-chip-link" @click="openDelivery(b.delivery_id)">
+                Backorder {{ b.number }}
+              </button>
+            </div>
+
+            <div class="loc-title">Barang</div>
+            <div class="inv-lines">
+              <div
+                v-for="line in store.deliveryDetail.lines"
+                :key="line.line_id"
+                class="inv-line"
+                :class="{ 'inv-line-current': line.product_id === store.productDetail.id }"
+              >
+                <div class="tx-main">
+                  <div class="tx-name">{{ line.product_name || line.description }}</div>
+                  <div class="tx-sub">Diminta {{ store.formatStock(line.qty_demand) }} {{ line.uom }}</div>
+                </div>
+                <div class="tx-side">
+                  <div class="tx-amount" :class="{ 'dlv-qty-short': line.qty_done < line.qty_demand && store.deliveryDetail.state === 'done' }">
+                    {{ store.formatStock(line.qty_done) }} {{ line.uom }}
+                  </div>
+                  <div class="tx-sub">{{ store.deliveryDetail.type === 'incoming' ? 'diterima' : 'dikirim' }}</div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Daftar transfer -->
+          <template v-else>
+            <div class="tx-toolbar">
+              <div class="tx-summary">
+                <template v-if="store.delivery.summary">
+                  <strong>{{ store.delivery.summary.done_count }} selesai</strong>
+                  · {{ store.formatStock(store.delivery.summary.qty_done) }} unit
+                  <span class="tx-summary-sub">
+                    · {{ store.delivery.summary.open_count }} belum selesai
+                    <span v-if="store.delivery.summary.qty_open"> ({{ store.formatStock(store.delivery.summary.qty_open) }} unit)</span>
+                    <span v-if="store.delivery.summary.late_count" class="text-danger-strong">· {{ store.delivery.summary.late_count }} terlambat</span>
+                  </span>
+                </template>
+                <template v-else>&nbsp;</template>
+              </div>
+              <label class="month-pick">
+                <input v-model="store.delivery.month" type="month" @change="reloadDeliveries()" />
+              </label>
+            </div>
+
+            <div class="tx-filter">
+              <button
+                v-for="t in [{ v: 'outgoing', l: 'Pengiriman' }, { v: 'incoming', l: 'Penerimaan' }, { v: 'all', l: 'Semua' }]"
+                :key="t.v"
+                class="chip" :class="{ active: store.delivery.type === t.v }"
+                @click="setDeliveryType(t.v)"
+              >{{ t.l }}</button>
+            </div>
+
+            <div v-if="store.delivery.loading && !store.delivery.items.length" class="tx-empty">
+              <font-awesome-icon icon="spinner" spin /> Memuat data...
+            </div>
+            <div v-else-if="!store.delivery.items.length" class="tx-empty">
+              Belum ada pengiriman di bulan ini.
+            </div>
+            <div v-else class="tx-list">
+              <div
+                v-for="d in store.delivery.items"
+                :key="d.delivery_id"
+                class="tx-row clickable"
+                role="button"
+                tabindex="0"
+                @click="openDelivery(d.delivery_id)"
+                @keydown.enter="openDelivery(d.delivery_id)"
+              >
+                <div class="tx-main">
+                  <div class="tx-name">{{ d.partner || '-' }}</div>
+                  <div class="tx-sub mono">{{ d.number }} · {{ d.type_label }}</div>
+                  <div class="tx-sub">
+                    <template v-if="d.date_done">Selesai {{ store.formatShortDate(d.date_done) }}</template>
+                    <template v-else>Rencana <span :class="{ 'text-danger-strong': d.is_late }">{{ store.formatShortDate(d.scheduled_date) }}</span></template>
+                    <span v-if="d.origin"> · {{ d.origin }}</span>
+                  </div>
+                </div>
+                <div class="tx-side">
+                  <div class="tx-amount">{{ store.formatStock(d.qty_done) }} / {{ store.formatStock(d.qty_demand) }} {{ d.uom }}</div>
+                  <div class="tx-meta">
+                    <span class="dlv-badge" :class="`dlv-badge-${d.status}`">{{ d.state_label }}</span>
+                  </div>
+                </div>
+              </div>
+              <button v-if="store.delivery.next" class="btn-more" :disabled="store.delivery.loading" @click="reloadDeliveries(true)">
+                <font-awesome-icon v-if="store.delivery.loading" icon="spinner" spin />
+                Muat lebih banyak
+              </button>
+            </div>
+            <div class="tx-note">Qty ditampilkan sebagai terkirim / diminta untuk product ini. Transfer batal tidak ditampilkan. Klik untuk melihat detail.</div>
+          </template>
         </template>
       </template>
 
@@ -796,6 +1193,67 @@ const bucketLabel = {
 .btn-more:hover:not(:disabled) { border-color: #6366f1; }
 .btn-more:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* ===== TAB INVOICE ===== */
+.inv-badge { padding: 1px 8px; border-radius: 99px; font-size: 0.66rem; font-weight: 700; white-space: nowrap; }
+.inv-badge-draft      { background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-main); }
+.inv-badge-unpaid     { background: rgba(245,158,11,0.15); color: #d97706; }
+.inv-badge-partial    { background: rgba(245,158,11,0.15); color: #b45309; }
+.inv-badge-overdue    { background: rgba(239,68,68,0.12);  color: #dc2626; }
+.inv-badge-in_payment { background: rgba(59,130,246,0.12); color: #2563eb; }
+.inv-badge-paid       { background: rgba(34,197,94,0.12);  color: #16a34a; }
+.inv-badge-reversed   { background: rgba(139,92,246,0.12); color: #7c3aed; }
+.text-danger-strong { color: #dc2626; font-weight: 700; }
+.tx-row.clickable { cursor: pointer; transition: border-color 0.15s; }
+.tx-row.clickable:hover { border-color: rgba(99,102,241,0.45); }
+.btn-back { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 4px 0; border: none; background: none; color: #6366f1; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.inv-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-top: 8px; }
+.inv-number { font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+.inv-type { margin-left: 6px; font-size: 0.7rem; font-weight: 700; color: #6366f1; text-transform: uppercase; }
+.inv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 14px; margin-top: 12px; font-size: 0.82rem; color: var(--text-primary); }
+.inv-label { display: block; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.inv-totals { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border-main); border-radius: 10px; background: var(--bg-input); }
+.inv-total-row { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 3px 0; color: var(--text-primary); }
+.inv-total-main { font-weight: 800; border-top: 1px solid var(--border-main); margin-top: 4px; padding-top: 6px; }
+.inv-total-due { font-weight: 800; }
+.inv-payments { display: flex; flex-direction: column; gap: 6px; }
+.inv-payment { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border: 1px solid var(--border-main); border-radius: 8px; background: rgba(34,197,94,0.04); }
+.inv-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.inv-chip { padding: 3px 10px; border-radius: 99px; border: 1px solid var(--border-main); background: var(--bg-card); font-size: 0.74rem; font-weight: 600; color: var(--text-primary); }
+.inv-chip-link { cursor: pointer; color: #6366f1; border-color: rgba(99,102,241,0.4); }
+.inv-chip-link:hover { background: rgba(99,102,241,0.08); }
+.inv-lines { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+.inv-line { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--border-main); border-radius: 8px; }
+.inv-line-current { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.05); }
+.inv-line-section { font-size: 0.8rem; font-weight: 800; color: var(--text-primary); padding: 6px 2px 0; }
+.inv-line-note { font-size: 0.76rem; font-style: italic; color: var(--text-muted); white-space: pre-line; padding: 0 2px; }
+
+/* ===== TAB DELIVERY ===== */
+.dlv-badge { padding: 1px 8px; border-radius: 99px; font-size: 0.66rem; font-weight: 700; white-space: nowrap; }
+.dlv-badge-draft   { background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border-main); }
+.dlv-badge-waiting { background: rgba(245,158,11,0.15); color: #d97706; }
+.dlv-badge-ready   { background: rgba(59,130,246,0.12); color: #2563eb; }
+.dlv-badge-late    { background: rgba(239,68,68,0.12);  color: #dc2626; }
+.dlv-badge-done    { background: rgba(34,197,94,0.12);  color: #16a34a; }
+.dlv-badge-cancel  { background: var(--bg-input); color: var(--text-muted); text-decoration: line-through; }
+.dlv-qty-short { color: #d97706; }
+
+/* ===== STATUS ORDER (stepper seperti desain mobile) ===== */
+.os-list { display: flex; flex-direction: column; gap: 8px; }
+.os-card { padding: 12px 14px; border: 1px solid var(--border-main); border-radius: 10px; background: var(--bg-card); }
+.os-title { font-size: 0.84rem; font-weight: 700; color: var(--text-primary); }
+.os-sub { font-size: 0.74rem; color: var(--text-muted); margin-top: 2px; }
+.os-steps { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 10px; }
+.os-step { display: flex; flex-direction: column; align-items: center; }
+.os-track { display: flex; align-items: center; width: 100%; }
+.os-line { flex: 1; height: 2px; background: var(--border-main); }
+.os-line.on { background: #16a34a; }
+.os-line.hidden { visibility: hidden; }
+.os-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-main); background: var(--bg-card); flex-shrink: 0; }
+.os-done .os-dot { background: #16a34a; border-color: #16a34a; }
+.os-in_progress .os-dot { border-color: #16a34a; background: linear-gradient(90deg, #16a34a 50%, var(--bg-card) 50%); }
+.os-label { margin-top: 4px; font-size: 0.68rem; color: var(--text-muted); text-align: center; line-height: 1.2; }
+.os-done .os-label, .os-in_progress .os-label { color: var(--text-primary); }
+
 /* ===== MOBILE ===== */
 @media (max-width: 900px) {
   .breadcrumb-card { flex-direction: column; align-items: flex-start; }
@@ -809,5 +1267,6 @@ const bucketLabel = {
   .page-badges { width: 100%; justify-content: center; flex-wrap: wrap; }
   .page-badge { flex: 1; text-align: center; font-size: 0.7rem; }
   .chip-label { min-width: 100%; }
+  .inv-grid { grid-template-columns: 1fr; }
 }
 </style>

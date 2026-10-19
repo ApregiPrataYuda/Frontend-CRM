@@ -55,4 +55,34 @@ export const productServices = {
     return response
   },
 
+  // Tab Invoice: invoice berisi product ini per bulan. params: { month, type: 'customer'|'vendor'|'all', per_page }
+  async getInvoices(id, params = {}) {
+    const response = await api.get(`/mobile/products/${id}/invoices`, { params })
+    return response
+  },
+
+  // Detail satu invoice (header, baris, SO / PO asal, credit note). invoiceId = invoice_id dari daftar
+  async getInvoice(invoiceId) {
+    const response = await api.get(`/mobile/invoices/${invoiceId}`)
+    return response
+  },
+
+  // Tab Delivery: surat jalan / penerimaan berisi product ini per bulan. params: { month, type: 'outgoing'|'incoming'|'all', per_page }
+  async getDeliveries(id, params = {}) {
+    const response = await api.get(`/mobile/products/${id}/deliveries`, { params })
+    return response
+  },
+
+  // Status order terbaru yang berisi product ini (4 tahap: On Delivery, Delivered, Invoiced, Payment Confirmed)
+  async getOrderStatus(id, limit = 5) {
+    const response = await api.get(`/mobile/products/${id}/order-status`, { params: { limit } })
+    return response
+  },
+
+  // Detail satu transfer (baris, SO / PO asal, backorder). deliveryId = delivery_id dari daftar
+  async getDelivery(deliveryId) {
+    const response = await api.get(`/mobile/deliveries/${deliveryId}`)
+    return response
+  },
+
 }
