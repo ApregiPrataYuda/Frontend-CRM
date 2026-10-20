@@ -98,7 +98,8 @@ export const useProductStore = defineStore('product', () => {
   })
 
   // Status order (4 tahap) di tab Detail
-  const orderStatus = reactive({ items: [], loading: false, loaded: false })
+  // scope: all (semua order company) / own (hanya order milik sales, dari quotation CRM yang ia buat)
+  const orderStatus = reactive({ items: [], scope: 'all', loading: false, loaded: false })
 
   // Detail satu transfer yang dibuka dari tab Delivery (null = tampilkan daftar)
   const deliveryDetail        = ref(null)
@@ -204,7 +205,7 @@ export const useProductStore = defineStore('product', () => {
     invoiceDetail.value = null
     Object.assign(delivery, { month: currentMonth(), type: 'outgoing', summary: null, items: [], next: null, loading: false, loaded: false })
     deliveryDetail.value = null
-    Object.assign(orderStatus, { items: [], loading: false, loaded: false })
+    Object.assign(orderStatus, { items: [], scope: 'all', loading: false, loaded: false })
   }
 
   // Pertama kali tab Sold dibuka: mulai dari bulan transaksi terakhir (bila ada),
@@ -231,6 +232,7 @@ export const useProductStore = defineStore('product', () => {
 
       const data = response.data?.data ?? {}
       sold.summary = data.summary ?? null
+      sold.scope   = data.order_scope ?? 'all'
       sold.items   = append ? [...sold.items, ...(data.items ?? [])] : (data.items ?? [])
       sold.next    = data.links?.next ?? null
       sold.loaded  = true
@@ -275,6 +277,7 @@ export const useProductStore = defineStore('product', () => {
 
       const data = response.data?.data ?? {}
       invoice.summary = data.summary ?? null
+      invoice.scope   = data.order_scope ?? 'all'
       invoice.items   = append ? [...invoice.items, ...(data.items ?? [])] : (data.items ?? [])
       invoice.next    = data.links?.next ?? null
       invoice.loaded  = true
@@ -305,7 +308,7 @@ export const useProductStore = defineStore('product', () => {
     invoiceDetail.value = null
     Object.assign(delivery, { month: currentMonth(), type: 'outgoing', summary: null, items: [], next: null, loading: false, loaded: false })
     deliveryDetail.value = null
-    Object.assign(orderStatus, { items: [], loading: false, loaded: false })
+    Object.assign(orderStatus, { items: [], scope: 'all', loading: false, loaded: false })
   }
 
   // ── STATUS ORDER (tab Detail) ──
@@ -315,6 +318,7 @@ export const useProductStore = defineStore('product', () => {
     try {
       const response = await productServices.getOrderStatus(productId, limit)
       orderStatus.items = response.data?.data?.items ?? []
+      orderStatus.scope = response.data?.data?.order_scope ?? 'all'
     } catch (error) {
       console.error('Gagal fetch status order:', error)
       orderStatus.items = []
@@ -334,6 +338,7 @@ export const useProductStore = defineStore('product', () => {
 
       const data = response.data?.data ?? {}
       delivery.summary = data.summary ?? null
+      delivery.scope   = data.order_scope ?? 'all'
       delivery.items   = append ? [...delivery.items, ...(data.items ?? [])] : (data.items ?? [])
       delivery.next    = data.links?.next ?? null
       delivery.loaded  = true
@@ -362,7 +367,7 @@ export const useProductStore = defineStore('product', () => {
 
   const closeDeliveryDetail = () => {
     deliveryDetail.value = null
-    Object.assign(orderStatus, { items: [], loading: false, loaded: false })
+    Object.assign(orderStatus, { items: [], scope: 'all', loading: false, loaded: false })
   }
 
   // ── SEARCH WITH DELAY ──

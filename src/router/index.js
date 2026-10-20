@@ -596,6 +596,16 @@ const routes = [
       },
 
       {
+        path: 'customer-assignment-sales',
+        name: 'Customer Assignment',
+        component: () =>
+          import('@/views/admin/customerAssignment/CustomerAssignment.vue'),
+        meta: {
+          role: [3], title: 'Customer Assignment'
+        }
+      },
+
+      {
         path: 'reports-manager',
 
         name: 'ManagerReports',

@@ -511,7 +511,7 @@ const bucketLabel = {
             <font-awesome-icon icon="spinner" spin /> Memuat status order...
           </div>
           <div v-else-if="!store.orderStatus.items.length" class="tx-empty">
-            Belum ada order (SO) untuk product ini.
+            {{ store.orderStatus.scope === 'own' ? 'Belum ada order (SO) Anda untuk product ini.' : 'Belum ada order (SO) untuk product ini.' }}
           </div>
           <div v-else class="os-list">
             <div v-for="o in store.orderStatus.items" :key="o.order_id" class="os-card">
@@ -597,7 +597,7 @@ const bucketLabel = {
             <font-awesome-icon icon="spinner" spin /> Memuat data...
           </div>
           <div v-else-if="!store.sold.items.length" class="tx-empty">
-            Belum ada penjualan di bulan ini.
+            {{ store.sold.scope === 'own' ? 'Belum ada penjualan Anda di bulan ini.' : 'Belum ada penjualan di bulan ini.' }}
           </div>
           <div v-else class="tx-list">
             <div v-for="tx in store.sold.items" :key="tx.order_id" class="tx-row">
