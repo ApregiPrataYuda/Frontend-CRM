@@ -514,9 +514,10 @@ const bucketLabel = {
             {{ store.orderStatus.scope === 'own' ? 'Belum ada order (SO) Anda untuk product ini.' : 'Belum ada order (SO) untuk product ini.' }}
           </div>
           <div v-else class="os-list">
-            <div v-for="o in store.orderStatus.items" :key="o.order_id" class="os-card">
+            <div v-for="o in store.orderStatus.items" :key="o.order_id" class="os-card" :class="{ 'os-card-cancelled': o.is_cancelled }">
               <div class="os-title">
                 <span class="mono">{{ o.order_number }}</span> · {{ o.customer || '-' }}
+                <span v-if="o.is_cancelled" class="os-cancel-badge">Dibatalkan</span>
               </div>
               <div class="os-sub">{{ store.formatShortDate(o.date) }} · {{ o.salesperson || '-' }} · {{ store.formatCurrency(o.amount_total) }}</div>
               <div class="os-steps">
@@ -1253,6 +1254,10 @@ const bucketLabel = {
 .os-in_progress .os-dot { border-color: #16a34a; background: linear-gradient(90deg, #16a34a 50%, var(--bg-card) 50%); }
 .os-label { margin-top: 4px; font-size: 0.68rem; color: var(--text-muted); text-align: center; line-height: 1.2; }
 .os-done .os-label, .os-in_progress .os-label { color: var(--text-primary); }
+.os-card-cancelled { background: var(--bg-input); }
+.os-card-cancelled .os-steps { opacity: 0.45; }
+.os-card-cancelled .os-title .mono { text-decoration: line-through; }
+.os-cancel-badge { margin-left: 6px; padding: 1px 8px; border-radius: 99px; font-size: 0.66rem; font-weight: 700; background: rgba(239,68,68,0.12); color: #dc2626; vertical-align: middle; }
 
 /* ===== MOBILE ===== */
 @media (max-width: 900px) {
