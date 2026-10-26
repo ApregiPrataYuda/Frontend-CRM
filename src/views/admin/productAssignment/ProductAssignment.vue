@@ -27,17 +27,17 @@ onMounted(() => {
 })
 
 // ── SYNC DATA ODOO ─────────────────────────
-// Urutan di backend: product (+ gambar + stok), PO, SO, invoice, pembayaran, delivery.
+// Urutan di backend: product (+ gambar + stok), PO, SO, invoice, pembayaran, delivery, inquiry.
 // Bisa makan waktu, jangan tutup halaman sampai selesai.
 async function handleSync() {
-  toast.info('Sync data Odoo dimulai (product, PO, SO, invoice, pembayaran, delivery), mohon tunggu sampai selesai...')
+  toast.info('Sync data Odoo dimulai (product, PO, SO, invoice, pembayaran, delivery, inquiry), mohon tunggu sampai selesai...')
 
   const result = await store.syncProducts()
 
   if (result.ok) {
     toast.success(
       `Sync berhasil. Product: ${result.total ?? '-'}, PO: ${result.totalPo ?? '-'}, SO: ${result.totalSo ?? '-'}, ` +
-      `Invoice: ${result.totalInv ?? '-'}, Delivery: ${result.totalDel ?? '-'}`
+      `Invoice: ${result.totalInv ?? '-'}, Delivery: ${result.totalDel ?? '-'}, Inquiry: ${result.totalInq ?? '-'}`
     )
   } else {
     toast.error(result.message)

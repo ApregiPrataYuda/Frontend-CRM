@@ -285,8 +285,8 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
     }
   }
 
-  // Sync product (+ gambar + stok), PO, Quotation & SO, invoice, pembayaran, delivery -- berurutan di backend.
-  // Return: { ok: true, total, totalPo, totalSo, totalInv, totalDel } atau { ok: false, message }
+  // Sync product (+ gambar + stok), PO, Quotation & SO, invoice, pembayaran, delivery, inquiry -- berurutan di backend.
+  // Return: { ok: true, total, totalPo, totalSo, totalInv, totalDel, totalInq } atau { ok: false, message }
   const syncProducts = async () => {
     if (syncing.value) return { ok: false, message: 'Sync masih berjalan.' }
 
@@ -309,6 +309,7 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
         totalSo: data.total_sale_orders ?? null,
         totalInv: data.total_invoices ?? null,
         totalDel: data.total_pickings ?? null,
+        totalInq: data.total_inquiries ?? null,
       }
 
     } catch (error) {
