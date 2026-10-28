@@ -35,6 +35,12 @@ export const productAssignmentServices = {
     return response
   },
 
+  // ── Sync Product Catalog saja (Odoo Documents) -- tombol "Sync Catalog" ──
+  async syncCatalog() {
+    const response = await api.post('/products/sync-catalog')
+    return response
+  },
+
   async getSyncStatus() {
     const response = await api.get('/products/sync-status')
     return response
