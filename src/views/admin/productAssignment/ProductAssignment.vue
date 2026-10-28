@@ -44,6 +44,23 @@ async function handleSync() {
   }
 }
 
+// ── SYNC CATALOG (Odoo Documents) ──────────
+// Hanya menarik Product Catalog: jauh lebih cepat dari Sync Data Odoo.
+async function handleSyncCatalog() {
+  toast.info('Sync catalog dimulai...')
+
+  const result = await store.syncCatalog()
+
+  if (result.ok) {
+    toast.success(
+      `Sync catalog berhasil. Katalog: ${result.totalItems ?? '-'}, File: ${result.totalFiles ?? '-'} ` +
+      `(tertaut product: ${result.linkedFiles ?? '-'}, umum: ${result.unlinkedFiles ?? '-'})`
+    )
+  } else {
+    toast.error(result.message)
+  }
+}
+
 // ── DROPDOWN TOGGLES ───────────────────────
 const showSalesMenu   = ref(false)
 const showPerPageMenu = ref(false)
@@ -164,13 +181,30 @@ const firstName = (name = '') => name.split(' ')[0] || name
           <span v-else-if="store.syncStatus.status === 'failed'" class="sync-status failed" :title="store.syncStatus.last_error">
             <font-awesome-icon icon="circle-info" /> Sync terakhir gagal
           </span>
+          <span v-if="store.syncingCatalog" class="sync-status running">
+            <font-awesome-icon icon="spinner" spin /> Sync catalog berjalan...
+          </span>
+          <span v-else-if="store.catalogStatus.status === 'failed'" class="sync-status failed" :title="store.catalogStatus.last_error">
+            <font-awesome-icon icon="circle-info" /> Sync catalog terakhir gagal
+          </span>
           <span v-if="store.syncStatus.last_success_at" class="sync-last">
             Terakhir berhasil: {{ store.formatDateTime(store.syncStatus.last_success_at) }}
           </span>
           <span v-else-if="!store.syncing" class="sync-last">Belum pernah sync</span>
         </div>
 
-        <button class="btn-toolbar btn-purple" :disabled="store.syncing" @click="handleSync">
+        <button
+          class="btn-toolbar btn-outline-purple"
+          :disabled="store.syncing || store.syncingCatalog"
+          :title="store.catalogStatus.last_success_at ? 'Catalog terakhir: ' + store.formatDateTime(store.catalogStatus.last_success_at) : 'Catalog belum pernah sync'"
+          @click="handleSyncCatalog"
+        >
+          <font-awesome-icon v-if="store.syncingCatalog" icon="spinner" spin />
+          <font-awesome-icon v-else icon="folder-open" />
+          {{ store.syncingCatalog ? 'Sync catalog...' : 'Sync Catalog' }}
+        </button>
+
+        <button class="btn-toolbar btn-purple" :disabled="store.syncing || store.syncingCatalog" @click="handleSync">
           <font-awesome-icon v-if="store.syncing" icon="spinner" spin />
           <font-awesome-icon v-else icon="rotate" />
           {{ store.syncing ? 'Menyinkronkan...' : 'Sync Data Odoo' }}
@@ -636,5 +670,18 @@ const firstName = (name = '') => name.split(' ')[0] || name
   .btn-prev-next { flex: 1; max-width: 48%; padding: 10px 14px; }
   .page-badges { width: 100%; justify-content: center; flex-wrap: wrap; }
   .page-badge { flex: 1; text-align: center; font-size: 0.7rem; }
+}
+.btn-outline-purple {
+  background: #fff;
+  color: #6f42c1;
+  border: 1px solid #6f42c1;
+  margin-right: 8px;
+}
+.btn-outline-purple:hover:not(:disabled) {
+  background: #f3edfb;
+}
+.btn-outline-purple:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

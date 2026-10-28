@@ -49,6 +49,8 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
 
   // ── Sync product dari Odoo ──
   const syncing      = ref(false)
+  const syncingCatalog = ref(false)     // tombol "Sync Catalog" (Odoo Documents)
+  const catalogStatus  = reactive({ status: null, last_success_at: null, last_error: null, total_items: null, total_files: null, linked_files: null, unlinked_files: null })
   const syncStatus   = reactive({
     status: null,          // running / success / failed
     last_success_at: null,
@@ -278,6 +280,7 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
   const fetchSyncStatus = async () => {
     try {
       const response = await productAssignmentServices.getSyncStatus()
+      if (response.data?.data?.catalog) Object.assign(catalogStatus, response.data.data.catalog)
       Object.assign(syncStatus, response.data?.data ?? {})
     } catch (error) {
       // Status sync hanya informasi tambahan -- halaman tetap jalan tanpa ini.
@@ -321,6 +324,35 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
     }
   }
 
+  // Sync Product Catalog saja (Odoo Documents). Return: { ok, totalItems, totalFiles, linkedFiles } atau { ok: false, message }
+  const syncCatalog = async () => {
+    if (syncingCatalog.value) return { ok: false, message: 'Sync catalog masih berjalan.' }
+    if (syncing.value) return { ok: false, message: 'Sync Data Odoo sedang berjalan, tunggu sampai selesai.' }
+
+    syncingCatalog.value = true
+
+    try {
+      const response = await productAssignmentServices.syncCatalog()
+      const data     = response.data?.data ?? {}
+      Object.assign(catalogStatus, data)
+
+      return {
+        ok: true,
+        totalItems: data.total_items ?? null,
+        totalFiles: data.total_files ?? null,
+        linkedFiles: data.linked_files ?? null,
+        unlinkedFiles: data.unlinked_files ?? null,
+      }
+
+    } catch (error) {
+      await fetchSyncStatus()
+      return { ok: false, message: errorMessage(error, 'Gagal sync catalog dari Odoo') }
+
+    } finally {
+      syncingCatalog.value = false
+    }
+  }
+
   // ───────────────── FORMAT ─────────────────
   const formatPrice = (value) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 })
@@ -358,6 +390,8 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
 
     syncing,
     syncStatus,
+    syncingCatalog,
+    catalogStatus,
 
     // actions
     buildUrl,
@@ -383,6 +417,7 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
 
     fetchSyncStatus,
     syncProducts,
+    syncCatalog,
 
     formatPrice,
     formatDateTime,
