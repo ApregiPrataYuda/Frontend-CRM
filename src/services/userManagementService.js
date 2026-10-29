@@ -89,4 +89,20 @@ export const usersManagementServices = {
     const response = await api.get(`/users-management/hierarchy/${id}`)
     return response
   },
+
+  // ── Sync Akun Odoo (mapping user CRM ke user & employee Odoo berdasarkan email) ──
+  // Pratinjau tanpa menyimpan. force = periksa ulang user yang sudah terhubung.
+  async previewOdooMapping(force = false) {
+    const response = await api.get('/users-management/odoo-mapping', {
+      params: force ? { force: 1 } : {},
+      timeout: 120000,
+    })
+    return response
+  },
+
+  // Simpan mapping. payload: { force?: bool, user_ids?: number[] }
+  async syncOdooMapping(payload = {}) {
+    const response = await api.post('/users-management/odoo-mapping/sync', payload, { timeout: 120000 })
+    return response
+  },
 }

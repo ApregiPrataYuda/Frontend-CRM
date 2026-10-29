@@ -38,6 +38,11 @@ export const useUserStore = defineStore('userStore', () => {
   const hierarchyData    = ref(null)
   const loadingHierarchy = ref(false)
 
+  // ── Sync Akun Odoo (mapping ms_users ke user & employee Odoo) ──
+  const odooMapping        = ref({ rows: [], counts: {}, will_update: 0 })
+  const loadingOdooMapping = ref(false)
+  const savingOdooMapping  = ref(false)
+
   // ─────────────────────────────────────────────
   // STATE — Select Options Form
   // ─────────────────────────────────────────────
@@ -262,6 +267,50 @@ export const useUserStore = defineStore('userStore', () => {
   }
 
   // ─────────────────────────────────────────────
+  // SYNC AKUN ODOO
+  // Email user CRM dicocokkan dengan login/email user Odoo; hasilnya mengisi
+  // odoo_user_id / odoo_employee_id di ms_users (sama dengan command odoo:map-users).
+  // ─────────────────────────────────────────────
+  const odooErrorMessage = (error, fallback) =>
+    error?.response?.data?.errors?.odoo
+    ?? error?.response?.data?.message
+    ?? error?.message
+    ?? fallback
+
+  // Pratinjau (tidak menyimpan)
+  const previewOdooMapping = async (force = false) => {
+    loadingOdooMapping.value = true
+    try {
+      const response    = await usersManagementServices.previewOdooMapping(force)
+      odooMapping.value = response.data?.data ?? { rows: [], counts: {}, will_update: 0 }
+      return true
+    } catch (error) {
+      console.error('Gagal pratinjau akun Odoo:', error)
+      toast.error(odooErrorMessage(error, 'Gagal membaca user Odoo'))
+      return false
+    } finally {
+      loadingOdooMapping.value = false
+    }
+  }
+
+  // Simpan mapping, lalu muat ulang tabel
+  const syncOdooMapping = async (force = false) => {
+    savingOdooMapping.value = true
+    try {
+      const response = await usersManagementServices.syncOdooMapping({ force })
+      toast.success(response.data?.message ?? 'Sync akun Odoo berhasil.')
+      await fetchUsers(buildUrl())
+      return true
+    } catch (error) {
+      console.error('Gagal sync akun Odoo:', error)
+      toast.error(odooErrorMessage(error, 'Gagal sync akun Odoo'))
+      return false
+    } finally {
+      savingOdooMapping.value = false
+    }
+  }
+
+  // ─────────────────────────────────────────────
   // HELPER — Build FormData
   // ─────────────────────────────────────────────
   const buildFormData = (payload, isUpdate = false) => {
@@ -428,6 +477,11 @@ export const useUserStore = defineStore('userStore', () => {
     hierarchyData,
     loadingHierarchy,
     fetchUserHierarchy,
+    odooMapping,
+    loadingOdooMapping,
+    savingOdooMapping,
+    previewOdooMapping,
+    syncOdooMapping,
     clearFieldError,      // FIX #2 — expose per-field error clear
     saveUser,
     updateUser,

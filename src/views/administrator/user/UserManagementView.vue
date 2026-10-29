@@ -507,6 +507,68 @@ async function downloadHierarchyPNG() {
 }
 
 /* ─────────────────────────────────────────
+ * SYNC AKUN ODOO
+ * (cocokkan email user CRM dengan login/email user Odoo, lalu isi
+ *  odoo_user_id / odoo_employee_id -- sama dengan command odoo:map-users)
+ * ───────────────────────────────────────── */
+const isOdooModalVisible = ref(false)
+const odooForce          = ref(false)
+const odooFilter         = ref('all')   // all | matched | mapped | not_found | duplicate | no_email
+
+const ODOO_STATUS = {
+  matched:   { label: 'Cocok',           cls: 'odoo-st-green'  },
+  mapped:    { label: 'Sudah terhubung', cls: 'odoo-st-blue'   },
+  not_found: { label: 'Tidak ditemukan', cls: 'odoo-st-gray'   },
+  duplicate: { label: 'Ganda',           cls: 'odoo-st-orange' },
+  no_email:  { label: 'Tanpa email',     cls: 'odoo-st-red'    },
+}
+
+const odooRows = computed(() => {
+  const rows = store.odooMapping.rows ?? []
+  return odooFilter.value === 'all' ? rows : rows.filter(r => r.status === odooFilter.value)
+})
+
+async function openOdooModal() {
+  odooFilter.value         = 'all'
+  odooForce.value          = false
+  isOdooModalVisible.value = true
+  const ok = await store.previewOdooMapping(false)
+  if (!ok) isOdooModalVisible.value = false
+}
+
+function closeOdooModal() {
+  if (store.savingOdooMapping) return
+  isOdooModalVisible.value = false
+}
+
+async function toggleOdooForce() {
+  odooForce.value = !odooForce.value
+  await store.previewOdooMapping(odooForce.value)
+}
+
+async function saveOdooMapping() {
+  if (!store.odooMapping.will_update) {
+    toast.info('Tidak ada user yang perlu diperbarui.')
+    return
+  }
+  const ok = await store.syncOdooMapping(odooForce.value)
+  if (ok) isOdooModalVisible.value = false
+}
+
+function odooUserLabel(r) {
+  if (r.odoo_user) return `${r.odoo_user.name} (#${r.odoo_user.id})`
+  if (r.current)   return `${r.current.user_name ?? '-'} (#${r.current.user_id})`
+  if (r.status === 'duplicate') return r.candidates.map(c => `#${c.id} ${c.login}`).join(', ')
+  return '-'
+}
+
+function odooEmployeeLabel(r) {
+  if (r.odoo_employee)        return `${r.odoo_employee.name} (#${r.odoo_employee.id})`
+  if (r.current?.employee_id) return `${r.current.employee_name ?? '-'} (#${r.current.employee_id})`
+  return '-'
+}
+
+/* ─────────────────────────────────────────
  * DELETE
  * FIX #5 — rename handleDeleteUser agar tidak shadow store.deleteUser
  * ───────────────────────────────────────── */
@@ -624,6 +686,10 @@ async function handlePermissionChange(row) {
           <button v-if="canCreate" class="btn-toolbar btn-purple" @click="openAddModal">
             <font-awesome-icon icon="plus" /> Add User
           </button>
+          <!-- Sync Akun Odoo: hubungkan user CRM ke user & employee Odoo (cocok berdasarkan email) -->
+          <button v-if="canUpdate" class="btn-toolbar btn-outline-purple" @click="openOdooModal">
+            <font-awesome-icon icon="rotate" /> Sync Akun Odoo
+          </button>
         </div>
 
         <div class="controls-right">
@@ -715,6 +781,7 @@ async function handlePermissionChange(row) {
             <th>COMPANY</th>
             <th>REPORT TO</th>
             <th>BRANCH</th>
+            <th>ODOO</th>
             <th style="width:70px; text-align:center">PHOTO</th>
             <!-- <th style="width:130px">CREATED</th>
             <th style="width:130px">UPDATED</th> -->
@@ -768,6 +835,16 @@ async function handlePermissionChange(row) {
             </td>
             <td>
               <span class="badge-cabang">{{ item.cabang?.cabang ?? '-' }}</span>
+            </td>
+            <td>
+              <span
+                v-if="item.odoo_user_id"
+                class="badge-odoo"
+                :title="`User Odoo #${item.odoo_user_id}` + (item.odoo_employee_id ? ` · Employee #${item.odoo_employee_id}` : '')"
+              >
+                <font-awesome-icon icon="link" /> {{ item.odoo_user_name ?? 'Terhubung' }}
+              </span>
+              <span v-else class="td-muted">-</span>
             </td>
             <td style="text-align:center">
               <img
@@ -1126,6 +1203,19 @@ async function handlePermissionChange(row) {
             <span class="badge-cabang">{{ detailUser.cabang?.cabang ?? '-' }}</span>
           </div>
           <div class="detail-row">
+            <span class="detail-label">Akun Odoo</span>
+            <span v-if="detailUser.odoo_user_id" class="badge-odoo">
+              <font-awesome-icon icon="link" /> {{ detailUser.odoo_user_name ?? '-' }} (#{{ detailUser.odoo_user_id }})
+            </span>
+            <span v-else class="detail-value">Belum terhubung</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Employee Odoo</span>
+            <span class="detail-value">
+              {{ detailUser.odoo_employee_id ? `${detailUser.odoo_employee_name ?? '-'} (#${detailUser.odoo_employee_id})` : '-' }}
+            </span>
+          </div>
+          <div class="detail-row">
             <span class="detail-label">Created At</span>
             <span class="detail-value">{{ store.formatDate(detailUser.created_at) }}</span>
           </div>
@@ -1280,6 +1370,103 @@ async function handlePermissionChange(row) {
           <font-awesome-icon v-if="downloadingHierarchy" icon="spinner" spin />
           <font-awesome-icon v-else icon="download" />
           {{ downloadingHierarchy ? 'Membuat gambar...' : 'Download PNG' }}
+        </button>
+      </template>
+    </AppModal>
+
+    <!-- ════════════════════════════════════════
+         MODAL SYNC AKUN ODOO
+         (pratinjau pencocokan email user CRM ↔ user Odoo, lalu simpan)
+    ════════════════════════════════════════ -->
+    <AppModal
+      :show="isOdooModalVisible"
+      title="Sync Akun Odoo"
+      icon="rotate"
+      size="lg"
+      @close="closeOdooModal"
+    >
+      <p class="odoo-intro">
+        Email user CRM dicocokkan dengan login/email user Odoo. Ini pratinjau, belum disimpan.
+      </p>
+
+      <div class="odoo-toolbar">
+        <div class="odoo-chips">
+          <button :class="{ active: odooFilter === 'all' }" @click="odooFilter = 'all'">
+            Semua ({{ store.odooMapping.rows?.length ?? 0 }})
+          </button>
+          <button
+            v-for="(n, key) in store.odooMapping.counts"
+            :key="key"
+            :class="{ active: odooFilter === key }"
+            @click="odooFilter = key"
+          >{{ ODOO_STATUS[key]?.label ?? key }} ({{ n }})</button>
+        </div>
+        <label class="odoo-force">
+          <input
+            type="checkbox"
+            class="perm-check"
+            :checked="odooForce"
+            :disabled="store.loadingOdooMapping || store.savingOdooMapping"
+            @change="toggleOdooForce"
+          />
+          Periksa ulang yang sudah terhubung
+        </label>
+      </div>
+
+      <div class="odoo-table-wrap">
+        <div v-if="store.loadingOdooMapping" class="td-center">
+          <div class="spinner-custom" style="margin: 0 auto;"></div>
+          <p style="margin-top:10px; font-size:0.82rem;">Membaca user Odoo...</p>
+        </div>
+
+        <div v-else-if="!odooRows.length" class="td-center">Tidak ada data.</div>
+
+        <table v-else class="data-table">
+          <thead>
+            <tr>
+              <th>USER CRM</th>
+              <th>EMAIL</th>
+              <th>USER ODOO</th>
+              <th>EMPLOYEE ODOO</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="r in odooRows"
+              :key="r.id_user"
+              class="data-row"
+              :class="{ 'odoo-inactive': !r.is_active }"
+            >
+              <td class="td-bold">
+                {{ r.fullname }}
+                <span v-if="!r.is_active" class="td-muted"> · nonaktif</span>
+              </td>
+              <td class="td-muted">{{ r.email || '-' }}</td>
+              <td>{{ odooUserLabel(r) }}</td>
+              <td>{{ odooEmployeeLabel(r) }}</td>
+              <td>
+                <span class="odoo-status" :class="ODOO_STATUS[r.status]?.cls">
+                  {{ ODOO_STATUS[r.status]?.label ?? r.status_label }}
+                </span>
+                <span v-if="r.will_update" class="odoo-new">akan disimpan</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <template #footer>
+        <span class="odoo-footnote">{{ store.odooMapping.will_update ?? 0 }} user akan diperbarui</span>
+        <button class="btn-cancel" :disabled="store.savingOdooMapping" @click="closeOdooModal">Batal</button>
+        <button
+          class="btn-save"
+          :disabled="store.loadingOdooMapping || store.savingOdooMapping || !store.odooMapping.will_update"
+          @click="saveOdooMapping"
+        >
+          <font-awesome-icon v-if="store.savingOdooMapping" icon="spinner" spin />
+          <font-awesome-icon v-else icon="check" />
+          {{ store.savingOdooMapping ? 'Menyimpan...' : 'Simpan Mapping' }}
         </button>
       </template>
     </AppModal>
@@ -1797,4 +1984,32 @@ async function handlePermissionChange(row) {
   padding: 14px 20px; border-top: 1px solid var(--border-main);
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; flex-shrink: 0;
 }
+
+/* ══════════════════════════════════════════
+   SYNC AKUN ODOO
+══════════════════════════════════════════ */
+.btn-outline-purple { background: transparent; color: #6366f1; border: 1.5px solid #6366f1; }
+.btn-outline-purple:hover:not(:disabled) { background: rgba(99,102,241,0.08); }
+
+.badge-odoo { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; background: rgba(113,75,103,0.1); color: #714b67; border: 1px solid rgba(113,75,103,0.25); white-space: nowrap; }
+
+.odoo-intro { margin: 0 0 12px; font-size: 0.82rem; color: var(--text-muted); }
+.odoo-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.odoo-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.odoo-chips button { padding: 4px 11px; border: 1px solid var(--border-main); border-radius: 99px; background: var(--bg-input); color: var(--text-primary); font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+.odoo-chips button.active { background: #6366f1; border-color: #6366f1; color: #fff; }
+.odoo-force { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-primary); }
+
+.odoo-table-wrap { border: 1px solid var(--border-main); border-radius: 10px; overflow: auto; max-height: 55vh; }
+.odoo-table-wrap .data-table thead tr { position: sticky; top: 0; }
+.odoo-inactive td { opacity: 0.6; }
+
+.odoo-status { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.72rem; font-weight: 700; }
+.odoo-st-green  { background: rgba(16,185,129,0.12); color: #059669; }
+.odoo-st-blue   { background: rgba(59,130,246,0.12); color: #2563eb; }
+.odoo-st-gray   { background: rgba(100,116,139,0.12); color: #475569; }
+.odoo-st-orange { background: rgba(245,158,11,0.14); color: #b45309; }
+.odoo-st-red    { background: rgba(239,68,68,0.12);  color: #dc2626; }
+.odoo-new { display: block; margin-top: 3px; font-size: 0.7rem; font-weight: 600; color: #6366f1; }
+.odoo-footnote { margin-right: auto; font-size: 0.78rem; color: var(--text-muted); }
 </style>
