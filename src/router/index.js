@@ -272,131 +272,131 @@ const routes = [
       },
 
 
-      {
-        path: 'sales-timesheets-leave-attendance',
+      // {
+      //   path: 'sales-timesheets-leave-attendance',
 
-        name: 'SalesTimesheetsLeaveAttendance',
+      //   name: 'SalesTimesheetsLeaveAttendance',
 
-        component: () =>
-          import('@/views/sales/attendance/AttendanceView.vue'),
+      //   component: () =>
+      //     import('@/views/sales/attendance/AttendanceView.vue'),
 
-        meta: {
-          role: [2], title: 'Sales Attendance'
-        }
-      },
-
-
-       {
-        path: 'sales-timesheets-leave-reports',
-
-        name: 'SalesTimesheetsLeaveReports',
-
-        component: () =>
-          import('@/views/sales/attendance/ReportAttendanceView.vue'),
-
-        meta: {
-          role: [2], title: 'Attendance Reports'
-        }
-      },
-
-      {
-        path: 'sales-timesheets-leave-reports-history',
-
-        name: 'SalesTimesheetsLeaveReportsHistory',
-
-        component: () =>
-          import('@/views/sales/attendance/AttendanceHistoryView.vue'),
-
-        meta: {
-          role: [2], title: 'Reports History'
-        }
-      },
+      //   meta: {
+      //     role: [2], title: 'Sales Attendance'
+      //   }
+      // },
 
 
+      //  {
+      //   path: 'sales-timesheets-leave-reports',
 
-      {
-        path: 'sales-leads',
-        name: 'SalesLeads',
+      //   name: 'SalesTimesheetsLeaveReports',
 
-        component: () =>
-          import('@/views/sales/leads/LeadsManagementView.vue'),
+      //   component: () =>
+      //     import('@/views/sales/attendance/ReportAttendanceView.vue'),
 
-        meta: {
-          role: [2], title: 'Leads'
-        }
-      },
+      //   meta: {
+      //     role: [2], title: 'Attendance Reports'
+      //   }
+      // },
 
-      {
-        path: 'data-master-leads-assign',
-        name: 'SalesLeadsAssign',
+      // {
+      //   path: 'sales-timesheets-leave-reports-history',
 
-        component: () =>
-          import('@/views/sales/leads/LeadsAssigntToSalesView.vue'),
+      //   name: 'SalesTimesheetsLeaveReportsHistory',
 
-        meta: {
-          role: [2], title: 'Leads Assignment'
-        }
-      },
+      //   component: () =>
+      //     import('@/views/sales/attendance/AttendanceHistoryView.vue'),
 
-      {
-        path: 'sales-customers',
-        name: 'SalesCustomers',
-
-        component: () =>
-          import('@/views/sales/customers/CustomersManagementView.vue'),
-
-        meta: {
-          role: [2], title: 'Customers'
-        }
-      },
-
-      {
-        path: 'sales-visit',
-        name: 'SalesVisit',
-
-        component: () =>
-          import('@/views/sales/visit/SalesVisitView.vue'),
-
-        meta: {
-          role: [2], title: 'Sales Visit'
-        }
-      },
+      //   meta: {
+      //     role: [2], title: 'Reports History'
+      //   }
+      // },
 
 
-      {
-        path: 'sales-follow-up',
-        name: 'SalesFollowUp',
 
-        component: () =>
-          import('@/views/sales/followup/FollowUpManagementView.vue'),
+      // {
+      //   path: 'sales-leads',
+      //   name: 'SalesLeads',
 
-        meta: {
-          role: [2], title: 'Follow UP'
-        }
-      },
+      //   component: () =>
+      //     import('@/views/sales/leads/LeadsManagementView.vue'),
+
+      //   meta: {
+      //     role: [2], title: 'Leads'
+      //   }
+      // },
+
+      // {
+      //   path: 'data-master-leads-assign',
+      //   name: 'SalesLeadsAssign',
+
+      //   component: () =>
+      //     import('@/views/sales/leads/LeadsAssigntToSalesView.vue'),
+
+      //   meta: {
+      //     role: [2], title: 'Leads Assignment'
+      //   }
+      // },
+
+      // {
+      //   path: 'sales-customers',
+      //   name: 'SalesCustomers',
+
+      //   component: () =>
+      //     import('@/views/sales/customers/CustomersManagementView.vue'),
+
+      //   meta: {
+      //     role: [2], title: 'Customers'
+      //   }
+      // },
+
+      // {
+      //   path: 'sales-visit',
+      //   name: 'SalesVisit',
+
+      //   component: () =>
+      //     import('@/views/sales/visit/SalesVisitView.vue'),
+
+      //   meta: {
+      //     role: [2], title: 'Sales Visit'
+      //   }
+      // },
 
 
-      {
-        path: 'customer-history',
-        name: 'Customer History',
+      // {
+      //   path: 'sales-follow-up',
+      //   name: 'SalesFollowUp',
 
-        component: () =>
-        import('@/views/sales/customers/CustomersPopulationView.vue'),
-        meta: {
-          role: [2], title: 'Customer History'
-        }
-      },
+      //   component: () =>
+      //     import('@/views/sales/followup/FollowUpManagementView.vue'),
 
-      {
-        path: 'customer-population',
-        name: 'Customer Population',
+      //   meta: {
+      //     role: [2], title: 'Follow UP'
+      //   }
+      // },
 
-        component: () =>
-        import('@/views/sales/customers/CustomersProductPopulationView.vue'),
-        meta: {
-          role: [2], title: 'Customer Population'
-        }
-      },
+
+      // {
+      //   path: 'customer-history',
+      //   name: 'Customer History',
+
+      //   component: () =>
+      //   import('@/views/sales/customers/CustomersPopulationView.vue'),
+      //   meta: {
+      //     role: [2], title: 'Customer History'
+      //   }
+      // },
+
+      // {
+      //   path: 'customer-population',
+      //   name: 'Customer Population',
+
+      //   component: () =>
+      //   import('@/views/sales/customers/CustomersProductPopulationView.vue'),
+      //   meta: {
+      //     role: [2], title: 'Customer Population'
+      //   }
+      // },
 
 
       {
@@ -410,108 +410,108 @@ const routes = [
         }
       },
 
-      {
-        path: 'sales-target-visit',
-        name: 'My Target Visit',
+      // {
+      //   path: 'sales-target-visit',
+      //   name: 'My Target Visit',
 
-        component: () =>
-        import('@/views/sales/visit/TargetSalesView.vue'),
-        meta: {
-          role: [2], title: 'My Target Visit'
-        }
-      },
+      //   component: () =>
+      //   import('@/views/sales/visit/TargetSalesView.vue'),
+      //   meta: {
+      //     role: [2], title: 'My Target Visit'
+      //   }
+      // },
 
-      {
-        path: 'sales-planning',
-        name: 'My Planning',
+      // {
+      //   path: 'sales-planning',
+      //   name: 'My Planning',
 
-        component: () =>
-        import('@/views/sales/plan/myVisitPlanView.vue'),
-        meta: {
-          role: [2], title: 'My Planning'
-        }
-      },
+      //   component: () =>
+      //   import('@/views/sales/plan/myVisitPlanView.vue'),
+      //   meta: {
+      //     role: [2], title: 'My Planning'
+      //   }
+      // },
 
-      {
-        path: 'sales-target',
-        name: 'My Target Sales',
+      // {
+      //   path: 'sales-target',
+      //   name: 'My Target Sales',
 
-        component: () =>
-        import('@/views/sales/target/mySalesTargetView.vue'),
-        meta: {
-          role: [2], title: 'My Target Sales'
-        }
-      },
-
-
-
-      {
-        path: 'reports-sales',
-
-        name: 'SalesReports',
-
-        component: () =>
-          import('@/views/template/reports/ReportsSalesView.vue'),
-
-        meta: {
-          role: [2]
-        }
-      },
-
-      {
-        path: 'user-guide',
-
-        name: 'User Guide',
-
-        component: () =>
-          import('@/views/global/settings/userGuideView.vue'),
-
-        meta: {
-          role: [2]
-        }
-      },
-
-      {
-        path: 'sales-expenses',
-        name: 'Expenses',
-        component: () =>
-          import('@/views/sales/expense/expensesView.vue'),
-        meta: {
-          role: [2]
-        }
-      },
-
-      {
-        path: 'sales-quotation',
-        name: 'Quotation',
-        component: () =>
-          import('@/views/sales/quotation/quotationView.vue'),
-        meta: {
-          role: [2]
-        }
-      },
-
-      {
-        path: 'sales/products-catalog-sales',
-        name: 'Products Catalog',
-        component: () =>
-          import('@/views/sales/catalog/productCatalogSalesView.vue'),
-        meta: {
-          role: [2]
-        }
-      },
+      //   component: () =>
+      //   import('@/views/sales/target/mySalesTargetView.vue'),
+      //   meta: {
+      //     role: [2], title: 'My Target Sales'
+      //   }
+      // },
 
 
 
-      {
-        path: 'contact',
-        name: 'Contact',
-        component: () =>
-          import('@/views/sales/contact/contactView.vue'),
-        meta: {
-          role: [2]
-        }
-      },
+      // {
+      //   path: 'reports-sales',
+
+      //   name: 'SalesReports',
+
+      //   component: () =>
+      //     import('@/views/template/reports/ReportsSalesView.vue'),
+
+      //   meta: {
+      //     role: [2]
+      //   }
+      // },
+
+      // {
+      //   path: 'user-guide',
+
+      //   name: 'User Guide',
+
+      //   component: () =>
+      //     import('@/views/global/settings/userGuideView.vue'),
+
+      //   meta: {
+      //     role: [2]
+      //   }
+      // },
+
+      // {
+      //   path: 'sales-expenses',
+      //   name: 'Expenses',
+      //   component: () =>
+      //     import('@/views/sales/expense/expensesView.vue'),
+      //   meta: {
+      //     role: [2]
+      //   }
+      // },
+
+      // {
+      //   path: 'sales-quotation',
+      //   name: 'Quotation',
+      //   component: () =>
+      //     import('@/views/sales/quotation/quotationView.vue'),
+      //   meta: {
+      //     role: [2]
+      //   }
+      // },
+
+      // {
+      //   path: 'sales/products-catalog-sales',
+      //   name: 'Products Catalog',
+      //   component: () =>
+      //     import('@/views/sales/catalog/productCatalogSalesView.vue'),
+      //   meta: {
+      //     role: [2]
+      //   }
+      // },
+
+
+
+      // {
+      //   path: 'contact',
+      //   name: 'Contact',
+      //   component: () =>
+      //     import('@/views/sales/contact/contactView.vue'),
+      //   meta: {
+      //     role: [2]
+      //   }
+      // },
 
 
 
@@ -534,46 +534,46 @@ const routes = [
         }
       },
 
-      {
-        path: 'activity-sales-reports',
+      // {
+      //   path: 'activity-sales-reports',
 
-        name: 'Activity Sales',
+      //   name: 'Activity Sales',
 
-        component: () =>
-          import('@/views/manager/activity/salesActivityView.vue'),
+      //   component: () =>
+      //     import('@/views/manager/activity/salesActivityView.vue'),
 
-        meta: {
-          role: [3], title: 'Activity Sales'
-        }
-      },
+      //   meta: {
+      //     role: [3], title: 'Activity Sales'
+      //   }
+      // },
 
-      {
-        path: 'manager-target-visit',
+      // {
+      //   path: 'manager-target-visit',
 
-        name: 'Target Visit',
+      //   name: 'Target Visit',
 
-        component: () =>
-          import('@/views/manager/visits/targetVisitView.vue'),
+      //   component: () =>
+      //     import('@/views/manager/visits/targetVisitView.vue'),
 
-        meta: {
-          role: [3], title: 'Target Visit'
-        }
-      },
+      //   meta: {
+      //     role: [3], title: 'Target Visit'
+      //   }
+      // },
 
 
 
-      {
-        path: 'manager-sales-target',
+      // {
+      //   path: 'manager-sales-target',
 
-        name: 'Sales Target',
+      //   name: 'Sales Target',
 
-        component: () =>
-          import('@/views/manager/target/salesTargetManagementView.vue'),
+      //   component: () =>
+      //     import('@/views/manager/target/salesTargetManagementView.vue'),
 
-        meta: {
-          role: [3], title: 'Sales Target'
-        }
-      },
+      //   meta: {
+      //     role: [3], title: 'Sales Target'
+      //   }
+      // },
 
       {
         path: 'setting-cover-area-sales',
@@ -605,18 +605,18 @@ const routes = [
         }
       },
 
-      {
-        path: 'reports-manager',
+      // {
+      //   path: 'reports-manager',
 
-        name: 'ManagerReports',
+      //   name: 'ManagerReports',
 
-        component: () =>
-          import('@/views/template/reports/ReportsManagerView.vue'),
+      //   component: () =>
+      //     import('@/views/template/reports/ReportsManagerView.vue'),
 
-        meta: {
-          role: [3]
-        }
-      },
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
 
       // ── Notification Center: SENGAJA tidak dikasih `role` meta --
@@ -639,244 +639,244 @@ const routes = [
         }
       },
 
-      {
-        path: 'manager-executive-summary-report',
+      // {
+      //   path: 'manager-executive-summary-report',
 
-        name: 'Summary Report',
+      //   name: 'Summary Report',
 
-        component: () =>
-          import('@/views/manager/executiveSummary/executiveSummaryView.vue'),
+      //   component: () =>
+      //     import('@/views/manager/executiveSummary/executiveSummaryView.vue'),
 
-        meta: {
-          role: [3]
-        }
-      },
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
-      {
-        path: 'manager-sales-performance-report',
+      // {
+      //   path: 'manager-sales-performance-report',
 
-        name: 'Sales Performance',
+      //   name: 'Sales Performance',
 
-        component: () =>
-          import('@/views/manager/salesPerformance/salesPerformanceView.vue'),
+      //   component: () =>
+      //     import('@/views/manager/salesPerformance/salesPerformanceView.vue'),
 
-        meta: {
-          role: [3]
-        }
-      },
-
-
-      {
-        path: 'manager-follow-up-report',
-
-        name: 'Follow Up Report',
-
-        component: () =>
-          import('@/views/manager/followUp/FollowUpReportView.vue'),
-
-        meta: {
-          role: [3]
-        }
-      },
-
-      {
-        path: 'manager-visit-report',
-
-        name: 'Visit Report',
-
-        component: () =>
-          import('@/views/manager/visits/visitsView.vue'),
-
-        meta: {
-          role: [3]
-        }
-      },
-
-      {
-        path: 'manager-sales-pipeline-report',
-
-        name: 'Sales Pipeline Report',
-
-        component: () =>
-          import('@/views/manager/salesPipeline/SalesPipelineView.vue'),
-
-        meta: {
-          role: [3]
-        }
-      },
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
 
-      {
-        path: 'manager-activity-report',
+      // {
+      //   path: 'manager-follow-up-report',
 
-        name: 'Activity Report',
+      //   name: 'Follow Up Report',
 
-        component: () =>
-          import('@/views/manager/activity/activityView.vue'),
+      //   component: () =>
+      //     import('@/views/manager/followUp/FollowUpReportView.vue'),
 
-        meta: {
-          role: [3]
-        }
-      },
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
-      {
-        path: 'manager-customer-report',
+      // {
+      //   path: 'manager-visit-report',
 
-        name: 'Customer Analytics',
+      //   name: 'Visit Report',
 
-        component: () =>
-          import('@/views/manager/customers/customersView.vue'),
+      //   component: () =>
+      //     import('@/views/manager/visits/visitsView.vue'),
 
-        meta: {
-          role: [3]
-        }
-      },
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
-      {
-        path: 'manager-conversion-report',
+      // {
+      //   path: 'manager-sales-pipeline-report',
 
-        name: 'Conversion Analytics',
+      //   name: 'Sales Pipeline Report',
 
-        component: () =>
-          import('@/views/manager/conversion/conversionView.vue'),
+      //   component: () =>
+      //     import('@/views/manager/salesPipeline/SalesPipelineView.vue'),
 
-        meta: {
-          role: [3]
-        }
-      },
-
-      {
-        path: 'manager-lead-report',
-        name: 'Lead Analytics',
-        component: () =>
-          import('@/views/manager/lead/leadView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
 
-      {
-        path: 'manager-complaint-report',
-        name: 'Complaint Analytics',
-        component: () =>
-          import('@/views/manager/complaint/complaintView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      // {
+      //   path: 'manager-activity-report',
 
-      {
-        path: 'manager-potential-order-report',
-        name: 'Potential Order Analytics',
-        component: () =>
-          import('@/views/manager/potensialOrder/potensialOrderView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      //   name: 'Activity Report',
 
-      {
-        path: 'manager-kpi-report',
-        name: 'KPI Analytics',
-        component: () =>
-          import('@/views/manager/kpi/kpiView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      //   component: () =>
+      //     import('@/views/manager/activity/activityView.vue'),
 
-      {
-        path: 'approval-customers',
-        name: 'Approvals Customer',
-        component: () =>
-          import('@/views/manager/approvalCustomers/approvalCustomersView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
+      // {
+      //   path: 'manager-customer-report',
 
-      {
-        path: 'approval-expenses',
-        name: 'Approvals Expenses',
-        component: () =>
-          import('@/views/manager/expenses/expensesApproval.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      //   name: 'Customer Analytics',
 
-      {
-        path: 'lists-qoutations',
-        name: 'Lists Quotation',
-        component: () =>
-          import('@/views/manager/quotation/quotationView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      //   component: () =>
+      //     import('@/views/manager/customers/customersView.vue'),
 
-      {
-        path: 'product-by-sales-report',
-        name: 'Product By Sales Report',
-        component: () =>
-          import('@/views/manager/reportProductBySales/reportProductBySalesView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
-      {
-        path: 'approval-branch-customers',
-        name: 'Approvals Branch Customer',
-        component: () =>
-          import('@/views/manager/approvalCustomers/approvalBranchCustomersView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      // {
+      //   path: 'manager-conversion-report',
 
-      {
-        path: 'contact/list',
-        name: 'Contact List',
-        component: () =>
-          import('@/views/manager/contact/contactView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      //   name: 'Conversion Analytics',
+
+      //   component: () =>
+      //     import('@/views/manager/conversion/conversionView.vue'),
+
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
+
+      // {
+      //   path: 'manager-lead-report',
+      //   name: 'Lead Analytics',
+      //   component: () =>
+      //     import('@/views/manager/lead/leadView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
 
-      {
-        path: 'catalog/category/product',
-        name: 'Catalog Category',
-        component: () =>
-          import('@/views/manager/catalog/category/categoryCatalogView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      // {
+      //   path: 'manager-complaint-report',
+      //   name: 'Complaint Analytics',
+      //   component: () =>
+      //     import('@/views/manager/complaint/complaintView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
-      {
-        path: 'product/catalog',
-        name: 'Catalog Product',
-        component: () =>
-          import('@/views/manager/catalog/productCatalog/productCatalogManagement.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      // {
+      //   path: 'manager-potential-order-report',
+      //   name: 'Potential Order Analytics',
+      //   component: () =>
+      //     import('@/views/manager/potensialOrder/potensialOrderView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
-      {
-        path: 'reassignment-sales',
-        name: 'Reassignment Sales Page',
-        component: () =>
-          import('@/views/manager/reassignment/reassigmentSalesView.vue'),
-        meta: {
-          role: [3]
-        }
-      },
+      // {
+      //   path: 'manager-kpi-report',
+      //   name: 'KPI Analytics',
+      //   component: () =>
+      //     import('@/views/manager/kpi/kpiView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
+
+      // {
+      //   path: 'approval-customers',
+      //   name: 'Approvals Customer',
+      //   component: () =>
+      //     import('@/views/manager/approvalCustomers/approvalCustomersView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
+
+
+      // {
+      //   path: 'approval-expenses',
+      //   name: 'Approvals Expenses',
+      //   component: () =>
+      //     import('@/views/manager/expenses/expensesApproval.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
+
+      // {
+      //   path: 'lists-qoutations',
+      //   name: 'Lists Quotation',
+      //   component: () =>
+      //     import('@/views/manager/quotation/quotationView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
+
+      // {
+      //   path: 'product-by-sales-report',
+      //   name: 'Product By Sales Report',
+      //   component: () =>
+      //     import('@/views/manager/reportProductBySales/reportProductBySalesView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
+
+      // {
+      //   path: 'approval-branch-customers',
+      //   name: 'Approvals Branch Customer',
+      //   component: () =>
+      //     import('@/views/manager/approvalCustomers/approvalBranchCustomersView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
+
+      // {
+      //   path: 'contact/list',
+      //   name: 'Contact List',
+      //   component: () =>
+      //     import('@/views/manager/contact/contactView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
+
+
+      // {
+      //   path: 'catalog/category/product',
+      //   name: 'Catalog Category',
+      //   component: () =>
+      //     import('@/views/manager/catalog/category/categoryCatalogView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
+
+      // {
+      //   path: 'product/catalog',
+      //   name: 'Catalog Product',
+      //   component: () =>
+      //     import('@/views/manager/catalog/productCatalog/productCatalogManagement.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
+
+      // {
+      //   path: 'reassignment-sales',
+      //   name: 'Reassignment Sales Page',
+      //   component: () =>
+      //     import('@/views/manager/reassignment/reassigmentSalesView.vue'),
+      //   meta: {
+      //     role: [3]
+      //   }
+      // },
 
 
       // admin home page
@@ -890,6 +890,20 @@ const routes = [
 
         meta: {
           role: [4], title: 'Admin Home'
+        }
+      },
+
+
+      {
+        path: 'supervisor-home',
+
+        name: 'SupervisorHome',
+
+        component: () =>
+          import('@/views/Supervisor/home/homeSupervisorView.vue'),
+
+        meta: {
+          role: [4], title: 'Supervisor Home'
         }
       },
 
