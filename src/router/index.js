@@ -899,7 +899,7 @@ const routes = [
         name: 'BranchManagerHome',
 
         component: () =>
-          import('@/views/BranchManager/home/homeBranchManagerView.vue'),
+          import('@/views/branchManager/home/homeBranchManagerView.vue'),
 
         meta: {
           role: [5], title: 'Branch Manager Home'
@@ -917,6 +917,33 @@ const routes = [
 
         meta: {
           role: [6], title: 'Supervisor Home'
+        }
+      },
+
+      {
+        path: 'delivery-home',
+
+        name: 'DeliveryHome',
+
+        component: () =>
+          import('@/views/delivery/home/homeDeliveryView.vue'),
+
+        meta: {
+          role: [6], title: 'Delivery Home'
+        }
+      },
+
+
+      {
+        path: 'customer-home',
+
+        name: 'CustomerHome',
+
+        component: () =>
+          import('@/views/customers/home/homeCustomersView.vue'),
+
+        meta: {
+          role: [6], title: 'Customer Home'
         }
       },
 
