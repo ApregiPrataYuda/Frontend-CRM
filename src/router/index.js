@@ -903,7 +903,7 @@ const routes = [
           import('@/views/Supervisor/home/homeSupervisorView.vue'),
 
         meta: {
-          role: [4], title: 'Supervisor Home'
+          role: [5], title: 'Supervisor Home'
         }
       },
 
