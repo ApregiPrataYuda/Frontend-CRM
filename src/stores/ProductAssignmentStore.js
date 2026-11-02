@@ -58,6 +58,18 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
     total_products: 0,
   })
 
+  // ── Sync product population dari Odoo ── (tombol "Sync Population")
+  const syncingPopulation = ref(false)
+  const populationStatus  = reactive({
+    last_status: null,     // running / success / failed
+    last_success_at: null,
+    last_error: null,
+    total: null,
+  })
+
+  // Ada proses sync apa pun yang sedang berjalan (dipakai untuk menonaktifkan semua tombol sync)
+  const anySyncing = computed(() => syncing.value || syncingCatalog.value || syncingPopulation.value)
+
   // ───────────────── ERROR MESSAGE ─────────────────
   const errorMessage = (error, fallback) => {
     const res = error?.response
@@ -292,6 +304,7 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
   // Return: { ok: true, total, totalPo, totalSo, totalInv, totalDel, totalInq } atau { ok: false, message }
   const syncProducts = async () => {
     if (syncing.value) return { ok: false, message: 'Sync masih berjalan.' }
+    if (syncingPopulation.value) return { ok: false, message: 'Sync population sedang berjalan, tunggu sampai selesai.' }
 
     syncing.value = true
 
@@ -353,6 +366,41 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
     }
   }
 
+  // ───────────────── SYNC POPULATION ─────────────────
+  const fetchPopulationStatus = async () => {
+    try {
+      const response = await productAssignmentServices.getPopulationSyncStatus()
+      Object.assign(populationStatus, response.data?.data ?? {})
+    } catch (error) {
+      // Status sync hanya informasi tambahan -- halaman tetap jalan tanpa ini.
+      console.error('Gagal fetch status sync population:', error)
+    }
+  }
+
+  // Sync product population (+ foto/file) saja.
+  // full = true -> tarik ulang semua & hapus yang sudah tidak ada di Odoo.
+  // Return: { ok: true, total } atau { ok: false, message }
+  const syncPopulation = async (full = false) => {
+    if (syncingPopulation.value) return { ok: false, message: 'Sync population masih berjalan.' }
+    if (syncing.value) return { ok: false, message: 'Sync Data Odoo sedang berjalan, tunggu sampai selesai.' }
+
+    syncingPopulation.value = true
+
+    try {
+      await productAssignmentServices.syncPopulation(full)
+      await fetchPopulationStatus()
+
+      return { ok: true, total: populationStatus.total }
+
+    } catch (error) {
+      await fetchPopulationStatus()
+      return { ok: false, message: errorMessage(error, 'Gagal sync product population dari Odoo') }
+
+    } finally {
+      syncingPopulation.value = false
+    }
+  }
+
   // ───────────────── FORMAT ─────────────────
   const formatPrice = (value) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 })
@@ -392,6 +440,9 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
     syncStatus,
     syncingCatalog,
     catalogStatus,
+    syncingPopulation,
+    populationStatus,
+    anySyncing,
 
     // actions
     buildUrl,
@@ -418,6 +469,8 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
     fetchSyncStatus,
     syncProducts,
     syncCatalog,
+    fetchPopulationStatus,
+    syncPopulation,
 
     formatPrice,
     formatDateTime,

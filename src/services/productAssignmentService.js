@@ -45,4 +45,17 @@ export const productAssignmentServices = {
     const response = await api.get('/products/sync-status')
     return response
   },
+
+  // ── Sync Product Population saja (product.population + foto/file) -- tombol "Sync Population" ──
+  // Backend: App\Http\Controllers\Api\Mobile\ProductPopulation\ProductPopulationController
+  // full = true -> tarik ulang semua & hapus yang sudah tidak ada di Odoo
+  async syncPopulation(full = false) {
+    const response = await api.post('/mobile/product-populations/sync', { full })
+    return response
+  },
+
+  async getPopulationSyncStatus() {
+    const response = await api.get('/mobile/product-populations/sync/status')
+    return response
+  },
 }

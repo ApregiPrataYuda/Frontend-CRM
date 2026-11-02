@@ -23,6 +23,7 @@ const canUnassign = computed(() => permission.canDelete(currentUrl.value))
 onMounted(() => {
   store.fetchSales()
   store.fetchSyncStatus()
+  store.fetchPopulationStatus()
   if (store.selectedSalesId) store.fetchProducts()
 })
 
@@ -59,6 +60,17 @@ async function handleSyncCatalog() {
   } else {
     toast.error(result.message)
   }
+}
+
+// ── SYNC PRODUCT POPULATION ────────────────
+// Hanya menarik product population (+ foto/file) dari Odoo -- terpisah dari Sync Data Odoo.
+async function handleSyncPopulation() {
+  toast.info('Sync product population dimulai...')
+
+  const result = await store.syncPopulation()
+
+  if (result.ok) toast.success(`Sync product population berhasil. Total data: ${result.total ?? '-'}`)
+  else           toast.error(result.message)
 }
 
 // ── DROPDOWN TOGGLES ───────────────────────
@@ -187,6 +199,12 @@ const firstName = (name = '') => name.split(' ')[0] || name
           <span v-else-if="store.catalogStatus.status === 'failed'" class="sync-status failed" :title="store.catalogStatus.last_error">
             <font-awesome-icon icon="circle-info" /> Sync catalog terakhir gagal
           </span>
+          <span v-if="store.syncingPopulation" class="sync-status running">
+            <font-awesome-icon icon="spinner" spin /> Sync population berjalan...
+          </span>
+          <span v-else-if="store.populationStatus.last_status === 'failed'" class="sync-status failed" :title="store.populationStatus.last_error">
+            <font-awesome-icon icon="circle-info" /> Sync population terakhir gagal
+          </span>
           <span v-if="store.syncStatus.last_success_at" class="sync-last">
             Terakhir berhasil: {{ store.formatDateTime(store.syncStatus.last_success_at) }}
           </span>
@@ -195,7 +213,20 @@ const firstName = (name = '') => name.split(' ')[0] || name
 
         <button
           class="btn-toolbar btn-outline-purple"
-          :disabled="store.syncing || store.syncingCatalog"
+          :disabled="store.anySyncing"
+          :title="store.populationStatus.last_success_at
+            ? 'Population terakhir: ' + store.formatDateTime(store.populationStatus.last_success_at) + ' (' + (store.populationStatus.total ?? 0) + ' data)'
+            : 'Population belum pernah sync'"
+          @click="handleSyncPopulation"
+        >
+          <font-awesome-icon v-if="store.syncingPopulation" icon="spinner" spin />
+          <font-awesome-icon v-else icon="list" />
+          {{ store.syncingPopulation ? 'Sync population...' : 'Sync Population' }}
+        </button>
+
+        <button
+          class="btn-toolbar btn-outline-purple"
+          :disabled="store.anySyncing"
           :title="store.catalogStatus.last_success_at ? 'Catalog terakhir: ' + store.formatDateTime(store.catalogStatus.last_success_at) : 'Catalog belum pernah sync'"
           @click="handleSyncCatalog"
         >
@@ -204,7 +235,7 @@ const firstName = (name = '') => name.split(' ')[0] || name
           {{ store.syncingCatalog ? 'Sync catalog...' : 'Sync Catalog' }}
         </button>
 
-        <button class="btn-toolbar btn-purple" :disabled="store.syncing || store.syncingCatalog" @click="handleSync">
+        <button class="btn-toolbar btn-purple" :disabled="store.anySyncing" @click="handleSync">
           <font-awesome-icon v-if="store.syncing" icon="spinner" spin />
           <font-awesome-icon v-else icon="rotate" />
           {{ store.syncing ? 'Menyinkronkan...' : 'Sync Data Odoo' }}
