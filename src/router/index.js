@@ -1009,7 +1009,7 @@ router.beforeEach((to, from) => {
       1: '/app/administrator-dashboard',
       2: '/app/sales-home',
       3: '/app/manager-home',
-      5: '/app/supervisor-home',
+      // 5: '/app/supervisor-home',
     }
     return roleMap[authStore.roleId] || '/app/administrator-dashboard'
   }
