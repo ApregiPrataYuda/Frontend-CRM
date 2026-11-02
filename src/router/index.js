@@ -893,6 +893,19 @@ const routes = [
         }
       },
 
+       {
+        path: 'branch-manager-home',
+
+        name: 'BranchManagerHome',
+
+        component: () =>
+          import('@/views/BranchManager/home/homeBranchManagerView.vue'),
+
+        meta: {
+          role: [5], title: 'Branch Manager Home'
+        }
+      },
+
 
       {
         path: 'supervisor-home',
@@ -903,7 +916,7 @@ const routes = [
           import('@/views/Supervisor/home/homeSupervisorView.vue'),
 
         meta: {
-          role: [5], title: 'Supervisor Home'
+          role: [6], title: 'Supervisor Home'
         }
       },
 
@@ -1010,7 +1023,10 @@ router.beforeEach((to, from) => {
       2: '/app/sales-home',
       3: '/app/manager-home',
       4: '/app/admin-home',
-      5: '/app/supervisor-home',
+      5: '/app/branch-manager-home',
+      6: '/app/supervisor-home',
+      7: '/app/delivery-home',
+      8: '/app/customer-home',
     }
     return roleMap[authStore.roleId] || '/app/administrator-dashboard'
   }
