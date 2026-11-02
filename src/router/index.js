@@ -899,7 +899,7 @@ const routes = [
         name: 'BranchManagerHome',
 
         component: () =>
-          import('@/views/branchManager/home/homeBranchManagerView.vue'),
+          import('@/views/branchManagers/home/homeBranchManagerView.vue'),
 
         meta: {
           role: [5], title: 'Branch Manager Home'
