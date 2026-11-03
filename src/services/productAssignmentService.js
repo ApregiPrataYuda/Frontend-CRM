@@ -58,4 +58,16 @@ export const productAssignmentServices = {
     const response = await api.get('/mobile/product-populations/sync/status')
     return response
   },
+
+  // ── Sync Kategori Expense saja (product can_be_expensed) -- tombol "Sync Kategori Expense" ──
+  // Backend: App\Http\Controllers\Api\Mobile\Expense\ExpenseApprovalController
+  async syncExpenseCategories() {
+    const response = await api.post('/mobile/expense-approvals/sync-categories')
+    return response
+  },
+
+  async getExpenseCategorySyncStatus() {
+    const response = await api.get('/mobile/expense-approvals/sync-categories/status')
+    return response
+  },
 }

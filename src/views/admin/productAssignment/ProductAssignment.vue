@@ -24,6 +24,7 @@ onMounted(() => {
   store.fetchSales()
   store.fetchSyncStatus()
   store.fetchPopulationStatus()
+  store.fetchExpenseCatStatus()
   if (store.selectedSalesId) store.fetchProducts()
 })
 
@@ -70,6 +71,17 @@ async function handleSyncPopulation() {
   const result = await store.syncPopulation()
 
   if (result.ok) toast.success(`Sync product population berhasil. Total data: ${result.total ?? '-'}`)
+  else           toast.error(result.message)
+}
+
+// ── SYNC KATEGORI EXPENSE ──────────────────
+// Menarik kategori expense (product "Can be Expensed") dari Odoo untuk chip kategori di aplikasi.
+async function handleSyncExpenseCategories() {
+  toast.info('Sync kategori expense dimulai...')
+
+  const result = await store.syncExpenseCategories()
+
+  if (result.ok) toast.success(`Sync kategori expense berhasil. Kategori aktif: ${result.total ?? '-'}`)
   else           toast.error(result.message)
 }
 
@@ -205,11 +217,30 @@ const firstName = (name = '') => name.split(' ')[0] || name
           <span v-else-if="store.populationStatus.last_status === 'failed'" class="sync-status failed" :title="store.populationStatus.last_error">
             <font-awesome-icon icon="circle-info" /> Sync population terakhir gagal
           </span>
+          <span v-if="store.syncingExpenseCat" class="sync-status running">
+            <font-awesome-icon icon="spinner" spin /> Sync kategori expense berjalan...
+          </span>
+          <span v-else-if="store.expenseCatStatus.last_status === 'failed'" class="sync-status failed" :title="store.expenseCatStatus.last_error">
+            <font-awesome-icon icon="circle-info" /> Sync kategori expense terakhir gagal
+          </span>
           <span v-if="store.syncStatus.last_success_at" class="sync-last">
             Terakhir berhasil: {{ store.formatDateTime(store.syncStatus.last_success_at) }}
           </span>
           <span v-else-if="!store.syncing" class="sync-last">Belum pernah sync</span>
         </div>
+
+        <button
+          class="btn-toolbar btn-outline-purple"
+          :disabled="store.anySyncing"
+          :title="store.expenseCatStatus.last_success_at
+            ? 'Kategori expense terakhir: ' + store.formatDateTime(store.expenseCatStatus.last_success_at) + ' (' + (store.expenseCatStatus.total ?? 0) + ' kategori)'
+            : 'Kategori expense belum pernah sync'"
+          @click="handleSyncExpenseCategories"
+        >
+          <font-awesome-icon v-if="store.syncingExpenseCat" icon="spinner" spin />
+          <font-awesome-icon v-else icon="list" />
+          {{ store.syncingExpenseCat ? 'Sync kategori...' : 'Sync Kategori Expense' }}
+        </button>
 
         <button
           class="btn-toolbar btn-outline-purple"
