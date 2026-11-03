@@ -605,6 +605,17 @@ const routes = [
         }
       },
 
+
+       {
+        path: 'consignment-locations',
+        name: 'Consignment Locations',
+        component: () =>
+          import('@/views/admin/consignmentLocations/consignmentLocations.vue'),
+        meta: {
+          role: [3], title: 'Consignment Locations '
+        }
+      },
+
       // {
       //   path: 'reports-manager',
 
