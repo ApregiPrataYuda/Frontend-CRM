@@ -59,15 +59,16 @@ export const productAssignmentServices = {
     return response
   },
 
-  // ── Sync Kategori Expense saja (product can_be_expensed) -- tombol "Sync Kategori Expense" ──
+  // ── Sync Expense (kategori + status expense + expense buatan Odoo) -- tombol "Sync Expense" ──
   // Backend: App\Http\Controllers\Api\Mobile\Expense\ExpenseApprovalController
-  async syncExpenseCategories() {
-    const response = await api.post('/mobile/expense-approvals/sync-categories')
+  // full = true -> tarik semua expense & bereskan yang dihapus di Odoo
+  async syncExpenses(full = false) {
+    const response = await api.post('/mobile/expense-approvals/sync', { full })
     return response
   },
 
-  async getExpenseCategorySyncStatus() {
-    const response = await api.get('/mobile/expense-approvals/sync-categories/status')
+  async getExpenseSyncStatus() {
+    const response = await api.get('/mobile/expense-approvals/sync/status')
     return response
   },
 }

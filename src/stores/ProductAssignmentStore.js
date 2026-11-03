@@ -67,13 +67,14 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
     total: null,
   })
 
-  // ── Sync kategori expense dari Odoo ── (tombol "Sync Kategori Expense")
+  // ── Sync expense dari Odoo ── (tombol "Sync Expense": kategori + status + expense buatan Odoo)
   const syncingExpenseCat = ref(false)
   const expenseCatStatus  = reactive({
     last_status: null,     // running / success / failed
     last_success_at: null,
     last_error: null,
-    total: null,
+    total_categories: null,
+    total_from_odoo: null,
   })
 
   // Ada proses sync apa pun yang sedang berjalan (dipakai untuk menonaktifkan semua tombol sync)
@@ -316,7 +317,7 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
   const syncProducts = async () => {
     if (syncing.value) return { ok: false, message: 'Sync masih berjalan.' }
     if (syncingPopulation.value) return { ok: false, message: 'Sync population sedang berjalan, tunggu sampai selesai.' }
-    if (syncingExpenseCat.value) return { ok: false, message: 'Sync kategori expense sedang berjalan, tunggu sampai selesai.' }
+    if (syncingExpenseCat.value) return { ok: false, message: 'Sync expense sedang berjalan, tunggu sampai selesai.' }
 
     syncing.value = true
 
@@ -413,34 +414,39 @@ export const useProductAssignmentStore = defineStore('productAssignment', () => 
     }
   }
 
-  // ───────────────── SYNC KATEGORI EXPENSE ─────────────────
+  // ───────────────── SYNC EXPENSE ─────────────────
   const fetchExpenseCatStatus = async () => {
     try {
-      const response = await productAssignmentServices.getExpenseCategorySyncStatus()
+      const response = await productAssignmentServices.getExpenseSyncStatus()
       Object.assign(expenseCatStatus, response.data?.data ?? {})
     } catch (error) {
       // Status sync hanya informasi tambahan -- halaman tetap jalan tanpa ini.
-      console.error('Gagal fetch status sync kategori expense:', error)
+      console.error('Gagal fetch status sync expense:', error)
     }
   }
 
-  // Sync kategori expense (product can_be_expensed) saja. Cepat: datanya kecil.
-  // Return: { ok: true, total } atau { ok: false, message }
-  const syncExpenseCategories = async () => {
-    if (syncingExpenseCat.value) return { ok: false, message: 'Sync kategori expense masih berjalan.' }
+  // Sync expense: kategori, lalu status expense CRM (posted / dibayar / ditolak finance)
+  // dan expense yang dibuat langsung di Odoo.
+  // Return: { ok: true, totalCategories, totalFromOdoo } atau { ok: false, message }
+  const syncExpenseCategories = async (full = false) => {
+    if (syncingExpenseCat.value) return { ok: false, message: 'Sync expense masih berjalan.' }
     if (syncing.value) return { ok: false, message: 'Sync Data Odoo sedang berjalan, tunggu sampai selesai.' }
 
     syncingExpenseCat.value = true
 
     try {
-      await productAssignmentServices.syncExpenseCategories()
+      await productAssignmentServices.syncExpenses(full)
       await fetchExpenseCatStatus()
 
-      return { ok: true, total: expenseCatStatus.total }
+      return {
+        ok: true,
+        totalCategories: expenseCatStatus.total_categories,
+        totalFromOdoo: expenseCatStatus.total_from_odoo,
+      }
 
     } catch (error) {
       await fetchExpenseCatStatus()
-      return { ok: false, message: errorMessage(error, 'Gagal sync kategori expense dari Odoo') }
+      return { ok: false, message: errorMessage(error, 'Gagal sync expense dari Odoo') }
 
     } finally {
       syncingExpenseCat.value = false

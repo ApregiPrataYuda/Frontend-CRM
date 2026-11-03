@@ -74,15 +74,22 @@ async function handleSyncPopulation() {
   else           toast.error(result.message)
 }
 
-// ── SYNC KATEGORI EXPENSE ──────────────────
-// Menarik kategori expense (product "Can be Expensed") dari Odoo untuk chip kategori di aplikasi.
+// ── SYNC EXPENSE ───────────────────────────
+// Kategori expense, status expense yang sudah dikirim (posted / dibayar / ditolak finance),
+// dan expense yang dibuat langsung di Odoo.
 async function handleSyncExpenseCategories() {
-  toast.info('Sync kategori expense dimulai...')
+  toast.info('Sync expense dimulai...')
 
   const result = await store.syncExpenseCategories()
 
-  if (result.ok) toast.success(`Sync kategori expense berhasil. Kategori aktif: ${result.total ?? '-'}`)
-  else           toast.error(result.message)
+  if (result.ok) {
+    toast.success(
+      `Sync expense berhasil. Kategori aktif: ${result.totalCategories ?? '-'}, ` +
+      `expense dari Odoo: ${result.totalFromOdoo ?? '-'}`
+    )
+  } else {
+    toast.error(result.message)
+  }
 }
 
 // ── DROPDOWN TOGGLES ───────────────────────
@@ -218,10 +225,10 @@ const firstName = (name = '') => name.split(' ')[0] || name
             <font-awesome-icon icon="circle-info" /> Sync population terakhir gagal
           </span>
           <span v-if="store.syncingExpenseCat" class="sync-status running">
-            <font-awesome-icon icon="spinner" spin /> Sync kategori expense berjalan...
+            <font-awesome-icon icon="spinner" spin /> Sync expense berjalan...
           </span>
           <span v-else-if="store.expenseCatStatus.last_status === 'failed'" class="sync-status failed" :title="store.expenseCatStatus.last_error">
-            <font-awesome-icon icon="circle-info" /> Sync kategori expense terakhir gagal
+            <font-awesome-icon icon="circle-info" /> Sync expense terakhir gagal
           </span>
           <span v-if="store.syncStatus.last_success_at" class="sync-last">
             Terakhir berhasil: {{ store.formatDateTime(store.syncStatus.last_success_at) }}
@@ -233,13 +240,13 @@ const firstName = (name = '') => name.split(' ')[0] || name
           class="btn-toolbar btn-outline-purple"
           :disabled="store.anySyncing"
           :title="store.expenseCatStatus.last_success_at
-            ? 'Kategori expense terakhir: ' + store.formatDateTime(store.expenseCatStatus.last_success_at) + ' (' + (store.expenseCatStatus.total ?? 0) + ' kategori)'
-            : 'Kategori expense belum pernah sync'"
+            ? 'Expense terakhir: ' + store.formatDateTime(store.expenseCatStatus.last_success_at) + ' (' + (store.expenseCatStatus.total_categories ?? 0) + ' kategori, ' + (store.expenseCatStatus.total_from_odoo ?? 0) + ' expense dari Odoo)'
+            : 'Expense belum pernah sync'"
           @click="handleSyncExpenseCategories"
         >
           <font-awesome-icon v-if="store.syncingExpenseCat" icon="spinner" spin />
           <font-awesome-icon v-else icon="list" />
-          {{ store.syncingExpenseCat ? 'Sync kategori...' : 'Sync Kategori Expense' }}
+          {{ store.syncingExpenseCat ? 'Sync expense...' : 'Sync Expense' }}
         </button>
 
         <button
