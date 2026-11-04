@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, reactive } from 'vue'
-import { consignmentLocationServices } from '@/services/consignmentLocationService'
+import { consignmentLocationServices } from '@/services/consignmentLocationServices'
 
 export const useConsignmentLocationStore = defineStore('consignmentLocation', () => {
 
