@@ -115,6 +115,15 @@ export const useConsignmentLocationStore = defineStore('consignmentLocation', ()
     }
   }
 
+  const searchSales = async (search) => {
+    try {
+      const res = await consignmentLocationServices.searchSales(search)
+      return res.data?.data ?? []
+    } catch {
+      return []
+    }
+  }
+
   const searchPartners = async (search) => {
     try {
       const res = await consignmentLocationServices.searchPartners(search)
@@ -162,7 +171,7 @@ export const useConsignmentLocationStore = defineStore('consignmentLocation', ()
     applyingAll, lastSkipped, applyAllSuggestions,
     syncing, syncStatus,
     fetchCompanies, fetchLocations, searchWithDelay,
-    updateLocation, applySuggestion, searchPartners,
+    updateLocation, applySuggestion, searchPartners, searchSales,
     fetchSyncStatus, syncLocations,
     formatDateTime, formatQty,
   }

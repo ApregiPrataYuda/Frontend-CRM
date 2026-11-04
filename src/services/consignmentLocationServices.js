@@ -1,6 +1,5 @@
 import api from './api'
 
-// ini adalah service untuk halaman "Lokasi Konsinyasi" (Admin / Manager / admin / Supervisor) di aplikasi mobile.
 // ── Halaman "Lokasi Konsinyasi" (Admin / Manager / admin / Supervisor) ──
 // Backend: App\Http\Controllers\Api\Mobile\Inventory\ConsignmentLocationController
 export const consignmentLocationServices = {
@@ -18,7 +17,11 @@ export const consignmentLocationServices = {
     return api.get('/stock-locations/partners', { params: search ? { search } : {} })
   },
 
-  // payload: { is_consignment?, partner_odoo_id?, count_interval_days? }
+  async searchSales(search = '') {
+    return api.get('/stock-locations/sales', { params: search ? { search } : {} })
+  },
+
+  // payload: { is_consignment?, partner_odoo_id?, count_interval_days?, is_vehicle?, vehicle_sales_id? }
   async update(id, payload) {
     return api.put(`/stock-locations/${id}`, payload)
   },

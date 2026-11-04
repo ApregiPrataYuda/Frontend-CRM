@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
-import { useConsignmentLocationStore } from '@/stores/consignmentLocationStores'
+import { useConsignmentLocationStore } from '@/stores/ConsignmentLocationStores'
 
 const toast = useToast()
 const store = useConsignmentLocationStore()
@@ -78,7 +78,37 @@ const filterOptions = [
   { value: 'all',         label: 'Semua lokasi' },
   { value: 'consignment', label: 'Konsinyasi' },
   { value: 'unmapped',    label: 'Belum ada customer' },
+  { value: 'vehicle',     label: 'Mobil (canvas)' },
 ]
+
+// ── MOBIL CANVAS ───────────────────────────
+const salesEditingId = ref(null)
+const salesSearch    = ref('')
+const salesOpts      = ref([])
+let salesTimeout     = null
+
+async function toggleVehicle(loc) {
+  const r = await store.updateLocation(loc, { is_vehicle: !loc.is_vehicle })
+  r.ok ? toast.success(loc.is_vehicle ? 'Tanda mobil dilepas' : 'Ditandai sebagai mobil canvas') : toast.error(r.message)
+}
+
+function openSales(loc) {
+  salesEditingId.value = salesEditingId.value === loc.id ? null : loc.id
+  salesSearch.value = ''
+  salesOpts.value = []
+  if (salesEditingId.value) loadSales()
+}
+
+function loadSales() {
+  clearTimeout(salesTimeout)
+  salesTimeout = setTimeout(async () => { salesOpts.value = await store.searchSales(salesSearch.value) }, 400)
+}
+
+async function chooseSales(loc, s) {
+  const r = await store.updateLocation(loc, { vehicle_sales_id: s ? s.id : null })
+  salesEditingId.value = null
+  r.ok ? toast.success(s ? `Mobil dipakai ${s.name}` : 'Sales pemakai dilepas') : toast.error(r.message)
+}
 </script>
 
 <template>
@@ -88,12 +118,12 @@ const filterOptions = [
     <div class="breadcrumb-card mb-2">
       <div class="breadcrumb-left">
         <h4 class="breadcrumb-title">
-          <font-awesome-icon icon="table-list" /> Lokasi Konsinyasi
+          <font-awesome-icon icon="table-list" /> Lokasi Stok
         </h4>
         <div class="breadcrumb-path">
           <span class="breadcrumb-item"><font-awesome-icon icon="house" /> Dashboard</span>
           <font-awesome-icon icon="chevron-right" class="breadcrumb-separator" />
-          <span class="breadcrumb-item active">Lokasi Konsinyasi</span>
+          <span class="breadcrumb-item active">Lokasi Stok</span>
         </div>
       </div>
 
@@ -124,6 +154,7 @@ const filterOptions = [
       Centang <strong>Konsinyasi</strong> untuk lokasi tempat barang dititipkan di customer.
       Menandai induk (mis. <code>WHDIM/Electronic City</code>) membuat semua sub-lokasinya ikut terhitung konsinyasi di Inventory.
       Untuk Stock Count, petakan <strong>lokasi per toko</strong> ke customer / cabangnya.
+      Centang <strong>Mobil</strong> untuk lokasi canvas sales (stok yang dibawa di mobil), lalu pilih sales pemakainya.
     </div>
 
     <!-- ── FILTER ── -->
@@ -182,18 +213,19 @@ const filterOptions = [
         <thead>
           <tr>
             <th style="width:110px; text-align:center">Konsinyasi</th>
+            <th style="width:90px; text-align:center">Mobil</th>
             <th>Lokasi Odoo</th>
-            <th>Customer / Cabang</th>
+            <th>Customer / Cabang · Sales mobil</th>
             <th style="width:130px">Interval hitung</th>
             <th style="width:120px; text-align:right">Stok saat ini</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="store.loading">
-            <td colspan="5" class="td-center"><div class="spinner-custom"></div></td>
+            <td colspan="6" class="td-center"><div class="spinner-custom"></div></td>
           </tr>
           <tr v-else-if="!store.locations.length">
-            <td colspan="5" class="td-center">Tidak ada lokasi. Jalankan Sync Lokasi Odoo bila daftar masih kosong.</td>
+            <td colspan="6" class="td-center">Tidak ada lokasi. Jalankan Sync Lokasi Odoo bila daftar masih kosong.</td>
           </tr>
 
           <tr v-for="loc in store.locations" v-else :key="loc.id" class="data-row"
@@ -202,6 +234,12 @@ const filterOptions = [
               <input type="checkbox" class="row-check" :checked="loc.is_consignment"
                      :disabled="store.savingId === loc.id" @change="toggleConsignment(loc)" />
               <div v-if="loc.inherited_consignment" class="tiny-note">ikut induk</div>
+            </td>
+
+            <td style="text-align:center">
+              <input type="checkbox" class="row-check" :checked="loc.is_vehicle"
+                     :disabled="store.savingId === loc.id || loc.is_consignment" @change="toggleVehicle(loc)" />
+              <div v-if="loc.is_warehouse_stock" class="tiny-note">stok gudang</div>
             </td>
 
             <td>
@@ -240,11 +278,29 @@ const filterOptions = [
                   </div>
                 </div>
               </template>
+              <template v-else-if="loc.is_vehicle">
+                <div class="partner-line">
+                  <span v-if="loc.vehicle_sales" class="sales-chip current">Sales: {{ loc.vehicle_sales.name }}</span>
+                  <span v-else class="td-muted">Belum ada sales pemakai</span>
+                  <button class="btn-link" :disabled="store.savingId === loc.id" @click="openSales(loc)">
+                    {{ loc.vehicle_sales ? 'Ganti' : 'Pilih' }}
+                  </button>
+                  <button v-if="loc.vehicle_sales" class="btn-link danger" :disabled="store.savingId === loc.id"
+                          @click="chooseSales(loc, null)">Lepas</button>
+                </div>
+                <div v-if="salesEditingId === loc.id" class="partner-picker">
+                  <input v-model="salesSearch" type="text" class="form-input" placeholder="Cari sales..." @input="loadSales()" />
+                  <div class="drop-scroll">
+                    <div v-if="!salesOpts.length" class="td-muted" style="padding:8px">Ketik untuk mencari...</div>
+                    <button v-for="s in salesOpts" :key="s.id" class="drop-item" @click="chooseSales(loc, s)">{{ s.name }}</button>
+                  </div>
+                </div>
+              </template>
               <span v-else class="td-muted">—</span>
             </td>
 
             <td>
-              <input v-if="loc.is_consignment || loc.inherited_consignment" type="number" min="1" max="365"
+              <input v-if="loc.is_consignment" || loc.inherited_consignment" type="number" min="1" max="365"
                      class="form-input interval-input" :placeholder="`${store.defaultInterval} (default)`"
                      :value="loc.count_interval_days" @change="saveInterval(loc, $event.target.value)" />
               <span v-else class="td-muted">—</span>
