@@ -1,5 +1,6 @@
 import api from './api'
 
+// ini adalah service untuk halaman "Lokasi Konsinyasi" (Admin / Manager / admin / Supervisor) di aplikasi mobile.
 // ── Halaman "Lokasi Konsinyasi" (Admin / Manager / admin / Supervisor) ──
 // Backend: App\Http\Controllers\Api\Mobile\Inventory\ConsignmentLocationController
 export const consignmentLocationServices = {
