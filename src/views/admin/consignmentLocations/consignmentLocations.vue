@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
-import { useConsignmentLocationStore } from '@/stores/ConsignmentLocationStores'
+import { useConsignmentLocationStore } from '@/stores/ConsignmentLocationStore'
 
 const toast = useToast()
 const store = useConsignmentLocationStore()
@@ -300,7 +300,7 @@ async function chooseSales(loc, s) {
             </td>
 
             <td>
-              <input v-if="loc.is_consignment" || loc.inherited_consignment" type="number" min="1" max="365"
+              <input v-if="loc.is_consignment || loc.inherited_consignment" type="number" min="1" max="365"
                      class="form-input interval-input" :placeholder="`${store.defaultInterval} (default)`"
                      :value="loc.count_interval_days" @change="saveInterval(loc, $event.target.value)" />
               <span v-else class="td-muted">—</span>
