@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useToast } from 'vue-toastification'
-import { useConsignmentLocationStore } from '@/stores/consignmentLocationStore'
+import { useConsignmentLocationStore } from '@/stores/consignmentLocationStores'
 
 const toast = useToast()
 const store = useConsignmentLocationStore()
